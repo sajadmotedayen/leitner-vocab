@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>جعبه لایتنر | یادگیری لغات انگلیسی</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=Lora:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#22303f;
+    --ink-soft:#5b6b7a;
+    --parchment:#f6efe0;
+    --parchment-dark:#ecdfc2;
+    --panel:#fffaf0;
+    --brass:#ab8446;
+    --brass-dark:#8a6a35;
+    --sage:#66845f;
+    --sage-dark:#4f6b49;
+    --rust:#b3564f;
+    --rust-dark:#953f39;
+    --line:#d8c9a3;
+    --shadow: 0 8px 24px rgba(34,48,63,.12);
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(1200px 800px at 20% -10%, #fffdf6 0%, var(--parchment) 45%, #ede0c3 100%);
+    color:var(--ink);
+    font-family:'Vazirmatn', sans-serif;
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  .en{ font-family:'Lora', serif; }
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+
+  /* ===== Header ===== */
+  header{
+    padding:28px 20px 18px;
+    text-align:center;
+    position:relative;
+  }
+  header .eyebrow{
+    font-size:12px;
+    letter-spacing:.12em;
+    color:var(--brass-dark);
+    font-weight:600;
+    text-transform:uppercase;
+  }
+  header h1{
+    margin:6px 0 4px;
+    font-size:30px;
+    font-weight:800;
+    color:var(--ink);
+  }
+  header p{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:14px;
+  }
+
+  .wrap{max-width:920px;margin:0 auto;padding:0 16px;}
+
+  /* ===== Cabinet (signature element) ===== */
+  .cabinet{
+    background: linear-gradient(180deg, #7a5a34, #5f4527);
+    border-radius: 18px;
+    padding:18px 16px 22px;
+    box-shadow: var(--shadow), inset 0 0 0 2px rgba(255,255,255,.04);
+    margin: 18px 0 22px;
+  }
+  .cabinet-top{
+    display:flex; justify-content:space-between; align-items:center;
+    color:#f3e6c8; padding:2px 8px 14px;
+  }
+  .cabinet-top .today{
+    font-size:13px; opacity:.9;
+  }
+  .cabinet-top .due-badge{
+    background:var(--rust);
+    color:#fff8ef;
+    padding:6px 14px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:700;
+    box-shadow:0 2px 6px rgba(0,0,0,.25);
+  }
+  .drawers{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .drawer{
+    background: linear-gradient(180deg, #eaddbb, #ddcda1);
+    border-radius:10px;
+    padding:12px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    box-shadow: 0 3px 0 rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.5);
+    border:1px solid #c9b57e;
+    cursor:pointer;
+    transition:transform .15s ease;
+    position:relative;
+  }
+  .drawer:hover{ transform: translateX(-3px); }
+  .drawer .handle{
+    width:34px; height:8px; border-radius:6px;
+    background: linear-gradient(180deg, var(--brass), var(--brass-dark));
+    box-shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+  .drawer .label{
+    display:flex; align-items:center; gap:10px;
+    font-weight:700; color:var(--ink);
+    font-size:14px;
+  }
+  .drawer .interval{
+    font-size:11px; color:var(--ink-soft); font-weight:500;
+  }
+  .drawer .counts{
+    display:flex; align-items:center; gap:8px;
+  }
+  .chip{
+    background:#fff; border:1px solid var(--line);
+    border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700;
+    color:var(--ink-soft);
+  }
+  .chip.due{ background:var(--rust); color:#fff; border-color:var(--rust-dark); }
+  .drawer.mastered{
+    background: linear-gradient(180deg, #dfe9dc, #cfe0ca);
+    border-color:#a9c2a1;
+  }
+
+  /* ===== Action buttons ===== */
+  .actions{
+    display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:24px;
+  }
+  .btn{
+    border:none; border-radius:12px; padding:13px 20px;
+    font-weight:700; font-size:14px;
+    display:flex; align-items:center; gap:8px;
+    box-shadow: var(--shadow);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .btn:hover{ transform: translateY(-2px); }
+  .btn:active{ transform: translateY(0); }
+  .btn-primary{ background: linear-gradient(180deg, var(--sage), var(--sage-dark)); color:#fdfaf0; }
+  .btn-secondary{ background:var(--panel); color:var(--ink); border:1px solid var(--line); }
+  .btn-ghost{ background:transparent; color:var(--ink-soft); box-shadow:none; border:1px dashed var(--line); }
+  .btn-small{ padding:8px 12px; font-size:12px; border-radius:9px; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
+
+  /* ===== Panels / Modal ===== */
+  .overlay{
+    position:fixed; inset:0; background:rgba(34,48,63,.45);
+    display:flex; align-items:flex-end; justify-content:center;
+    z-index:50; backdrop-filter: blur(2px);
+  }
+  @media(min-width:640px){ .overlay{ align-items:center; } }
+  .panel{
+    background:var(--panel);
+    width:100%; max-width:560px;
+    border-radius: 20px 20px 0 0;
+    padding:22px 20px 26px;
+    box-shadow:0 -10px 40px rgba(0,0,0,.25);
+    max-height:88vh; overflow-y:auto;
+    animation: slideup .22s ease;
+  }
+  @media(min-width:640px){ .panel{ border-radius:20px; } }
+  @keyframes slideup{ from{ transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;} }
+  .panel-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .panel-head h2{ margin:0; font-size:18px; }
+  .close-x{ background:none; border:none; font-size:20px; color:var(--ink-soft); box-shadow:none; padding:4px 8px;}
+
+  label{ display:block; font-size:13px; font-weight:600; color:var(--ink-soft); margin:14px 0 6px; }
+  input[type=text], textarea{
+    width:100%; border:1px solid var(--line); border-radius:10px;
+    padding:11px 12px; font-family:inherit; font-size:14px; background:#fffef9; color:var(--ink);
+  }
+  input.en, textarea.en{ font-family:'Lora', serif; direction:ltr; text-align:left; }
+  textarea{ min-height:70px; resize:vertical; }
+
+  /* ===== Flashcard ===== */
+  .card{
+    background:var(--panel);
+    border-radius:20px;
+    padding:26px 22px;
+    box-shadow:var(--shadow);
+    border:1px solid var(--line);
+    position:relative;
+    margin-bottom:16px;
+  }
+  .card .box-tag{
+    position:absolute; top:16px; left:16px;
+    font-size:11px; color:var(--brass-dark); font-weight:700;
+    background:#f5e9cb; padding:4px 10px; border-radius:999px;
+  }
+  .card .word{
+    font-size:34px; font-weight:600; text-align:center; color:var(--ink);
+    margin:18px 0 6px; direction:ltr;
+  }
+  .card .sub{ text-align:center; color:var(--ink-soft); font-size:13px; margin-bottom:18px; }
+
+  .linkrow{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:18px; }
+  .link-btn{
+    text-decoration:none; font-size:12.5px; font-weight:700;
+    padding:8px 13px; border-radius:9px;
+    display:inline-flex; align-items:center; gap:6px;
+    border:1px solid var(--line); background:#fffef9; color:var(--ink);
+  }
+  .link-btn:hover{ background:var(--parchment-dark); }
+  .dot{ width:7px; height:7px; border-radius:50%; }
+
+  .reveal-box{
+    border-top:1px dashed var(--line); margin-top:6px; padding-top:16px;
+  }
+  .fa-meaning{ font-size:19px; font-weight:700; text-align:center; margin-bottom:8px; }
+  .example{ background:var(--parchment-dark); border-radius:10px; padding:10px 14px; font-size:13.5px; color:var(--ink-soft); margin-bottom:10px; }
+  .example .en{ display:block; margin-bottom:2px; color:var(--ink); }
+
+  .note-area{ margin-top:6px; }
+
+  .grade-row{ display:flex; gap:10px; margin-top:18px; }
+  .grade-row .btn{ flex:1; justify-content:center; }
+
+  .empty{
+    text-align:center; padding:50px 20px; color:var(--ink-soft);
+  }
+  .empty .big{ font-size:40px; margin-bottom:10px; }
+
+  /* ===== Word list ===== */
+  .list-item{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:8px;
+  }
+  .list-item .li-word{ font-family:'Lora',serif; font-weight:600; font-size:16px; direction:ltr; }
+  .list-item .li-fa{ font-size:12.5px; color:var(--ink-soft); }
+  .li-actions{ display:flex; gap:6px; }
+  .icon-btn{ background:transparent; border:none; box-shadow:none; font-size:15px; padding:6px; color:var(--ink-soft); }
+  .search-input{ margin-bottom:14px; }
+
+  /* ===== AI assistant ===== */
+  .ai-msg{ background:var(--parchment-dark); border-radius:12px; padding:12px 14px; font-size:13.5px; line-height:1.9; margin-bottom:10px; white-space:pre-wrap;}
+  .ai-msg.user{ background:#e4ecdf; }
+  .ai-note{
+    font-size:12px; color:var(--ink-soft); background:#f5e9cb; border-radius:10px; padding:10px 12px; margin-bottom:14px; line-height:1.9;
+  }
+  .spinner{ display:inline-block; width:14px; height:14px; border:2px solid var(--line); border-top-color:var(--brass); border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+
+  footer{ text-align:center; color:var(--ink-soft); font-size:11.5px; margin-top:30px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Leitner System</div>
+  <h1>جعبه لایتنر لغات</h1>
+  <p>یادگیری هوشمند لغات انگلیسی با تکرار زمان‌بندی‌شده</p>
+</header>
+
+<div class="wrap">
+
+  <div class="cabinet">
+    <div class="cabinet-top">
+      <span class="today" id="todayLabel"></span>
+      <span class="due-badge" id="dueBadge">۰ کلمه برای مرور</span>
+    </div>
+    <div class="drawers" id="drawers"></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="startReviewBtn">▶ شروع مرور امروز</button>
+    <button class="btn btn-secondary" id="addWordBtn">+ افزودن لغت جدید</button>
+    <button class="btn btn-secondary" id="listBtn">فهرست همه لغات</button>
+    <button class="btn btn-ghost" id="settingsBtn">⚙ تنظیمات هوش مصنوعی</button>
+  </div>
+
+  <div id="main"></div>
+
+</div>
+
+<footer>ساخته‌شده برای مرور روزمره لغات — داده‌ها فقط روی همین مرورگر شما ذخیره می‌شود.</footer>
+
+<script>
+const BOX_INTERVALS = {1:1, 2:2, 3:4, 4:7, 5:15}; // days
+const BOX_LABELS = {1:'جعبه ۱ — روزانه',2:'جعبه ۲ — هر ۲ روز',3:'جعبه ۳ — هر ۴ روز',4:'جعبه ۴ — هر ۷ روز',5:'جعبه ۵ — هر ۱۵ روز'};
+const STORAGE_KEY = 'leitner-words-v1';
+
+let words = [];
+let currentDeck = [];
+let currentIndex = 0;
+let revealed = false;
+
+const $ = sel => document.querySelector(sel);
+const mainEl = $('#main');
+
+function todayISO(){ return new Date().toISOString(); }
+function addDays(date, days){ const d = new Date(date); d.setDate(d.getDate()+days); return d.toISOString(); }
+function fmtDate(iso){
+  try{ return new Date(iso).toLocaleDateString('fa-IR', {month:'short', day:'numeric'}); }catch(e){ return ''; }
+}
+
+async function loadWords(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    words = raw ? JSON.parse(raw) : [];
+  }catch(e){
+    console.error('خواندن داده‌ها ناموفق بود', e);
+    words = [];
+  }
+}
+async function saveWords(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(words));
+  }catch(e){
+    console.error('ذخیره‌سازی ناموفق بود', e);
+    alert('ذخیره‌سازی با مشکل مواجه شد. ممکن است حافظه مرورگر پر باشد.');
+  }
+}
+
+/* ---------- AI provider settings (stored locally in this browser only) ---------- */
+const AI_SETTINGS_KEY = 'leitner-ai-settings-v1';
+function loadAiSettings(){
+  try{
+    const raw = localStorage.getItem(AI_SETTINGS_KEY);
+    return raw ? JSON.parse(raw) : {provider:'local', key:''};
+  }catch(e){ return {provider:'', key:''}; }
+}
+function saveAiSettings(s){
+  try{ localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(s)); }catch(e){}
+}
+
+function isDue(w){
+  if(w.box === 6) return false; // mastered/archived
+  return new Date(w.nextReview) <= new Date();
+}
+
+function renderDrawers(){
+  const drawersEl = $('#drawers');
+  drawersEl.innerHTML = '';
+  const now = new Date();
+  let totalDue = 0;
+
+  for(let b=1;b<=5;b++){
+    const inBox = words.filter(w=>w.box===b);
+    const due = inBox.filter(isDue).length;
+    totalDue += due;
+    const div = document.createElement('div');
+    div.className='drawer';
+    div.innerHTML = `
+      <div class="label"><span class="handle"></span>${BOX_LABELS[b]}</div>
+      <div class="counts">
+        <span class="chip">${inBox.length} کلمه</span>
+        ${due>0?`<span class="chip due">${due} امروز</span>`:''}
+      </div>`;
+    div.onclick = ()=> startReview(b);
+    drawersEl.appendChild(div);
+  }
+  const mastered = words.filter(w=>w.box===6);
+  const md = document.createElement('div');
+  md.className='drawer mastered';
+  md.innerHTML = `
+    <div class="label"><span class="handle"></span>🏆 بایگانی مسلط‌شده‌ها</div>
+    <div class="counts"><span class="chip">${mastered.length} کلمه</span></div>`;
+  md.onclick = ()=> renderList(6);
+  drawersEl.appendChild(md);
+
+  $('#dueBadge').textContent = totalDue>0 ? `${totalDue} کلمه برای مرور` : 'مرور امروز تمام شد ✓';
+  $('#todayLabel').textContent = new Date().toLocaleDateString('fa-IR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+}
+
+/* ---------- Add / Edit word ---------- */
+function openAddForm(existing){
+  const isEdit = !!existing;
+  const overlay = document.createElement('div');
+  overlay.className='overlay';
+  overlay.innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <h2>${isEdit? 'ویرایش لغت' : 'افزودن لغت جدید'}</h2>
+        <button class="close-x">✕</button>
+      </div>
+      <label>کلمه انگلیسی</label>
+      <input type="text" class="en" id="f-en" placeholder="e.g. resilient" value="${isEdit?existing.en:''}">
+      <label>معنی فارسی</label>
+      <input type="text" id="f-fa" placeholder="مثلاً: تاب‌آور، مقاوم" value="${isEdit?existing.fa:''}">
+      <label>جمله نمونه (اختیاری)</label>
+      <textarea class="en" id="f-ex" placeholder="Example sentence...">${isEdit?(existing.example||''):''}</textarea>
+      <label>یادداشت شخصی (اختیاری)</label>
+      <textarea id="f-note" placeholder="نکته یا ترفند یادآوری خودتان...">${isEdit?(existing.note||''):''}</textarea>
+      <div class="actions" style="margin-top:18px;">
+        <button class="btn btn-primary" id="f-save">${isEdit?'ذخیره تغییرات':'افزودن به جعبه ۱'}</button>
+        ${isEdit?'<button class="btn btn-ghost" id="f-delete">حذف لغت</button>':''}
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+
+  overlay.querySelector('#f-save').onclick = async ()=>{
+    const en = overlay.querySelector('#f-en').value.trim();
+    const fa = overlay.querySelector('#f-fa').value.trim();
+    const example = overlay.querySelector('#f-ex').value.trim();
+    const note = overlay.querySelector('#f-note').value.trim();
+    if(!en || !fa){ alert('لطفاً کلمه انگلیسی و معنی فارسی را وارد کنید.'); return; }
+
+    if(isEdit){
+      Object.assign(existing, {en, fa, example, note});
+    } else {
+      words.push({
+        id: 'w_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+        en, fa, example, note,
+        box: 1,
+        nextReview: todayISO(),
+        createdAt: todayISO()
+      });
+    }
+    await saveWords();
+    overlay.remove();
+    renderDrawers();
+    if(mainEl.dataset.view==='list') renderList();
+  };
+
+  if(isEdit){
+    overlay.querySelector('#f-delete').onclick = async ()=>{
+      if(confirm('این لغت حذف شود؟')){
+        words = words.filter(w=>w.id!==existing.id);
+        await saveWords();
+        overlay.remove();
+        renderDrawers();
+        renderList();
+      }
+    };
+  }
+}
+
+/* ---------- Word list ---------- */
+function renderList(filterBox){
+  mainEl.dataset.view='list';
+  const q = mainEl.querySelector && mainEl.querySelector('#searchInput') ? mainEl.querySelector('#searchInput').value : '';
+  mainEl.innerHTML = `
+    <div class="card">
+      <input type="text" class="search-input" id="searchInput" placeholder="جستجوی لغت..." value="${q||''}">
+      <div id="listItems"></div>
+    </div>`;
+  const draw = ()=>{
+    const query = ($('#searchInput').value||'').toLowerCase();
+    let list = words;
+    if(filterBox) list = list.filter(w=>w.box===filterBox);
+    if(query) list = list.filter(w=> w.en.toLowerCase().includes(query) || w.fa.includes(query));
+    list.sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+    const box = $('#listItems');
+    if(list.length===0){
+      box.innerHTML = `<div class="empty">هنوز لغتی پیدا نشد.</div>`;
+      return;
+    }
+    box.innerHTML = list.map(w=>`
+      <div class="list-item">
+        <div>
+          <div class="li-word">${escapeHtml(w.en)}</div>
+          <div class="li-fa">${escapeHtml(w.fa)} · ${w.box===6?'مسلط‌شده':'جعبه '+w.box+' · مرور بعدی: '+fmtDate(w.nextReview)}</div>
+        </div>
+        <div class="li-actions">
+          <button class="icon-btn" data-edit="${w.id}">✎</button>
+        </div>
+      </div>`).join('');
+    box.querySelectorAll('[data-edit]').forEach(btn=>{
+      btn.onclick = ()=> openAddForm(words.find(w=>w.id===btn.dataset.edit));
+    });
+  };
+  $('#searchInput').oninput = draw;
+  draw();
+}
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------- Review flow ---------- */
+function startReview(box){
+  currentDeck = words.filter(w => (box ? w.box===box : true) && isDue(w));
+  currentDeck.sort(()=>Math.random()-0.5);
+  currentIndex = 0;
+  revealed = false;
+  if(currentDeck.length===0){
+    mainEl.dataset.view='review';
+    mainEl.innerHTML = `<div class="card empty"><div class="big">🎉</div>مرور این بخش برای الان تمام شده. کارت جدیدی برای نمایش نیست.</div>`;
+    return;
+  }
+  renderCard();
+}
+
+function currentCard(){ return currentDeck[currentIndex]; }
+
+function renderCard(){
+  mainEl.dataset.view='review';
+  const w = currentCard();
+  if(!w){
+    mainEl.innerHTML = `<div class="card empty"><div class="big">✅</div>همه کارت‌های این نوبت مرور شدند. آفرین!</div>`;
+    renderDrawers();
+    return;
+  }
+  const enQ = encodeURIComponent(w.en);
+  mainEl.innerHTML = `
+    <div class="card">
+      <span class="box-tag">جعبه ${w.box} · کارت ${currentIndex+1} از ${currentDeck.length}</span>
+      <div class="word en">${escapeHtml(w.en)}</div>
+      <div class="sub">${revealed ? '' : 'قبل از دیدن معنی، به یاد بیاور...'}</div>
+
+      <div class="linkrow">
+        <a class="link-btn" target="_blank" href="https://www.ldoceonline.com/dictionary/${enQ}"><span class="dot" style="background:#c0392b"></span>Longman</a>
+        <a class="link-btn" target="_blank" href="https://www.oxfordlearnersdictionaries.com/definition/english/${enQ}"><span class="dot" style="background:#2b579a"></span>Oxford</a>
+        <a class="link-btn" target="_blank" href="https://www.collinsdictionary.com/dictionary/english/${enQ}"><span class="dot" style="background:#e08e00"></span>Collins</a>
+        <a class="link-btn" target="_blank" href="https://www.google.com/search?q=${enQ}"><span class="dot" style="background:#4285f4"></span>جستجوی گوگل</a>
+        <a class="link-btn" target="_blank" rel="noopener noreferrer" href="https://translate.google.com/m/translate?sl=en&tl=fa&q=${enQ}"><span class="dot" style="background:#34a853"></span>گوگل ترنسلیت</a>
+        <button class="link-btn" id="askAiBtn"><span class="dot" style="background:#8a6a35"></span>پرسش از دستیار هوشمند</button>
+      </div>
+
+      ${revealed ? `
+      <div class="reveal-box">
+        <div class="fa-meaning">${escapeHtml(w.fa)}</div>
+        ${w.example ? `<div class="example"><span class="en">${escapeHtml(w.example)}</span></div>` : ''}
+        <label>یادداشت شخصی</label>
+        <div class="note-area">
+          <textarea id="noteField" placeholder="نکته‌ای برای یادآوری بنویس...">${escapeHtml(w.note||'')}</textarea>
+        </div>
+        <div class="grade-row">
+          <button class="btn" style="background:linear-gradient(180deg,var(--rust),var(--rust-dark));color:#fff8ef;" id="failBtn">✗ بلد نبودم</button>
+          <button class="btn btn-primary" id="passBtn">✓ بلد بودم</button>
+        </div>
+      </div>` : `
+      <div style="text-align:center;">
+        <button class="btn btn-secondary" id="revealBtn">نمایش معنی</button>
+      </div>`}
+    </div>
+  `;
+
+  if(!revealed){
+    $('#revealBtn').onclick = ()=>{ revealed=true; renderCard(); };
+  } else {
+    $('#noteField').onblur = async ()=>{
+      w.note = $('#noteField').value.trim();
+      await saveWords();
+    };
+    $('#passBtn').onclick = ()=> grade(true);
+    $('#failBtn').onclick = ()=> grade(false);
+  }
+  $('#askAiBtn').onclick = ()=> openAiPanel(w);
+}
+
+async function grade(passed){
+  const w = currentCard();
+  if(!w.history) w.history=[];
+  w.history.push({date: todayISO(), passed});
+  if(passed){
+    if(w.box>=5){
+      w.box = 6; // mastered/archive
+      w.nextReview = null;
+    } else {
+      w.box += 1;
+      w.nextReview = addDays(new Date(), BOX_INTERVALS[w.box]);
+    }
+  } else {
+    w.box = 1;
+    w.nextReview = addDays(new Date(), BOX_INTERVALS[1]);
+  }
+  await saveWords();
+  currentIndex += 1;
+  revealed = false;
+  renderCard();
+}
+
+/* ---------- AI settings panel ---------- */
+function openSettingsPanel(){
+  const s = loadAiSettings();
+  const overlay = document.createElement('div');
+  overlay.className='overlay';
+  overlay.innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <h2>تنظیمات دستیار هوش مصنوعی</h2>
+        <button class="close-x">✕</button>
+      </div>
+      <div class="ai-note">
+        از این برنامه خارج از Claude استفاده می‌کنید، پس دستیار به یک منبع پاسخ نیاز دارد. دو گزینه رایگان اضافه شده:<br>
+        • <b>مدل محلی (کاملاً رایگان)</b>: یک مدل کوچک هوش مصنوعی مستقیماً داخل همین مرورگر شما اجرا می‌شود؛ به هیچ سروری وصل نمی‌شود، پس هیچ محدودیت جغرافیایی ندارد. اما دفعه اول باید حدود ۳۰۰ تا ۵۰۰ مگابایت دانلود کند، روی گوشی‌های ضعیف‌تر کند است، و کیفیت پاسخ به فارسی معمولاً پایین‌تر از سرویس‌های بزرگ است.<br>
+        • <b>Google Gemini (رایگان با سهمیه روزانه)</b>: نیاز به یک کلید رایگان از aistudio.google.com دارد. مشخص نیست ساخت حساب گوگل و این سرویس از ایران بدون فیلترشکن ممکن باشد یا نه — باید خودتان امتحان کنید.
+      </div>
+      <label>سرویس هوش مصنوعی</label>
+      <select id="s-provider" style="width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);font-family:inherit;background:#fffef9;">
+        <option value="local" ${s.provider==='local'?'selected':''}>مدل محلی — رایگان، اجرا در مرورگر</option>
+        <option value="google" ${s.provider==='google'?'selected':''}>Google Gemini — رایگان با سهمیه روزانه</option>
+        <option value="openai" ${s.provider==='openai'?'selected':''}>OpenAI (ChatGPT — پولی)</option>
+        <option value="anthropic" ${s.provider==='anthropic'?'selected':''}>Anthropic (Claude — پولی)</option>
+      </select>
+      <div id="s-keyWrap">
+        <label>کلید API</label>
+        <input type="text" class="en" id="s-key" placeholder="AIza... یا sk-..." value="${escapeHtml(s.key||'')}">
+      </div>
+      <div class="actions" style="margin-top:16px;">
+        <button class="btn btn-primary" id="s-save">ذخیره</button>
+        <button class="btn btn-ghost" id="s-clear">حذف کلید</button>
+      </div>
+      <div class="actions" style="margin-top:10px;">
+        <button class="btn btn-ghost" id="s-clearModel">🗑 حذف مدل محلی دانلودشده از حافظه مرورگر</button>
+      </div>
+      <div id="s-clearModelMsg" style="font-size:12px;color:var(--ink-soft);margin-top:6px;"></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+
+  function syncKeyVisibility(){
+    const p = overlay.querySelector('#s-provider').value;
+    overlay.querySelector('#s-keyWrap').style.display = (p==='local') ? 'none' : 'block';
+  }
+  overlay.querySelector('#s-provider').addEventListener('change', syncKeyVisibility);
+  syncKeyVisibility();
+
+  overlay.querySelector('#s-save').onclick = ()=>{
+    saveAiSettings({
+      provider: overlay.querySelector('#s-provider').value,
+      key: overlay.querySelector('#s-key').value.trim()
+    });
+    overlay.remove();
+  };
+  overlay.querySelector('#s-clear').onclick = ()=>{
+    saveAiSettings({provider:'', key:''});
+    overlay.remove();
+  };
+  overlay.querySelector('#s-clearModel').onclick = async ()=>{
+    const msgEl = overlay.querySelector('#s-clearModelMsg');
+    msgEl.textContent = 'در حال پاک کردن...';
+    try{
+      if('caches' in window){
+        const names = await caches.keys();
+        const targets = names.filter(n => /transformers|xenova|onnx/i.test(n));
+        for(const n of targets) await caches.delete(n);
+      }
+      localGeneratorPromise = null; // force re-download next time it's used
+      msgEl.textContent = 'مدل محلی از حافظه مرورگر پاک شد. دفعه بعد که از دستیار استفاده کنید، دوباره دانلود می‌شود.';
+    }catch(e){
+      msgEl.textContent = 'پاک‌سازی خودکار انجام نشد. راه مطمئن‌تر: تنظیمات مرورگر → حریم خصوصی → پاک کردن داده‌های سایت برای همین صفحه.';
+    }
+  };
+}
+
+/* ---------- Local in-browser model (fully free, no key, no server) ---------- */
+let localGeneratorPromise = null;
+function getLocalGenerator(onProgress){
+  if(!localGeneratorPromise){
+    localGeneratorPromise = (async ()=>{
+      const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+      env.allowLocalModels = false;
+      return await pipeline('text-generation', 'Xenova/Qwen1.5-0.5B-Chat', { progress_callback: onProgress });
+    })();
+  }
+  return localGeneratorPromise;
+}
+
+/* ---------- AI assistant (uses the user's own API key, or the free local model) ---------- */
+function openAiPanel(word){
+  const settings = loadAiSettings();
+  const needsKey = settings.provider && settings.provider!=='local';
+  const ready = settings.provider==='local' || (needsKey && settings.key);
+  const overlay = document.createElement('div');
+  overlay.className='overlay';
+  overlay.innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <h2>دستیار هوشمند · <span class="en">${escapeHtml(word.en)}</span></h2>
+        <button class="close-x">✕</button>
+      </div>
+      ${!ready ? `<div class="ai-note">هنوز سرویسی انتخاب نکرده‌اید. از دکمه «تنظیمات هوش مصنوعی» بالای صفحه، یک گزینه (مثلاً «مدل محلی — رایگان») را انتخاب کنید.</div>` : ''}
+      <div id="aiThread"></div>
+      <textarea id="aiInput" placeholder="مثلاً: چند مثال دیگر با این کلمه بزن / تفاوتش با فلان کلمه چیه؟" ${!ready?'disabled':''}></textarea>
+      <div class="actions" style="margin-top:12px;">
+        <button class="btn btn-primary" id="aiAskBtn" ${!ready?'disabled':''}>پرسیدن</button>
+        ${!ready ? `<button class="btn btn-secondary" id="aiSettingsShortcut">رفتن به تنظیمات</button>` : ''}
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+  const shortcutBtn = overlay.querySelector('#aiSettingsShortcut');
+  if(shortcutBtn) shortcutBtn.onclick = ()=>{ overlay.remove(); openSettingsPanel(); };
+
+  const thread = overlay.querySelector('#aiThread');
+  const history = [];
+  const systemPrompt = `تو یک دستیار آموزش زبان انگلیسی هستی. کاربر ایرانی است و در حال یادگیری کلمه انگلیسی "${word.en}" (معنی: ${word.fa}) است. پاسخ‌ها را به فارسی، کوتاه، روشن و کاربردی بده. در صورت نیاز مثال انگلیسی با ترجمه فارسی بیاور.`;
+
+  async function callOpenAI(key){
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', 'Authorization':'Bearer '+key},
+      body: JSON.stringify({
+        model:'gpt-4o-mini',
+        messages:[{role:'system', content: systemPrompt}, ...history]
+      })
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || 'پاسخی دریافت نشد.';
+  }
+
+  async function callAnthropic(key){
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:1000,
+        system: systemPrompt,
+        messages: [...history]
+      })
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    return (data.content||[]).map(b=>b.text||'').join('\n').trim() || 'پاسخی دریافت نشد.';
+  }
+
+  async function callGemini(key){
+    const contents = history.map(h=>({ role: h.role==='assistant'?'model':'user', parts:[{text:h.content}] }));
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + encodeURIComponent(key);
+    const res = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        system_instruction: {parts:[{text: systemPrompt}]},
+        contents
+      })
+    });
+    if(!res.ok){
+      let detail = '';
+      try{ const errData = await res.json(); detail = errData.error && errData.error.message ? ' — ' + errData.error.message : ''; }catch(e){}
+      throw new Error('HTTP '+res.status+detail);
+    }
+    const data = await res.json();
+    const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+    return (parts ? parts.map(p=>p.text||'').join('\n').trim() : '') || 'پاسخی دریافت نشد.';
+  }
+
+  async function callLocal(loadingId){
+    const generator = await getLocalGenerator((p)=>{
+      if(p && p.status==='progress'){
+        const pct = p.progress ? Math.round(p.progress) : 0;
+        const el = document.getElementById(loadingId);
+        if(el) el.innerHTML = `<span class="spinner"></span> در حال دانلود مدل (${pct}٪) — فقط بار اول کمی طول می‌کشد...`;
+      }
+    });
+    const el = document.getElementById(loadingId);
+    if(el) el.innerHTML = `<span class="spinner"></span> در حال فکر کردن (روی همین گوشی/کامپیوتر شما)...`;
+    const chatPrompt = `<|im_start|>system\n${systemPrompt}<|im_end|>\n`
+      + history.map(h=>`<|im_start|>${h.role}\n${h.content}<|im_end|>\n`).join('')
+      + `<|im_start|>assistant\n`;
+    const out = await generator(chatPrompt, {max_new_tokens:220, temperature:0.7, do_sample:true, repetition_penalty:1.15});
+    let text = out[0].generated_text;
+    text = text.slice(chatPrompt.length);
+    text = text.split('<|im_end|>')[0].trim();
+    return text || 'پاسخی تولید نشد. دوباره تلاش کنید یا سوال را کوتاه‌تر بپرسید.';
+  }
+
+  async function ask(customPrompt){
+    if(!ready) return;
+    const input = overlay.querySelector('#aiInput');
+    const userText = customPrompt || input.value.trim();
+    if(!userText) return;
+    input.value='';
+    history.push({role:'user', content:userText});
+    thread.innerHTML += `<div class="ai-msg user">${escapeHtml(userText)}</div>`;
+    const loadingId = 'ld_'+Date.now();
+    thread.innerHTML += `<div class="ai-msg" id="${loadingId}"><span class="spinner"></span> در حال فکر کردن...</div>`;
+    thread.scrollTop = thread.scrollHeight;
+
+    try{
+      let text;
+      if(settings.provider==='local') text = await callLocal(loadingId);
+      else if(settings.provider==='google') text = await callGemini(settings.key);
+      else if(settings.provider==='openai') text = await callOpenAI(settings.key);
+      else text = await callAnthropic(settings.key);
+      document.getElementById(loadingId).outerHTML = `<div class="ai-msg">${escapeHtml(text)}</div>`;
+      history.push({role:'assistant', content:text});
+    }catch(e){
+      const msg = settings.provider==='local'
+        ? `اجرای مدل محلی با مشکل مواجه شد (${escapeHtml(e.message||'')}). ممکن است حافظه دستگاه کافی نباشد یا اتصال اینترنت برای دانلود اولیه مدل قطع باشد.`
+        : `درخواست ناموفق بود (${escapeHtml(e.message||'')}). محتمل‌ترین دلیل: نبود دسترسی به این سرویس از ایران بدون فیلترشکن، یا نامعتبر بودن کلید API.`;
+      document.getElementById(loadingId).outerHTML = `<div class="ai-msg">${msg}</div>`;
+    }
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  overlay.querySelector('#aiAskBtn') && (overlay.querySelector('#aiAskBtn').onclick = ()=> ask());
+  overlay.querySelector('#aiInput').addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); ask(); }
+  });
+
+  if(ready) ask(`لطفاً معنی، تلفظ تقریبی، و یک مثال کوتاه برای کلمه "${word.en}" بده.`);
+}
+
+/* ---------- Wire up top buttons ---------- */
+$('#startReviewBtn').onclick = ()=> startReview();
+$('#addWordBtn').onclick = ()=> openAddForm();
+$('#listBtn').onclick = ()=> renderList();
+$('#settingsBtn').onclick = ()=> openSettingsPanel();
+
+/* ---------- Init ---------- */
+(async function init(){
+  await loadWords();
+  renderDrawers();
+  if(words.length===0){
+    mainEl.innerHTML = `<div class="card empty"><div class="big">📇</div>هنوز لغتی اضافه نکرده‌اید. با دکمه «افزودن لغت جدید» شروع کنید.</div>`;
+  } else {
+    mainEl.innerHTML = `<div class="card empty"><div class="big">👋</div>برای شروع، «مرور امروز» یا یکی از جعبه‌ها را انتخاب کنید.</div>`;
+  }
+})();
+</script>
+</body>
+</html>
