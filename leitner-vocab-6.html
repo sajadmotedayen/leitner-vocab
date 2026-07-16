@@ -252,6 +252,41 @@
   @keyframes spin{ to{ transform:rotate(360deg);} }
 
   footer{ text-align:center; color:var(--ink-soft); font-size:11.5px; margin-top:30px; }
+
+  /* ===== Free browse — fullscreen ===== */
+  .browse-full{
+    position:fixed; inset:0; z-index:40;
+    background: radial-gradient(1200px 800px at 20% -10%, #fffdf6 0%, var(--parchment) 45%, #ede0c3 100%);
+    display:flex; flex-direction:column;
+    height:100dvh;
+  }
+  .browse-top{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 18px 4px; flex-shrink:0;
+  }
+  .browse-top .browse-counter{ font-size:13px; font-weight:700; color:var(--ink-soft); }
+  .browse-top .close-x{ font-size:22px; padding:6px 10px; }
+  .browse-body{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:10px 22px; text-align:center; overflow-y:auto; min-height:0;
+  }
+  .browse-body .box-tag{
+    font-size:11px; color:var(--brass-dark); font-weight:700;
+    background:#f5e9cb; padding:4px 10px; border-radius:999px; margin-bottom:18px;
+  }
+  .browse-word{ font-size:40px; font-weight:600; color:var(--ink); direction:ltr; margin-bottom:10px; word-break:break-word; }
+  .browse-meaning{ font-size:21px; font-weight:700; color:var(--ink); margin-bottom:10px; }
+  .browse-example{ background:var(--parchment-dark); border-radius:10px; padding:10px 14px; font-size:13.5px; color:var(--ink-soft); max-width:420px; }
+  .browse-example .en{ display:block; margin-bottom:2px; color:var(--ink); }
+  .browse-note-toggle{ margin-top:14px; }
+  .browse-bottom{
+    flex-shrink:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .browse-nav{ display:flex; gap:10px; }
+  .browse-nav .btn{ flex:1; justify-content:center; }
+  .browse-tools-row{ display:flex; gap:10px; }
+  .browse-tools-row .btn{ flex:1; justify-content:center; }
 </style>
 </head>
 <body>
@@ -276,7 +311,9 @@
     <button class="btn btn-primary" id="startReviewBtn">▶ شروع مرور امروز</button>
     <button class="btn btn-secondary" id="addWordBtn">+ افزودن لغت جدید</button>
     <button class="btn btn-secondary" id="listBtn">فهرست همه لغات</button>
+    <button class="btn btn-secondary" id="browseBtn">📖 مرور آزاد لغات</button>
     <button class="btn btn-ghost" id="settingsBtn">⚙ تنظیمات هوش مصنوعی</button>
+    <button class="btn btn-ghost" id="githubSyncBtn">☁ همگام‌سازی گیت‌هاب</button>
   </div>
 
   <div id="main"></div>
@@ -291,9 +328,6 @@ const BOX_LABELS = {1:'جعبه ۱ — روزانه',2:'جعبه ۲ — هر ۲ 
 const STORAGE_KEY = 'leitner-words-v1';
 
 let words = [];
-let currentDeck = [];
-let currentIndex = 0;
-let revealed = false;
 
 const $ = sel => document.querySelector(sel);
 const mainEl = $('#main');
@@ -312,7 +346,23 @@ async function loadWords(){
     console.error('خواندن داده‌ها ناموفق بود', e);
     words = [];
   }
+  // If GitHub sync is configured, try to pull the latest version from the repo
+  const sync = loadGithubSync();
+  if(sync.repo && sync.token){
+    try{
+      const remote = await githubFetchFile(sync);
+      if(remote){
+        words = remote.words;
+        githubSha = remote.sha;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(words)); // keep an offline cache
+      }
+    }catch(e){
+      console.error('دریافت از گیت‌هاب ناموفق بود، از نسخه محلی استفاده می‌شود', e);
+    }
+  }
 }
+
+let githubPushTimer = null;
 async function saveWords(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(words));
@@ -320,6 +370,142 @@ async function saveWords(){
     console.error('ذخیره‌سازی ناموفق بود', e);
     alert('ذخیره‌سازی با مشکل مواجه شد. ممکن است حافظه مرورگر پر باشد.');
   }
+  const sync = loadGithubSync();
+  if(sync.repo && sync.token){
+    clearTimeout(githubPushTimer);
+    githubPushTimer = setTimeout(()=> pushToGithub(sync), 2000); // debounce so rapid edits become one commit
+  }
+}
+
+/* ---------- GitHub sync (stores the word list in a file inside your own repo) ---------- */
+const GITHUB_SYNC_KEY = 'leitner-github-sync-v1';
+let githubSha = null;
+function loadGithubSync(){
+  try{
+    const raw = localStorage.getItem(GITHUB_SYNC_KEY);
+    return raw ? JSON.parse(raw) : {repo:'', path:'leitner-words-data.json', branch:'main', token:''};
+  }catch(e){ return {repo:'', path:'leitner-words-data.json', branch:'main', token:''}; }
+}
+function saveGithubSync(s){
+  try{ localStorage.setItem(GITHUB_SYNC_KEY, JSON.stringify(s)); }catch(e){}
+}
+function utf8ToBase64(str){ return btoa(unescape(encodeURIComponent(str))); }
+function base64ToUtf8(str){ return decodeURIComponent(escape(atob(str))); }
+
+async function githubFetchFile(sync){
+  const url = `https://api.github.com/repos/${sync.repo}/contents/${encodeURIComponent(sync.path)}?ref=${encodeURIComponent(sync.branch||'main')}`;
+  const res = await fetch(url, {
+    headers:{ 'Authorization':'token '+sync.token, 'Accept':'application/vnd.github+json' }
+  });
+  if(res.status===404) return null; // file doesn't exist yet — that's fine, first save will create it
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const data = await res.json();
+  const parsed = JSON.parse(base64ToUtf8(data.content));
+  return { words: parsed, sha: data.sha };
+}
+
+async function pushToGithub(sync, retry){
+  try{
+    const url = `https://api.github.com/repos/${sync.repo}/contents/${encodeURIComponent(sync.path)}`;
+    const body = {
+      message: `بروزرسانی لغت‌ها (${words.length} لغت) — ${new Date().toLocaleString('fa-IR')}`,
+      content: utf8ToBase64(JSON.stringify(words, null, 2)),
+      branch: sync.branch||'main'
+    };
+    if(githubSha) body.sha = githubSha;
+    const res = await fetch(url, {
+      method:'PUT',
+      headers:{ 'Authorization':'token '+sync.token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(res.status===409 && !retry){
+      // someone/something else updated the file — refetch the sha once and retry
+      const fresh = await githubFetchFile(sync);
+      if(fresh) githubSha = fresh.sha;
+      return pushToGithub(sync, true);
+    }
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    githubSha = data.content.sha;
+    updateSyncStatus('آخرین همگام‌سازی: ' + new Date().toLocaleTimeString('fa-IR'));
+  }catch(e){
+    console.error('ارسال به گیت‌هاب ناموفق بود', e);
+    updateSyncStatus('همگام‌سازی ناموفق بود — بررسی کن توکن و اتصال اینترنت درست باشد.');
+  }
+}
+
+function updateSyncStatus(text){
+  const el = document.getElementById('syncStatusLine');
+  if(el) el.textContent = text;
+}
+
+function openGithubSyncPanel(){
+  const s = loadGithubSync();
+  const overlay = document.createElement('div');
+  overlay.className='overlay';
+  overlay.innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <h2>☁ همگام‌سازی با گیت‌هاب</h2>
+        <button class="close-x">✕</button>
+      </div>
+      <div class="ai-note">
+        با این کار، لغت‌هایت به‌جای فقط ماندن روی این مرورگر، توی یک فایل داخل مخزن گیت‌هاب خودت ذخیره می‌شوند — پس از هر دستگاه/مرورگری که این تنظیمات را وارد کنی، همان لغت‌ها را می‌بینی.<br><br>
+        <b>ساخت توکن:</b> برو به github.com → روی عکس پروفایلت → Settings → پایین صفحه Developer settings → Personal access tokens → Fine-grained tokens → Generate new token. دسترسی (Permissions) این مخزن را روی «Contents: Read and write» بگذار.
+      </div>
+      <label>نام کاربری/مخزن (مثال: username/leitner-vocab)</label>
+      <input type="text" class="en" id="g-repo" placeholder="username/leitner-vocab" value="${escapeHtml(s.repo||'')}">
+      <label>نام برنچ</label>
+      <input type="text" class="en" id="g-branch" placeholder="main" value="${escapeHtml(s.branch||'main')}">
+      <label>مسیر فایل داده (نیازی به تغییر نیست)</label>
+      <input type="text" class="en" id="g-path" value="${escapeHtml(s.path||'leitner-words-data.json')}">
+      <label>توکن دسترسی (Personal Access Token)</label>
+      <input type="text" class="en" id="g-token" placeholder="github_pat_..." value="${escapeHtml(s.token||'')}">
+      <div id="syncStatusLine" style="font-size:12px;color:var(--ink-soft);margin-top:8px;"></div>
+      <div class="actions" style="margin-top:16px;">
+        <button class="btn btn-primary" id="g-save">ذخیره و همگام‌سازی</button>
+        <button class="btn btn-ghost" id="g-disconnect">قطع اتصال</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+
+  overlay.querySelector('#g-save').onclick = async ()=>{
+    const newSync = {
+      repo: overlay.querySelector('#g-repo').value.trim().replace(/^https?:\/\/github\.com\//,'').replace(/\/$/,''),
+      branch: overlay.querySelector('#g-branch').value.trim() || 'main',
+      path: overlay.querySelector('#g-path').value.trim() || 'leitner-words-data.json',
+      token: overlay.querySelector('#g-token').value.trim()
+    };
+    if(!newSync.repo || !newSync.token){ alert('نام مخزن و توکن را وارد کن.'); return; }
+    saveGithubSync(newSync);
+    updateSyncStatus('در حال بررسی اتصال...');
+    try{
+      const remote = await githubFetchFile(newSync);
+      if(remote){
+        words = remote.words;
+        githubSha = remote.sha;
+        await saveWordsLocalOnly();
+        renderDrawers();
+        updateSyncStatus('متصل شد ✓ لغت‌های موجود در گیت‌هاب بارگذاری شد.');
+      } else {
+        githubSha = null;
+        await pushToGithub(newSync);
+        updateSyncStatus('متصل شد ✓ فایل جدید در مخزن ساخته شد.');
+      }
+    }catch(e){
+      updateSyncStatus('اتصال ناموفق بود: ' + e.message + ' — نام مخزن یا توکن را بررسی کن.');
+    }
+  };
+  overlay.querySelector('#g-disconnect').onclick = ()=>{
+    saveGithubSync({repo:'', path:'leitner-words-data.json', branch:'main', token:''});
+    githubSha = null;
+    overlay.remove();
+  };
+}
+async function saveWordsLocalOnly(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(words)); }catch(e){}
 }
 
 /* ---------- AI provider settings (stored locally in this browser only) ---------- */
@@ -439,14 +625,32 @@ function openAddForm(existing){
 }
 
 /* ---------- Word list ---------- */
+let selectedIds = new Set();
+
 function renderList(filterBox){
   mainEl.dataset.view='list';
   const q = mainEl.querySelector && mainEl.querySelector('#searchInput') ? mainEl.querySelector('#searchInput').value : '';
   mainEl.innerHTML = `
     <div class="card">
       <input type="text" class="search-input" id="searchInput" placeholder="جستجوی لغت..." value="${q||''}">
+      <div class="actions" style="margin-bottom:14px;">
+        <button class="btn btn-secondary btn-small" id="selectAllBtn">انتخاب همه</button>
+        <button class="btn btn-secondary btn-small" id="clearSelectBtn">پاک کردن انتخاب</button>
+      </div>
       <div id="listItems"></div>
+      <div class="actions" id="selectionBar" style="margin-top:14px; display:none;">
+        <button class="btn btn-primary btn-small" id="exportSelectedBtn">📋 خروجی از انتخاب‌شده‌ها برای هوش مصنوعی</button>
+      </div>
+      <div style="border-top:1px dashed var(--line); margin-top:20px; padding-top:16px;">
+        <label style="margin-top:0;">پشتیبان‌گیری</label>
+        <div class="actions">
+          <button class="btn btn-secondary btn-small" id="backupBtn">⬇ دانلود پشتیبان کامل (JSON)</button>
+          <button class="btn btn-secondary btn-small" id="restoreBtn">⬆ بازیابی از فایل پشتیبان</button>
+          <input type="file" id="restoreFile" accept="application/json" style="display:none;">
+        </div>
+      </div>
     </div>`;
+
   const draw = ()=>{
     const query = ($('#searchInput').value||'').toLowerCase();
     let list = words;
@@ -456,104 +660,243 @@ function renderList(filterBox){
     const box = $('#listItems');
     if(list.length===0){
       box.innerHTML = `<div class="empty">هنوز لغتی پیدا نشد.</div>`;
-      return;
+    } else {
+      box.innerHTML = list.map(w=>`
+        <div class="list-item">
+          <label style="display:flex;align-items:center;gap:10px;flex:1;cursor:pointer;">
+            <input type="checkbox" data-select="${w.id}" ${selectedIds.has(w.id)?'checked':''} style="width:18px;height:18px;">
+            <div>
+              <div class="li-word">${escapeHtml(w.en)}</div>
+              <div class="li-fa">${escapeHtml(w.fa)} · ${w.box===6?'مسلط‌شده':'جعبه '+w.box+' · مرور بعدی: '+fmtDate(w.nextReview)}</div>
+            </div>
+          </label>
+          <div class="li-actions">
+            <button class="icon-btn" data-browse="${w.id}" title="مرور تکی این لغت">👁</button>
+            <button class="icon-btn" data-edit="${w.id}">✎</button>
+          </div>
+        </div>`).join('');
+      box.querySelectorAll('[data-edit]').forEach(btn=>{
+        btn.onclick = ()=> openAddForm(words.find(w=>w.id===btn.dataset.edit));
+      });
+      box.querySelectorAll('[data-browse]').forEach(btn=>{
+        btn.onclick = ()=>{
+          const list = [...box.querySelectorAll('[data-browse]')].map(b=>words.find(w=>w.id===b.dataset.browse));
+          const startIdx = list.findIndex(w=>w.id===btn.dataset.browse);
+          startBrowse(list, startIdx);
+        };
+      });
+      box.querySelectorAll('[data-select]').forEach(cb=>{
+        cb.onchange = ()=>{
+          if(cb.checked) selectedIds.add(cb.dataset.select);
+          else selectedIds.delete(cb.dataset.select);
+          updateSelectionBar();
+        };
+      });
     }
-    box.innerHTML = list.map(w=>`
-      <div class="list-item">
-        <div>
-          <div class="li-word">${escapeHtml(w.en)}</div>
-          <div class="li-fa">${escapeHtml(w.fa)} · ${w.box===6?'مسلط‌شده':'جعبه '+w.box+' · مرور بعدی: '+fmtDate(w.nextReview)}</div>
-        </div>
-        <div class="li-actions">
-          <button class="icon-btn" data-edit="${w.id}">✎</button>
-        </div>
-      </div>`).join('');
-    box.querySelectorAll('[data-edit]').forEach(btn=>{
-      btn.onclick = ()=> openAddForm(words.find(w=>w.id===btn.dataset.edit));
-    });
+    updateSelectionBar();
   };
+
+  function updateSelectionBar(){
+    const bar = $('#selectionBar');
+    if(!bar) return;
+    bar.style.display = selectedIds.size>0 ? 'flex' : 'none';
+    const btn = $('#exportSelectedBtn');
+    if(btn) btn.textContent = `📋 خروجی از ${selectedIds.size} لغت انتخاب‌شده برای هوش مصنوعی`;
+  }
+
   $('#searchInput').oninput = draw;
+  $('#selectAllBtn').onclick = ()=>{
+    let list = words;
+    if(filterBox) list = list.filter(w=>w.box===filterBox);
+    list.forEach(w=> selectedIds.add(w.id));
+    draw();
+  };
+  $('#clearSelectBtn').onclick = ()=>{ selectedIds.clear(); draw(); };
+  $('#exportSelectedBtn').onclick = ()=> openExportPanel(words.filter(w=>selectedIds.has(w.id)));
+  $('#backupBtn').onclick = downloadBackup;
+  $('#restoreBtn').onclick = ()=> $('#restoreFile').click();
+  $('#restoreFile').onchange = handleRestoreFile;
+
   draw();
+}
+
+/* ---------- Export selected words as text for pasting into any AI ---------- */
+function openExportPanel(selectedWords){
+  if(selectedWords.length===0) return;
+  const fullText = selectedWords.map(w=>w.en).join(', ');
+
+  const overlay = document.createElement('div');
+  overlay.className='overlay';
+  overlay.innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <h2>خروجی برای هوش مصنوعی</h2>
+        <button class="close-x">✕</button>
+      </div>
+      <div class="ai-note">فقط خودِ کلمات (بدون معنی و یادداشت) کپی می‌شود — چون این کلمات رو یاد گرفتی، می‌تونی این متن رو به هر هوش مصنوعی بدی و بگی: «این کلمات رو بلدم، حالا کلمات دیگه‌ای در همین سطح یا موضوع بهم پیشنهاد بده» یا هر کار دیگه‌ای بخوای.</div>
+      <textarea id="exportText" style="min-height:120px;" readonly>${escapeHtml(fullText)}</textarea>
+      <div class="actions" style="margin-top:14px;">
+        <button class="btn btn-primary" id="copyExportBtn">📋 کپی متن</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+  overlay.querySelector('#copyExportBtn').onclick = async ()=>{
+    const ta = overlay.querySelector('#exportText');
+    try{
+      await navigator.clipboard.writeText(fullText);
+      overlay.querySelector('#copyExportBtn').textContent = '✓ کپی شد';
+    }catch(e){
+      ta.select();
+      document.execCommand('copy');
+      overlay.querySelector('#copyExportBtn').textContent = '✓ کپی شد';
+    }
+  };
+}
+
+/* ---------- Full backup (download / restore JSON) ---------- */
+function downloadBackup(){
+  const blob = new Blob([JSON.stringify(words, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `leitner-backup-${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function handleRestoreFile(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async ()=>{
+    try{
+      const restored = JSON.parse(reader.result);
+      if(!Array.isArray(restored)) throw new Error('فرمت فایل معتبر نیست');
+      const choice = confirm('برای بازیابی: OK بزن تا لغت‌های فایل به لغت‌های فعلی اضافه شوند (بدون حذف چیزی). برای جایگزینی کامل به‌جای افزودن، Cancel بزن و در پنجره بعدی تایید کن.');
+      if(choice){
+        const existingIds = new Set(words.map(w=>w.id));
+        restored.forEach(w=>{ if(!existingIds.has(w.id)) words.push(w); });
+      } else {
+        if(confirm('مطمئنی؟ این کار تمام لغت‌های فعلی را با محتوای فایل جایگزین می‌کند و قابل بازگشت نیست.')){
+          words = restored;
+        } else {
+          return;
+        }
+      }
+      await saveWords();
+      renderDrawers();
+      renderList();
+      alert('بازیابی با موفقیت انجام شد.');
+    }catch(err){
+      alert('فایل معتبر نبود یا مشکلی پیش آمد: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
 }
 
 function escapeHtml(s){
   return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-/* ---------- Review flow ---------- */
+/* ---------- Unified card view ---------- */
+/* Both "today's review" and "free browse" use the exact same fullscreen card UI
+   and the exact same logic. The only difference is which words are in the deck
+   (due cards only vs. everything) and what happens once a card is graded:
+   in review mode a graded card is done for this session and drops out of the
+   deck; in browse mode grading just records progress and moves to the next card. */
+let deck = [];
+let deckIndex = 0;
+let deckRevealed = false;
+let deckMode = 'browse'; // 'review' | 'browse'
+let deckEl = null;
+let touchStartX = null, touchStartY = null;
+
 function startReview(box){
-  currentDeck = words.filter(w => (box ? w.box===box : true) && isDue(w));
-  currentDeck.sort(()=>Math.random()-0.5);
-  currentIndex = 0;
-  revealed = false;
-  if(currentDeck.length===0){
+  const list = words.filter(w => (box ? w.box===box : true) && isDue(w));
+  list.sort(()=>Math.random()-0.5);
+  if(list.length===0){
     mainEl.dataset.view='review';
     mainEl.innerHTML = `<div class="card empty"><div class="big">🎉</div>مرور این بخش برای الان تمام شده. کارت جدیدی برای نمایش نیست.</div>`;
     return;
   }
-  renderCard();
+  openDeck(list, {mode:'review'});
 }
 
-function currentCard(){ return currentDeck[currentIndex]; }
-
-function renderCard(){
-  mainEl.dataset.view='review';
-  const w = currentCard();
-  if(!w){
-    mainEl.innerHTML = `<div class="card empty"><div class="big">✅</div>همه کارت‌های این نوبت مرور شدند. آفرین!</div>`;
-    renderDrawers();
+function startBrowse(list, startIndex){
+  if(!list){
+    // no list passed in -> browse everything, sorted alphabetically
+    list = [...words].sort((a,b)=> a.en.localeCompare(b.en));
+  }
+  if(list.length===0){
+    alert('لغتی برای مرور وجود ندارد.');
     return;
   }
-  const enQ = encodeURIComponent(w.en);
-  mainEl.innerHTML = `
-    <div class="card">
-      <span class="box-tag">جعبه ${w.box} · کارت ${currentIndex+1} از ${currentDeck.length}</span>
-      <div class="word en">${escapeHtml(w.en)}</div>
-      <div class="sub">${revealed ? '' : 'قبل از دیدن معنی، به یاد بیاور...'}</div>
-
-      <div class="linkrow">
-        <a class="link-btn" target="_blank" href="https://www.ldoceonline.com/dictionary/${enQ}"><span class="dot" style="background:#c0392b"></span>Longman</a>
-        <a class="link-btn" target="_blank" href="https://www.oxfordlearnersdictionaries.com/definition/english/${enQ}"><span class="dot" style="background:#2b579a"></span>Oxford</a>
-        <a class="link-btn" target="_blank" href="https://www.collinsdictionary.com/dictionary/english/${enQ}"><span class="dot" style="background:#e08e00"></span>Collins</a>
-        <a class="link-btn" target="_blank" href="https://www.google.com/search?q=${enQ}"><span class="dot" style="background:#4285f4"></span>جستجوی گوگل</a>
-        <a class="link-btn" target="_blank" rel="noopener noreferrer" href="https://translate.google.com/m/translate?sl=en&tl=fa&q=${enQ}"><span class="dot" style="background:#34a853"></span>گوگل ترنسلیت</a>
-        <button class="link-btn" id="askAiBtn"><span class="dot" style="background:#8a6a35"></span>پرسش از دستیار هوشمند</button>
-      </div>
-
-      ${revealed ? `
-      <div class="reveal-box">
-        <div class="fa-meaning">${escapeHtml(w.fa)}</div>
-        ${w.example ? `<div class="example"><span class="en">${escapeHtml(w.example)}</span></div>` : ''}
-        <label>یادداشت شخصی</label>
-        <div class="note-area">
-          <textarea id="noteField" placeholder="نکته‌ای برای یادآوری بنویس...">${escapeHtml(w.note||'')}</textarea>
-        </div>
-        <div class="grade-row">
-          <button class="btn" style="background:linear-gradient(180deg,var(--rust),var(--rust-dark));color:#fff8ef;" id="failBtn">✗ بلد نبودم</button>
-          <button class="btn btn-primary" id="passBtn">✓ بلد بودم</button>
-        </div>
-      </div>` : `
-      <div style="text-align:center;">
-        <button class="btn btn-secondary" id="revealBtn">نمایش معنی</button>
-      </div>`}
-    </div>
-  `;
-
-  if(!revealed){
-    $('#revealBtn').onclick = ()=>{ revealed=true; renderCard(); };
-  } else {
-    $('#noteField').onblur = async ()=>{
-      w.note = $('#noteField').value.trim();
-      await saveWords();
-    };
-    $('#passBtn').onclick = ()=> grade(true);
-    $('#failBtn').onclick = ()=> grade(false);
-  }
-  $('#askAiBtn').onclick = ()=> openAiPanel(w);
+  openDeck(list, {mode:'browse', startIndex});
 }
 
-async function grade(passed){
-  const w = currentCard();
+function openDeck(list, opts){
+  opts = opts || {};
+  deck = list;
+  deckIndex = (typeof opts.startIndex==='number' && opts.startIndex>=0) ? opts.startIndex : 0;
+  deckRevealed = false;
+  deckMode = opts.mode || 'browse';
+
+  deckEl = document.createElement('div');
+  deckEl.className = 'browse-full';
+  document.body.appendChild(deckEl);
+  document.addEventListener('keydown', deckKeyHandler);
+  deckEl.addEventListener('touchstart', deckTouchStart, {passive:true});
+  deckEl.addEventListener('touchend', deckTouchEnd, {passive:true});
+  renderDeckCard();
+}
+
+function closeDeck(){
+  if(deckEl){ deckEl.remove(); deckEl = null; }
+  document.removeEventListener('keydown', deckKeyHandler);
+  if(deckMode==='review') renderDrawers();
+}
+
+function deckKeyHandler(e){
+  if(e.key==='Escape') closeDeck();
+  else if(e.key==='ArrowRight') deckGo(-1); // RTL: right arrow = previous
+  else if(e.key==='ArrowLeft') deckGo(1);
+  else if(e.key===' '){ e.preventDefault(); deckRevealed = !deckRevealed; renderDeckCard(); }
+}
+
+function deckTouchStart(e){
+  if(e.touches.length!==1) return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}
+function deckTouchEnd(e){
+  if(touchStartX===null) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+  touchStartX = null; touchStartY = null;
+  if(Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy)*1.5) return; // not a clear horizontal swipe
+  // RTL layout: swipe right-to-left = next card, swipe left-to-right = previous card
+  if(dx < 0) deckGo(1); else deckGo(-1);
+}
+
+function deckGo(dir){
+  const next = deckIndex + dir;
+  if(next<0 || next>=deck.length) return;
+  deckIndex = next;
+  deckRevealed = false;
+  renderDeckCard();
+}
+
+function currentDeckWord(){ return deck[deckIndex]; }
+
+async function deckGrade(passed){
+  const w = currentDeckWord();
+  if(!w) return;
   if(!w.history) w.history=[];
   w.history.push({date: todayISO(), passed});
   if(passed){
@@ -569,9 +912,132 @@ async function grade(passed){
     w.nextReview = addDays(new Date(), BOX_INTERVALS[1]);
   }
   await saveWords();
-  currentIndex += 1;
-  revealed = false;
-  renderCard();
+  deckRevealed = false;
+
+  if(deckMode==='review'){
+    // این کارت برای همین نوبت مرور انجام شد، پس دیگر لازم نیست دوباره نشان داده شود
+    deck.splice(deckIndex, 1);
+    if(deckIndex >= deck.length) deckIndex = Math.max(0, deck.length-1);
+    if(deck.length===0){ renderDeckFinished(); return; }
+  } else if(deckIndex < deck.length-1){
+    deckIndex += 1;
+  }
+  renderDeckCard();
+}
+
+function renderDeckFinished(){
+  if(!deckEl) return;
+  renderDrawers();
+  deckEl.innerHTML = `
+    <div class="browse-top">
+      <span class="browse-counter">مرور امروز</span>
+      <button class="close-x" id="deckCloseBtn">✕</button>
+    </div>
+    <div class="browse-body">
+      <div style="font-size:44px;margin-bottom:10px;">✅</div>
+      <div>همه کارت‌های این نوبت مرور شدند. آفرین!</div>
+    </div>
+    <div class="browse-bottom">
+      <button class="btn btn-primary" id="deckFinishBtn">بازگشت</button>
+    </div>
+  `;
+  deckEl.querySelector('#deckCloseBtn').onclick = closeDeck;
+  deckEl.querySelector('#deckFinishBtn').onclick = closeDeck;
+}
+
+function renderDeckCard(){
+  if(!deckEl) return;
+  const w = currentDeckWord();
+  if(!w) return;
+  const enQ = encodeURIComponent(w.en);
+  const isReview = deckMode==='review';
+  deckEl.innerHTML = `
+    <div class="browse-top">
+      <span class="browse-counter">${isReview ? 'مرور امروز · ' : ''}${w.box===6?'مسلط‌شده':'جعبه '+w.box} · ${deckIndex+1} از ${deck.length}</span>
+      <button class="close-x" id="deckCloseBtn">✕</button>
+    </div>
+    <div class="browse-body">
+      <div class="box-tag">${isReview ? 'مرور امروز — طبق زمان‌بندی' : 'مرور آزاد'}</div>
+      <div class="browse-word en">${escapeHtml(w.en)}</div>
+      ${deckRevealed ? `
+        <div class="browse-meaning">${escapeHtml(w.fa)}</div>
+        ${w.example ? `<div class="browse-example"><span class="en">${escapeHtml(w.example)}</span></div>` : ''}
+      ` : `
+        <button class="btn btn-secondary" id="deckRevealBtn">نمایش معنی</button>
+      `}
+      ${deckRevealed ? `<button class="btn btn-ghost btn-small browse-note-toggle" id="deckNoteToggle">📝 یادداشت${w.note?' (دارد)':''}</button>` : ''}
+      <div id="deckNoteWrap" style="width:100%;max-width:420px;margin-top:10px;display:none;">
+        <textarea id="deckNoteField" placeholder="نکته‌ای برای یادآوری بنویس...">${escapeHtml(w.note||'')}</textarea>
+      </div>
+    </div>
+    <div class="browse-bottom">
+      <div class="browse-tools-row">
+        <button class="btn btn-secondary btn-small" id="deckToolsBtn">🔗 دیکشنری و ابزارها</button>
+        <button class="btn btn-secondary btn-small" id="deckAskAiBtn">🤖 دستیار هوشمند</button>
+      </div>
+      ${deckRevealed ? `
+      <div class="browse-nav">
+        <button class="btn" style="background:linear-gradient(180deg,var(--rust),var(--rust-dark));color:#fff8ef;flex:1;justify-content:center;" id="deckFailBtn">✗ بلد نبودم</button>
+        <button class="btn btn-primary" id="deckPassBtn">✓ بلد بودم</button>
+      </div>` : ''}
+      <div class="browse-nav">
+        <button class="btn btn-secondary" id="deckNextBtn" ${deckIndex>=deck.length-1?'disabled':''}>بعدی ▶</button>
+        <button class="btn btn-secondary" id="deckPrevBtn" ${deckIndex===0?'disabled':''}>◀ قبلی</button>
+      </div>
+    </div>
+  `;
+
+  deckEl.querySelector('#deckCloseBtn').onclick = closeDeck;
+  const revealBtn = deckEl.querySelector('#deckRevealBtn');
+  if(revealBtn) revealBtn.onclick = ()=>{ deckRevealed=true; renderDeckCard(); };
+
+  const noteToggle = deckEl.querySelector('#deckNoteToggle');
+  if(noteToggle){
+    noteToggle.onclick = ()=>{
+      const wrap = deckEl.querySelector('#deckNoteWrap');
+      wrap.style.display = wrap.style.display==='none' ? 'block' : 'none';
+    };
+  }
+  const noteField = deckEl.querySelector('#deckNoteField');
+  if(noteField){
+    noteField.onblur = async ()=>{
+      w.note = noteField.value.trim();
+      await saveWords();
+    };
+  }
+  deckEl.querySelector('#deckAskAiBtn').onclick = ()=> openAiPanel(w);
+  deckEl.querySelector('#deckToolsBtn').onclick = ()=> openBrowseToolsPanel(w);
+  deckEl.querySelector('#deckPrevBtn').onclick = ()=> deckGo(-1);
+  deckEl.querySelector('#deckNextBtn').onclick = ()=> deckGo(1);
+  const passBtn = deckEl.querySelector('#deckPassBtn');
+  const failBtn = deckEl.querySelector('#deckFailBtn');
+  if(passBtn) passBtn.onclick = ()=> deckGrade(true);
+  if(failBtn) failBtn.onclick = ()=> deckGrade(false);
+}
+
+function openBrowseToolsPanel(w){
+  const enQ = encodeURIComponent(w.en);
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <h2>دیکشنری و ابزارها · <span class="en">${escapeHtml(w.en)}</span></h2>
+        <button class="close-x">✕</button>
+      </div>
+      <div class="linkrow">
+        <a class="link-btn" target="_blank" href="https://www.ldoceonline.com/dictionary/${enQ}"><span class="dot" style="background:#c0392b"></span>Longman</a>
+        <a class="link-btn" target="_blank" href="https://www.oxfordlearnersdictionaries.com/definition/english/${enQ}"><span class="dot" style="background:#2b579a"></span>Oxford</a>
+        <a class="link-btn" target="_blank" href="https://www.collinsdictionary.com/dictionary/english/${enQ}"><span class="dot" style="background:#e08e00"></span>Collins</a>
+        <a class="link-btn" target="_blank" href="https://www.google.com/search?q=${enQ}"><span class="dot" style="background:#4285f4"></span>جستجوی گوگل</a>
+        <a class="link-btn" target="_blank" rel="noopener noreferrer" href="https://translate.google.com/m/translate?sl=en&tl=fa&q=${enQ}"><span class="dot" style="background:#34a853"></span>گوگل ترنسلیت</a>
+        <a class="link-btn" target="_blank" rel="noopener noreferrer" href="https://chatgpt.com/?q=${encodeURIComponent('معنی، تلفظ و یک مثال کوتاه برای کلمه انگلیسی «'+w.en+'» را به فارسی توضیح بده.')}"><span class="dot" style="background:#10a37f"></span>پرسیدن در ChatGPT</a>
+        <a class="link-btn" target="_blank" rel="noopener noreferrer" href="https://claude.ai/new?q=${encodeURIComponent('معنی، تلفظ و یک مثال کوتاه برای کلمه انگلیسی «'+w.en+'» را به فارسی توضیح بده.')}"><span class="dot" style="background:#c15f3c"></span>پرسیدن در Claude</a>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
 }
 
 /* ---------- AI settings panel ---------- */
@@ -588,14 +1054,12 @@ function openSettingsPanel(){
       <div class="ai-note">
         از این برنامه خارج از Claude استفاده می‌کنید، پس دستیار به یک منبع پاسخ نیاز دارد. دو گزینه رایگان اضافه شده:<br>
         • <b>مدل محلی (کاملاً رایگان)</b>: یک مدل کوچک هوش مصنوعی مستقیماً داخل همین مرورگر شما اجرا می‌شود؛ به هیچ سروری وصل نمی‌شود، پس هیچ محدودیت جغرافیایی ندارد. اما دفعه اول باید حدود ۳۰۰ تا ۵۰۰ مگابایت دانلود کند، روی گوشی‌های ضعیف‌تر کند است، و کیفیت پاسخ به فارسی معمولاً پایین‌تر از سرویس‌های بزرگ است.<br>
-        • <b>Google Gemini (رایگان با سهمیه روزانه)</b>: نیاز به یک کلید رایگان از aistudio.google.com دارد. مشخص نیست ساخت حساب گوگل و این سرویس از ایران بدون فیلترشکن ممکن باشد یا نه — باید خودتان امتحان کنید.
+        • <b>Google Gemini (رایگان با سهمیه روزانه)</b>: نیاز به یک کلید رایگان از aistudio.google.com دارد. برای شما تست‌شده و کار می‌کند.
       </div>
       <label>سرویس هوش مصنوعی</label>
       <select id="s-provider" style="width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);font-family:inherit;background:#fffef9;">
         <option value="local" ${s.provider==='local'?'selected':''}>مدل محلی — رایگان، اجرا در مرورگر</option>
         <option value="google" ${s.provider==='google'?'selected':''}>Google Gemini — رایگان با سهمیه روزانه</option>
-        <option value="openai" ${s.provider==='openai'?'selected':''}>OpenAI (ChatGPT — پولی)</option>
-        <option value="anthropic" ${s.provider==='anthropic'?'selected':''}>Anthropic (Claude — پولی)</option>
       </select>
       <div id="s-keyWrap">
         <label>کلید API</label>
@@ -707,26 +1171,9 @@ function openAiPanel(word){
     return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || 'پاسخی دریافت نشد.';
   }
 
-  async function callAnthropic(key){
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key': key,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body: JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:1000,
-        system: systemPrompt,
-        messages: [...history]
-      })
-    });
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const data = await res.json();
-    return (data.content||[]).map(b=>b.text||'').join('\n').trim() || 'پاسخی دریافت نشد.';
-  }
+  
+
+  
 
   async function callGemini(key){
     const contents = history.map(h=>({ role: h.role==='assistant'?'model':'user', parts:[{text:h.content}] }));
@@ -785,8 +1232,7 @@ function openAiPanel(word){
       let text;
       if(settings.provider==='local') text = await callLocal(loadingId);
       else if(settings.provider==='google') text = await callGemini(settings.key);
-      else if(settings.provider==='openai') text = await callOpenAI(settings.key);
-      else text = await callAnthropic(settings.key);
+      else text = await callOpenAI(settings.key);
       document.getElementById(loadingId).outerHTML = `<div class="ai-msg">${escapeHtml(text)}</div>`;
       history.push({role:'assistant', content:text});
     }catch(e){
@@ -810,7 +1256,9 @@ function openAiPanel(word){
 $('#startReviewBtn').onclick = ()=> startReview();
 $('#addWordBtn').onclick = ()=> openAddForm();
 $('#listBtn').onclick = ()=> renderList();
+$('#browseBtn').onclick = ()=> startBrowse();
 $('#settingsBtn').onclick = ()=> openSettingsPanel();
+$('#githubSyncBtn').onclick = ()=> openGithubSyncPanel();
 
 /* ---------- Init ---------- */
 (async function init(){
