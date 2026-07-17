@@ -258,6 +258,22 @@
   .list-item .li-check{ width:14px; height:14px; pointer-events:none; }
   .li-actions{ display:flex; }
   .icon-btn{ background:transparent; border:none; box-shadow:none; font-size:12px; padding:2px 4px; color:var(--ink-soft); }
+
+  .help-toggle{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:18px; height:18px; border-radius:50%; border:1px solid var(--line);
+    background:#fffef9; color:var(--ink-soft); font-size:11px; font-weight:700;
+    vertical-align:middle; margin:0 6px; cursor:pointer; padding:0; box-shadow:none;
+  }
+  .help-toggle:active{ background:var(--parchment-dark); }
+
+  /* ===== Compact tool reorder list (Settings > دیکشنری و ابزارها) ===== */
+  .tool-row{ display:flex; align-items:center; justify-content:space-between; padding:5px 2px; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .tool-row:last-child{ border-bottom:none; }
+  .tool-row .tool-row-label{ display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tool-row .tool-row-actions{ display:flex; gap:0; flex-shrink:0; }
+  .tool-row .icon-btn{ padding:3px 6px; font-size:12px; line-height:1; }
+  .tool-row .icon-btn:disabled{ opacity:.3; }
   .search-input{ margin-bottom:10px; }
   .list-hint{ font-size:12px; color:var(--ink-soft); margin:0 0 14px; line-height:1.6; }
 
@@ -687,11 +703,10 @@ function renderHome(){
     return;
   }
   due.sort((a,b)=> new Date(a.nextReview) - new Date(b.nextReview));
-  const shown = due.slice(0, 8);
+  const shown = due.slice(0, 24);
   const rest = due.length - shown.length;
   mainEl.innerHTML = `
     <div class="card">
-      <div class="sub" style="margin-bottom:12px;">${due.length} کلمه برای مرور امروز آماده است</div>
       <div id="homeDueList" style="display:flex; flex-wrap:wrap; gap:7px; justify-content:center;">
         ${shown.map(w=>`<span class="list-item" data-id="${w.id}"><span class="li-word">${escapeHtml(w.en)}</span></span>`).join('')}
         ${rest>0 ? `<span class="list-item" style="cursor:default;">+ ${rest} مورد دیگر</span>` : ''}
@@ -1533,16 +1548,16 @@ function openSettingsPage(){
       </div>
 
       <div class="settings-section">
-        <h3>🔗 دیکشنری و ابزارها</h3>
-        <div class="ai-note">
-          ترتیب نمایش دیکشنری‌ها و دستیارهای هوش مصنوعی در پنجره‌ی «دیکشنری و ابزارها» رو با دکمه‌های ▲ ▼ تغییر بده. با دکمه‌ی «حذف» هرکدوم رو موقتاً از آن پنجره بردار؛ هر وقت خواستی از همین‌جا برش گردون.
+        <h3>🔗 دیکشنری و ابزارها <button type="button" class="help-toggle" data-help="help-tools">؟</button></h3>
+        <div class="ai-note" id="help-tools" style="display:none;">
+          ترتیب‌شون رو با ▲▼ عوض کن؛ با ✕ موقتاً حذفشون کن.
         </div>
         <div id="toolsSettingsList"></div>
       </div>
 
       <div class="settings-section">
-        <h3>🤖 دستیار هوش مصنوعی</h3>
-        <div class="ai-note">
+        <h3>🤖 دستیار هوش مصنوعی <button type="button" class="help-toggle" data-help="help-ai">؟</button></h3>
+        <div class="ai-note" id="help-ai" style="display:none;">
           دستیار از <b>Google Gemini</b> استفاده می‌کند (رایگان با سهمیه روزانه). یک کلید رایگان از aistudio.google.com بگیر و اینجا وارد کن.
         </div>
         <label>کلید API</label>
@@ -1554,8 +1569,8 @@ function openSettingsPage(){
       </div>
 
       <div class="settings-section">
-        <h3>☁ همگام‌سازی با گیت‌هاب</h3>
-        <div class="ai-note">
+        <h3>☁ همگام‌سازی با گیت‌هاب <button type="button" class="help-toggle" data-help="help-github">؟</button></h3>
+        <div class="ai-note" id="help-github" style="display:none;">
           با این کار، لغت‌هایت به‌جای فقط ماندن روی این مرورگر، توی یک فایل داخل مخزن گیت‌هاب خودت ذخیره می‌شوند — پس از هر دستگاه/مرورگری که این تنظیمات را وارد کنی، همان لغت‌ها را می‌بینی.<br><br>
           <b>ساخت توکن:</b> برو به github.com → روی عکس پروفایلت → Settings → پایین صفحه Developer settings → Personal access tokens → Fine-grained tokens → Generate new token. دسترسی (Permissions) این مخزن را روی «Contents: Read and write» بگذار.
         </div>
@@ -1579,6 +1594,13 @@ function openSettingsPage(){
   const sp = sel => settingsPageEl.querySelector(sel);
   sp('#settingsCloseBtn').onclick = closeSettingsPage;
 
+  settingsPageEl.querySelectorAll('.help-toggle').forEach(btn=>{
+    btn.onclick = ()=>{
+      const note = sp('#'+btn.dataset.help);
+      if(note) note.style.display = note.style.display==='none' ? 'block' : 'none';
+    };
+  });
+
   function renderToolsList(){
     const ts = loadToolsSettings();
     const listEl = sp('#toolsSettingsList');
@@ -1588,12 +1610,12 @@ function openSettingsPage(){
       if(!t) return '';
       const isOff = ts.disabled.includes(id);
       return `
-        <div class="list-item" style="display:flex; width:100%; box-sizing:border-box; justify-content:space-between; align-items:center; border-radius:12px; margin-bottom:6px; cursor:default; ${isOff?'opacity:.45;':''}">
-          <span><span class="dot" style="background:${t.color}; display:inline-block; margin-left:8px;"></span>${t.label}</span>
-          <span style="display:flex; gap:4px; flex-shrink:0;">
-            <button class="icon-btn" data-act="up" data-id="${id}" ${idx===0?'disabled':''}>▲</button>
-            <button class="icon-btn" data-act="down" data-id="${id}" ${idx===ts.order.length-1?'disabled':''}>▼</button>
-            <button class="icon-btn" data-act="toggle" data-id="${id}">${isOff?'برگردوندن':'حذف'}</button>
+        <div class="tool-row" style="${isOff?'opacity:.45;':''}">
+          <span class="tool-row-label"><span class="dot" style="background:${t.color}; flex-shrink:0;"></span>${t.label}</span>
+          <span class="tool-row-actions">
+            <button class="icon-btn" data-act="up" data-id="${id}" ${idx===0?'disabled':''} title="بالا">▲</button>
+            <button class="icon-btn" data-act="down" data-id="${id}" ${idx===ts.order.length-1?'disabled':''} title="پایین">▼</button>
+            <button class="icon-btn" data-act="toggle" data-id="${id}" title="${isOff?'برگردوندن':'حذف'}">${isOff?'↺':'✕'}</button>
           </span>
         </div>`;
     }).join('');
