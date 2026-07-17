@@ -269,8 +269,18 @@
   .lang-btn.active{ background:linear-gradient(180deg, var(--sage), var(--sage-dark)); color:#fdfaf0; border-color:var(--sage-dark); }
 
   /* ===== AI assistant ===== */
-  .ai-msg{ background:var(--parchment-dark); border-radius:12px; padding:12px 14px; font-size:13.5px; line-height:1.9; margin-bottom:10px; white-space:pre-wrap;}
+  .ai-msg{ background:var(--parchment-dark); border-radius:12px; padding:12px 14px; font-size:13.5px; line-height:1.9; margin-bottom:10px; }
+  .ai-msg div{ margin:2px 0; }
+  .ai-msg ul{ margin:4px 0 4px 0; padding-inline-start:20px; }
+  .ai-msg li{ margin:2px 0; }
+  .ai-msg code{ background:rgba(34,48,63,.08); padding:1px 6px; border-radius:5px; font-family:'Lora',monospace; font-size:12.5px; direction:ltr; display:inline-block; }
   .ai-msg.user{ background:#e4ecdf; }
+  .ai-suggestions{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
+  .suggestion-chip{
+    font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px;
+    border:1px solid var(--line); background:#fffef9; color:var(--brass-dark); cursor:pointer;
+  }
+  .suggestion-chip:active{ background:var(--parchment-dark); }
   .ai-note{
     font-size:12px; color:var(--ink-soft); background:#f5e9cb; border-radius:10px; padding:10px 12px; margin-bottom:14px; line-height:1.9;
   }
@@ -1102,6 +1112,36 @@ function escapeHtml(s){
   return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+/* Turns a small, safe subset of markdown (the kind AI assistants naturally write —
+   **bold**, *italic*, `code`, "- " bullet lists, line breaks) into real HTML.
+   The input is escaped first, so only the <b>/<i>/<code>/<ul>/<li>/<div>/<br> tags
+   this function itself adds ever reach innerHTML — nothing from the AI's text can
+   inject markup. */
+function inlineMarkdownLite(s){
+  s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  s = s.replace(/__(.+?)__/g, '<b>$1</b>');
+  s = s.replace(/`([^`]+?)`/g, '<code>$1</code>');
+  s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<i>$2</i>');
+  return s;
+}
+function renderMarkdownLite(raw){
+  const escaped = escapeHtml(raw||'');
+  const lines = escaped.split('\n');
+  let html = '', inList = false;
+  for(const line of lines){
+    const bulletMatch = line.match(/^\s*[-*]\s+(.+)/);
+    if(bulletMatch){
+      if(!inList){ html += '<ul>'; inList = true; }
+      html += `<li>${inlineMarkdownLite(bulletMatch[1])}</li>`;
+    } else {
+      if(inList){ html += '</ul>'; inList = false; }
+      html += line.trim()==='' ? '<br>' : `<div>${inlineMarkdownLite(line)}</div>`;
+    }
+  }
+  if(inList) html += '</ul>';
+  return html;
+}
+
 /* ---------- Unified card view ---------- */
 /* Both "today's review" and "free browse" use the exact same fullscreen card UI
    and the exact same logic. The only difference is which words are in the deck
@@ -1680,7 +1720,13 @@ function openAiPanel(word){
   const thread = overlay.querySelector('#aiThread');
   const history = [];
   const meaningNote = word.fa ? ` (معنی: ${word.fa})` : '';
-  const systemPrompt = `تو یک دستیار آموزش زبان انگلیسی هستی. کاربر ایرانی است و در حال یادگیری کلمه انگلیسی "${word.en}"${meaningNote} است. کاربر ممکن است سوالش را به فارسی یا انگلیسی بپرسد؛ پاسخ را دقیقاً به همان زبانی بده که سوال پرسیده شده، کوتاه، روشن و کاربردی. در صورت نیاز مثال انگلیسی با ترجمه فارسی بیاور.`;
+  const masteredCount = words.filter(x=>x.box===6).length;
+  const activityNote = `کاربر در مجموع ${words.length} کلمه در برنامه دارد که ${masteredCount} تای آن‌ها را کاملاً مسلط شده (بایگانی کرده). این کلمه («${word.en}») در حال حاضر در جعبه ${word.box===6?'مسلط‌شدگان':word.box+' از ۵'} است، یعنی ${word.box>=4?'کاربر آن را نسبتاً خوب بلد است':'کاربر هنوز در حال یادگیری اولیه این کلمه است'}.`;
+  const systemPrompt = `تو یک دستیار آموزش زبان انگلیسی هستی. کاربر ایرانی است و در حال یادگیری کلمه انگلیسی "${word.en}"${meaningNote} است. کاربر ممکن است سوالش را به فارسی یا انگلیسی بپرسد؛ پاسخ را دقیقاً به همان زبانی بده که سوال پرسیده شده، کوتاه، روشن و کاربردی. در صورت نیاز مثال انگلیسی با ترجمه فارسی بیاور. برای تاکید روی نکات مهم می‌توانی از **پررنگ** و برای فهرست کردن نکات از خط تیره («- ») در ابتدای هر خط استفاده کنی؛ از تیتر یا مارک‌داون پیچیده‌تر استفاده نکن.
+${activityNote}
+پاسخ را همیشه و فقط به‌صورت یک شیء JSON خام (بدون \`\`\`json و بدون هیچ متن اضافه بیرون از آن) با دقیقاً این دو کلید برگردان:
+{"answer": "پاسخ اصلی به همان زبان سوال کاربر", "suggestions": ["سوال پیشنهادی کوتاه بعدی ۱", "سوال پیشنهادی کوتاه بعدی ۲", "سوال پیشنهادی کوتاه بعدی ۳"]}
+مقدار "suggestions" باید ۲ تا ۳ سوال کوتاه (حداکثر ۸-۱۰ کلمه)، به همان زبان سوال کاربر، متناسب با همین کلمه و با در نظر گرفتن سوال قبلی و وضعیت یادگیری کاربر باشد — نه سوالات کلی و تکراری.`;
 
   async function callGemini(key){
     const contents = history.map(h=>({ role: h.role==='assistant'?'model':'user', parts:[{text:h.content}] }));
@@ -1690,6 +1736,7 @@ function openAiPanel(word){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         system_instruction: {parts:[{text: systemPrompt}]},
+        generationConfig: { response_mime_type: 'application/json' },
         contents
       })
     });
@@ -1710,15 +1757,32 @@ function openAiPanel(word){
     if(!userText) return;
     input.value='';
     history.push({role:'user', content:userText});
-    thread.innerHTML += `<div class="ai-msg user">${escapeHtml(userText)}</div>`;
+    thread.innerHTML += `<div class="ai-msg user">${renderMarkdownLite(userText)}</div>`;
     const loadingId = 'ld_'+Date.now();
     thread.innerHTML += `<div class="ai-msg" id="${loadingId}"><span class="spinner"></span> در حال فکر کردن...</div>`;
     thread.scrollTop = thread.scrollHeight;
 
     try{
-      const text = await callGemini(settings.key);
-      document.getElementById(loadingId).outerHTML = `<div class="ai-msg">${escapeHtml(text)}</div>`;
-      history.push({role:'assistant', content:text});
+      const raw = await callGemini(settings.key);
+      let answerText = raw, suggestions = [];
+      const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+      try{
+        const obj = JSON.parse(cleaned);
+        if(obj && typeof obj.answer === 'string'){
+          answerText = obj.answer;
+          if(Array.isArray(obj.suggestions)) suggestions = obj.suggestions.filter(s=>typeof s==='string' && s.trim()).slice(0,3);
+        }
+      }catch(e){ /* model didn't return valid JSON — just show the raw text, no suggestions */ }
+
+      const suggestionsHtml = suggestions.length ? `
+        <div class="ai-suggestions">
+          ${suggestions.map(s=>`<button class="suggestion-chip" data-suggest="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}
+        </div>` : '';
+      document.getElementById(loadingId).outerHTML = `<div class="ai-msg">${renderMarkdownLite(answerText)}${suggestionsHtml}</div>`;
+      thread.querySelectorAll('[data-suggest]').forEach(btn=>{
+        btn.onclick = ()=> ask(btn.dataset.suggest);
+      });
+      history.push({role:'assistant', content:answerText});
     }catch(e){
       const msg = `درخواست ناموفق بود (${escapeHtml(e.message||'')}). محتمل‌ترین دلیل: نبود دسترسی به این سرویس از ایران بدون فیلترشکن، یا نامعتبر بودن کلید API.`;
       document.getElementById(loadingId).outerHTML = `<div class="ai-msg">${msg}</div>`;
