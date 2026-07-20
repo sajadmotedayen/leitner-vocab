@@ -1013,6 +1013,13 @@ let episodeSourceIsSrt = false; // true when the current results came from a rea
 let episodeSuggestions = []; // [{en, fa, example, definition?}]
 let episodeSelected = new Set(); // indices into episodeSuggestions
 
+// Full candidate-word pool extracted from the last uploaded .srt file, kept around so the
+// "کلمات بیشتر" (more words) button can ask the AI to pick from the leftovers without
+// re-reading the file or re-suggesting words already shown.
+let srtCandidatesPool = [];
+let episodeMoreLoading = false;
+let episodeMoreError = null;
+
 // Common English function words to filter out of subtitle text — what's left is mostly
 // content words worth learning.
 const SRT_STOPWORDS = new Set(['a','an','the','and','or','but','if','then','than','so','because','as','of','at','by','for','with','about','against','between','into','through','during','before','after','above','below','to','from','up','down','in','out','on','off','over','under','again','further','once','here','there','when','where','why','how','all','any','both','each','few','more','most','other','some','such','no','nor','not','only','own','same','too','very','s','t','can','will','just','don','should','now','ll','re','ve','d','m',
@@ -1120,9 +1127,11 @@ async function runSrtAnalysis(){
   const settings = loadAiSettings();
   episodeLoading = true;
   episodeError = null;
+  episodeMoreError = null;
   episodeSuggestions = [];
   episodeSelected = new Set();
   episodeSourceIsSrt = true;
+  srtCandidatesPool = [];
   renderEpisodeResults();
   try{
     const text = await file.text();
@@ -1130,7 +1139,9 @@ async function runSrtAnalysis(){
     if(lines.length===0) throw new Error('متنی از این فایل استخراج نشد؛ مطمئن شو فایل srt معتبر است.');
     const knownWords = words.map(w=>w.en).filter(Boolean);
     const knownLower = new Set(knownWords.map(w=>w.trim().toLowerCase()));
-    const candidates = extractSrtVocabulary(lines, knownLower).slice(0, 150);
+    const allCandidates = extractSrtVocabulary(lines, knownLower);
+    srtCandidatesPool = allCandidates; // keep the full pool around for the "more words" button
+    const candidates = allCandidates.slice(0, 150);
     if(candidates.length===0) throw new Error('کلمه‌ی جدیدی (که قبلاً بلد نباشی) در این زیرنویس پیدا نشد.');
     const picked = await fetchSrtWordSelection(settings.key, candidates, knownWords);
     const byWord = {};
@@ -1148,6 +1159,47 @@ async function runSrtAnalysis(){
   }
 }
 
+/* Called by the "کلمات بیشتر" button after an .srt analysis: picks another round of
+   words from whatever candidates are left in the pool (i.e. excluding words already shown),
+   and appends them to the existing list instead of replacing it. Can be clicked repeatedly
+   until the candidate pool runs out. */
+async function loadMoreSrtWords(){
+  if(episodeMoreLoading || srtCandidatesPool.length===0) return;
+  const settings = loadAiSettings();
+  episodeMoreLoading = true;
+  episodeMoreError = null;
+  renderEpisodeResults();
+  try{
+    const shownLower = new Set(episodeSuggestions.map(w=>w.en.trim().toLowerCase()));
+    const remaining = srtCandidatesPool.filter(c=>!shownLower.has(c.en));
+    if(remaining.length===0){
+      episodeMoreError = 'کلمه‌ی جدید دیگری در این زیرنویس باقی نمانده.';
+      return;
+    }
+    const knownWords = words.map(w=>w.en).filter(Boolean).concat([...shownLower]);
+    const batch = remaining.slice(0, 150);
+    const picked = await fetchSrtWordSelection(settings.key, batch, knownWords);
+    const byWord = {};
+    batch.forEach(c=>{ byWord[c.en] = c; });
+    const newOnes = picked
+      .map(p=>{
+        const c = byWord[p.en.trim().toLowerCase()];
+        return { en: p.en, fa: p.fa, definition: p.definition, example: c ? c.example : '' };
+      })
+      .filter(w=>w.en && w.fa && !shownLower.has(w.en.trim().toLowerCase()));
+    if(newOnes.length===0){
+      episodeMoreError = 'کلمه‌ی جدید مناسبی پیدا نشد؛ می‌توانی دوباره امتحان کنی.';
+    }else{
+      episodeSuggestions = episodeSuggestions.concat(newOnes);
+    }
+  }catch(e){
+    episodeMoreError = 'دریافت کلمات بیشتر ناموفق بود (' + (e && e.message ? e.message : e) + ').';
+  }finally{
+    episodeMoreLoading = false;
+    renderEpisodeResults();
+  }
+}
+
 function closeEpisodePage(){
   if(episodePageEl){ episodePageEl.remove(); episodePageEl = null; }
 }
@@ -1161,6 +1213,9 @@ function openEpisodePage(){
   episodeSelected = new Set();
   episodeMayNotKnow = false;
   episodeSourceIsSrt = false;
+  srtCandidatesPool = [];
+  episodeMoreLoading = false;
+  episodeMoreError = null;
   renderEpisodePage();
 }
 
@@ -1230,6 +1285,8 @@ async function runEpisodeSearch(){
   episodeSuggestions = [];
   episodeSelected = new Set();
   episodeSourceIsSrt = false;
+  srtCandidatesPool = [];
+  episodeMoreError = null;
   renderEpisodeResults();
   try{
     const knownWords = words.map(w=>w.en).filter(Boolean);
@@ -1280,6 +1337,13 @@ function renderEpisodeResults(){
           ${w.example ? `<div class="ep-ex">${escapeHtml(w.example)}</div>` : ''}
         </div>
       </div>`).join('')}
+    ${episodeSourceIsSrt ? `
+      ${episodeMoreError ? `<div class="ai-note" style="margin-top:10px;">${escapeHtml(episodeMoreError)}</div>` : ''}
+      <div class="actions" style="margin-top:14px;">
+        <button class="btn btn-secondary" id="epMoreBtn" ${episodeMoreLoading?'disabled':''}>
+          ${episodeMoreLoading ? '<span class="spinner"></span> در حال دریافت کلمات بیشتر...' : '➕ کلمات بیشتر'}
+        </button>
+      </div>` : ''}
   `;
 
   const updateBanner = ()=>{
@@ -1297,6 +1361,9 @@ function renderEpisodeResults(){
       renderEpisodeResults();
     };
   });
+
+  const moreBtn = box.querySelector('#epMoreBtn');
+  if(moreBtn) moreBtn.onclick = loadMoreSrtWords;
 
   const addBtn = box.querySelector('#epAddBtn');
   if(addBtn){
