@@ -383,6 +383,15 @@
   .ep-word-card .ep-fa{ font-weight:700; margin:2px 0 4px; }
   .ep-word-card .ep-ex{ font-size:12.5px; color:var(--ink-soft); direction:ltr; text-align:left; }
   .ep-word-card .ep-def{ font-size:12px; color:var(--ink-soft); direction:ltr; text-align:left; margin-bottom:4px; }
+  .ep-show-all-btn{ direction:rtl; }
+  .ep-all-examples{
+    margin-top:8px; padding-top:8px; border-top:1px dashed var(--line);
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .ep-ex-item{
+    font-size:12.5px; color:var(--ink-soft); direction:ltr; text-align:left;
+    background:var(--bg,#f7f5f0); border-radius:8px; padding:6px 8px;
+  }
   .ep-divider{ text-align:center; color:var(--ink-soft); font-size:12px; margin:18px 0; }
   input[type=file]{ width:100%; }
 
@@ -1010,8 +1019,9 @@ let episodeLoading = false;
 let episodeError = null;
 let episodeMayNotKnow = false;
 let episodeSourceIsSrt = false; // true when the current results came from a real uploaded .srt, not a guess
-let episodeSuggestions = []; // [{en, fa, example, definition?}]
+let episodeSuggestions = []; // [{en, fa, example, definition?, allExamples?}]
 let episodeSelected = new Set(); // indices into episodeSuggestions
+let episodeExpandedExamples = new Set(); // indices into episodeSuggestions whose full sentence list is shown
 
 // Full candidate-word pool extracted from the last uploaded .srt file, kept around so the
 // "کلمات بیشتر" (more words) button can ask the AI to pick from the leftovers without
@@ -1075,9 +1085,10 @@ function parseSrtLines(text){
    the first real line each word appeared in, to use as an authentic example sentence later. */
 function extractSrtVocabulary(lines, knownLowerSet){
   const freq = {};
-  const examples = {};
+  const examples = {}; // word -> array of distinct subtitle lines it appeared in (capped)
   const midCap = new Set();
   const anyLower = new Set();
+  const MAX_EXAMPLES_PER_WORD = 30;
   lines.forEach(line=>{
     const matches = [...line.matchAll(/[A-Za-z']+/g)];
     matches.forEach((m, i)=>{
@@ -1090,13 +1101,17 @@ function extractSrtVocabulary(lines, knownLowerSet){
       if(isCap && i>0) midCap.add(lower);
       if(!isCap) anyLower.add(lower);
       freq[lower] = (freq[lower]||0) + 1;
-      if(!examples[lower]) examples[lower] = line;
+      if(!examples[lower]) examples[lower] = [];
+      const list = examples[lower];
+      if(list.length < MAX_EXAMPLES_PER_WORD && list[list.length-1] !== line){
+        list.push(line);
+      }
     });
   });
   return Object.keys(freq)
     .filter(w => !(midCap.has(w) && !anyLower.has(w)))
     .sort((a,b)=> freq[b]-freq[a])
-    .map(w => ({ en:w, count:freq[w], example:examples[w] }));
+    .map(w => ({ en:w, count:freq[w], example:examples[w][0], allExamples:examples[w] }));
 }
 
 /* Given real candidate words pulled from the subtitle file (with how often each occurs),
@@ -1130,6 +1145,7 @@ async function runSrtAnalysis(){
   episodeMoreError = null;
   episodeSuggestions = [];
   episodeSelected = new Set();
+  episodeExpandedExamples = new Set();
   episodeSourceIsSrt = true;
   srtCandidatesPool = [];
   renderEpisodeResults();
@@ -1148,7 +1164,7 @@ async function runSrtAnalysis(){
     candidates.forEach(c=>{ byWord[c.en] = c; });
     episodeSuggestions = picked.map(p=>{
       const c = byWord[p.en.trim().toLowerCase()];
-      return { en: p.en, fa: p.fa, definition: p.definition, example: c ? c.example : '' };
+      return { en: p.en, fa: p.fa, definition: p.definition, example: c ? c.example : '', allExamples: c ? c.allExamples : [] };
     }).filter(w=>w.en && w.fa);
     if(episodeSuggestions.length===0) episodeError = 'از تحلیل این زیرنویس پیشنهادی به‌دست نیامد.';
   }catch(e){
@@ -1184,7 +1200,7 @@ async function loadMoreSrtWords(){
     const newOnes = picked
       .map(p=>{
         const c = byWord[p.en.trim().toLowerCase()];
-        return { en: p.en, fa: p.fa, definition: p.definition, example: c ? c.example : '' };
+        return { en: p.en, fa: p.fa, definition: p.definition, example: c ? c.example : '', allExamples: c ? c.allExamples : [] };
       })
       .filter(w=>w.en && w.fa && !shownLower.has(w.en.trim().toLowerCase()));
     if(newOnes.length===0){
@@ -1211,6 +1227,7 @@ function openEpisodePage(){
   episodeError = null;
   episodeSuggestions = [];
   episodeSelected = new Set();
+  episodeExpandedExamples = new Set();
   episodeMayNotKnow = false;
   episodeSourceIsSrt = false;
   srtCandidatesPool = [];
@@ -1284,6 +1301,7 @@ async function runEpisodeSearch(){
   episodeError = null;
   episodeSuggestions = [];
   episodeSelected = new Set();
+  episodeExpandedExamples = new Set();
   episodeSourceIsSrt = false;
   srtCandidatesPool = [];
   episodeMoreError = null;
@@ -1327,7 +1345,10 @@ function renderEpisodeResults(){
       <span id="epSelCount"></span>
       <button class="btn btn-primary btn-small" id="epAddBtn">➕ افزودن به فهرست لغات</button>
     </div>
-    ${episodeSuggestions.map((w,i)=>`
+    ${episodeSuggestions.map((w,i)=>{
+      const hasMore = episodeSourceIsSrt && Array.isArray(w.allExamples) && w.allExamples.length>1;
+      const expanded = episodeExpandedExamples.has(i);
+      return `
       <div class="ep-word-card ${episodeSelected.has(i)?'selected':''}" data-idx="${i}">
         <input type="checkbox" ${episodeSelected.has(i)?'checked':''}>
         <div style="flex:1;">
@@ -1335,8 +1356,18 @@ function renderEpisodeResults(){
           <div class="ep-fa">${escapeHtml(w.fa)}</div>
           ${w.definition ? `<div class="ep-def">${escapeHtml(w.definition)}</div>` : ''}
           ${w.example ? `<div class="ep-ex">${escapeHtml(w.example)}</div>` : ''}
+          ${hasMore ? `
+            <button class="btn btn-secondary btn-small ep-show-all-btn" data-idx="${i}" style="margin-top:6px;">
+              ${expanded ? '▲ بستن جمله‌ها' : `💬 دیدن همه‌ی جمله‌های این کلمه (${w.allExamples.length})`}
+            </button>
+            ${expanded ? `
+              <div class="ep-all-examples">
+                ${w.allExamples.map(ex=>`<div class="ep-ex-item">${escapeHtml(ex)}</div>`).join('')}
+              </div>` : ''}
+          ` : ''}
         </div>
-      </div>`).join('')}
+      </div>`;
+    }).join('')}
     ${episodeSourceIsSrt ? `
       ${episodeMoreError ? `<div class="ai-note" style="margin-top:10px;">${escapeHtml(episodeMoreError)}</div>` : ''}
       <div class="actions" style="margin-top:14px;">
@@ -1358,6 +1389,15 @@ function renderEpisodeResults(){
     card.onclick = ()=>{
       const idx = +card.dataset.idx;
       if(episodeSelected.has(idx)) episodeSelected.delete(idx); else episodeSelected.add(idx);
+      renderEpisodeResults();
+    };
+  });
+
+  box.querySelectorAll('.ep-show-all-btn').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const idx = +btn.dataset.idx;
+      if(episodeExpandedExamples.has(idx)) episodeExpandedExamples.delete(idx); else episodeExpandedExamples.add(idx);
       renderEpisodeResults();
     };
   });
