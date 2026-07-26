@@ -17,18 +17,26 @@
   :root{
     --ink:#22303f;
     --ink-soft:#5b6b7a;
+    --ink-faint:#8b98a5;
     --parchment:#f6efe0;
     --parchment-dark:#ecdfc2;
     --panel:#fffaf0;
     --brass:#ab8446;
     --brass-dark:#8a6a35;
+    --brass-tint:#f5e9cb;
     --sage:#66845f;
     --sage-dark:#4f6b49;
+    --sage-tint:#eef3ea;
     --rust:#b3564f;
     --rust-dark:#953f39;
     --line:#d8c9a3;
+    --line-soft:#e6d9b8;
+    --shadow-sm: 0 2px 8px rgba(34,48,63,.08);
     --shadow: 0 8px 24px rgba(34,48,63,.12);
+    --shadow-lg: 0 16px 40px rgba(34,48,63,.16);
+    --radius-sm: 10px;
     --radius: 14px;
+    --radius-lg: 20px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -38,6 +46,9 @@
     font-family:'Vazirmatn', sans-serif;
     min-height:100vh;
     padding-bottom:60px;
+    -webkit-tap-highlight-color:transparent;
+    text-rendering:optimizeLegibility;
+    -webkit-font-smoothing:antialiased;
   }
   .en{ font-family:'Lora', serif; }
   a{color:inherit;}
@@ -45,115 +56,136 @@
 
   /* ===== Header ===== */
   header{
-    padding:28px 20px 18px;
+    padding:26px 20px 20px;
     text-align:center;
     position:relative;
   }
   header .eyebrow{
-    font-size:12px;
-    letter-spacing:.12em;
+    font-size:11px;
+    letter-spacing:.16em;
     color:var(--brass-dark);
-    font-weight:600;
+    font-weight:700;
     text-transform:uppercase;
   }
   header h1{
-    margin:6px 0 4px;
-    font-size:30px;
+    margin:8px 0 5px;
+    font-size:27px;
     font-weight:800;
     color:var(--ink);
+    letter-spacing:-.01em;
   }
   header p{
     margin:0;
     color:var(--ink-soft);
-    font-size:14px;
+    font-size:13.5px;
   }
   .settings-icon-btn{
-    position:absolute; top:18px; left:16px;
-    width:38px; height:38px; padding:0; border-radius:50%;
+    position:absolute; top:16px; left:16px;
+    width:40px; height:40px; padding:0; border-radius:50%;
     display:flex; align-items:center; justify-content:center;
-    font-size:17px; background:var(--panel); border:1px solid var(--line); box-shadow:var(--shadow);
+    font-size:17px; background:var(--panel); border:1px solid var(--line); box-shadow:var(--shadow-sm);
     color:var(--ink-soft);
+    transition:transform .12s ease, box-shadow .12s ease, color .12s ease;
   }
+  .settings-icon-btn:active{ transform:scale(.94); box-shadow:none; color:var(--brass-dark); }
 
   .wrap{max-width:920px;margin:0 auto;padding:0 16px;}
 
   /* ===== Word of the day (AI suggestion based on the user's own vocabulary) ===== */
   .wod-card{
     position:relative;
-    background: linear-gradient(160deg, #fffdf6 0%, #f5e9cb 100%);
-    border:1px solid var(--line); border-radius:16px;
+    background: linear-gradient(180deg, #fffdf6 0%, #fbf3dd 100%);
+    border:1px solid var(--line); border-radius:var(--radius-lg);
     box-shadow: var(--shadow);
-    padding:16px 18px; margin:18px 0 0;
+    padding:16px 18px 18px; margin:16px 0 20px;
     text-align:center;
+    overflow:hidden;
+  }
+  .wod-card::before{
+    content:''; position:absolute; top:0; left:0; right:0; height:4px;
+    background: linear-gradient(90deg, var(--brass), var(--sage));
   }
   .wod-close{
-    position:absolute; top:10px; left:10px; background:transparent; border:none; box-shadow:none;
-    color:var(--ink-soft); font-size:15px; padding:4px 7px;
+    position:absolute; top:12px; left:12px; background:rgba(255,255,255,.6); border:1px solid var(--line-soft); box-shadow:none;
+    color:var(--ink-faint); font-size:13px; width:26px; height:26px; padding:0; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
   }
+  .wod-close:active{ background:rgba(34,48,63,.08); }
   .wod-head{
-    font-size:11.5px; font-weight:700; color:var(--brass-dark);
-    display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:8px;
+    font-size:11px; font-weight:700; color:var(--brass-dark);
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    margin:2px auto 14px; padding:5px 14px;
+    background:rgba(171,132,70,.12); border-radius:999px;
+    letter-spacing:.03em;
   }
-  .wod-word{ font-size:30px; font-weight:600; color:var(--ink); direction:ltr; margin-bottom:4px; }
-  .wod-meaning{ font-size:17px; font-weight:700; color:var(--ink); margin-bottom:8px; }
-  .wod-definition{ font-size:13px; color:var(--ink-soft); line-height:1.9; margin:0 auto 10px; max-width:520px; direction:ltr; }
-  .wod-example{ background:var(--parchment-dark); border-radius:10px; padding:10px 14px; font-size:13px; color:var(--ink-soft); max-width:480px; margin:0 auto 12px; }
-  .wod-example .en{ display:block; direction:ltr; color:var(--ink); margin-bottom:2px; }
+  .wod-clickable{
+    cursor:pointer; border-radius:var(--radius-sm);
+    background:rgba(255,255,255,.55); border:1px solid var(--line-soft);
+    padding:14px 12px 12px; margin-bottom:12px;
+  }
+  .wod-clickable:active{ opacity:.85; }
+  .wod-word{ font-size:27px; font-weight:700; color:var(--ink); direction:ltr; margin-bottom:4px; }
+  .wod-meaning{ font-size:16px; font-weight:700; color:var(--sage-dark); margin-bottom:8px; }
+  .wod-definition{ font-size:12.5px; color:var(--ink-soft); line-height:1.85; margin:0 auto 10px; max-width:480px; direction:ltr; padding-top:8px; border-top:1px dashed var(--line-soft); }
+  .wod-example{ background:rgba(255,255,255,.7); border:1px solid var(--line-soft); border-radius:var(--radius-sm); padding:10px 14px; font-size:12.5px; color:var(--ink-soft); max-width:460px; margin:0 auto 12px; }
+  .wod-example .en{ display:block; direction:ltr; color:var(--ink); margin-bottom:3px; }
   .wod-actions{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
-  .wod-actions .btn{ padding:8px 14px; font-size:12.5px; }
-  .wod-added{ font-size:12.5px; font-weight:700; color:var(--sage-dark); }
-  .wod-note{ font-size:12.5px; color:var(--ink-soft); line-height:1.9; }
+  .wod-actions .btn{ padding:9px 18px; font-size:12.5px; }
+  .wod-actions .btn-icon{ padding:0; width:38px; height:38px; font-size:15px; }
+  .wod-added{ font-size:12.5px; font-weight:700; color:var(--sage-dark); background:var(--sage-tint); padding:7px 14px; border-radius:999px; }
+  .wod-note{ font-size:12.5px; color:var(--ink-soft); line-height:1.85; padding:0 4px; }
 
   /* ===== Cabinet (signature element) ===== */
   .cabinet{
-    background: linear-gradient(180deg, #7a5a34, #5f4527);
-    border-radius: 18px;
-    padding:18px 16px 22px;
-    box-shadow: var(--shadow), inset 0 0 0 2px rgba(255,255,255,.04);
-    margin: 18px 0 22px;
+    background: linear-gradient(180deg, #7d5d37, #5c4425);
+    border-radius: var(--radius-lg);
+    padding:20px 16px 20px;
+    box-shadow: var(--shadow-lg), inset 0 0 0 1px rgba(255,255,255,.05);
+    margin: 18px 0 24px;
   }
   .cabinet-top{
     display:flex; justify-content:space-between; align-items:center;
-    color:#f3e6c8; padding:2px 8px 14px;
+    color:#f3e6c8; padding:0 6px 16px;
   }
   .cabinet-top .today{
-    font-size:13px; opacity:.9;
+    font-size:13px; font-weight:600; opacity:.92; letter-spacing:.01em;
   }
   .cabinet-top .due-badge{
     background:var(--rust);
     color:#fff8ef;
-    padding:6px 14px;
+    padding:7px 15px;
     border-radius:999px;
-    font-size:13px;
+    font-size:12.5px;
     font-weight:700;
-    box-shadow:0 2px 6px rgba(0,0,0,.25);
+    box-shadow:0 3px 8px rgba(0,0,0,.28);
   }
   .drawers{
     display:flex;
     flex-direction:column;
-    gap:8px;
+    gap:9px;
   }
   .drawer{
-    background: linear-gradient(180deg, #eaddbb, #ddcda1);
-    border-radius:10px;
-    padding:12px 16px;
+    background: linear-gradient(180deg, #ede1c2, #e0d1a6);
+    border-radius:12px;
+    padding:13px 16px;
     display:flex;
     align-items:center;
     justify-content:space-between;
-    box-shadow: 0 3px 0 rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.5);
-    border:1px solid #c9b57e;
+    box-shadow: 0 2px 0 rgba(0,0,0,.13), inset 0 1px 0 rgba(255,255,255,.55);
+    border:1px solid #cbb87f;
     cursor:pointer;
-    transition:transform .15s ease;
+    transition:transform .15s ease, box-shadow .15s ease;
     position:relative;
   }
+  .drawer:active{ transform: scale(.985); }
   .drawer:hover{ transform: translateX(-3px); }
   .drawer .handle{
-    width:34px; height:8px; border-radius:6px;
+    width:30px; height:7px; border-radius:6px;
     background: linear-gradient(180deg, var(--brass), var(--brass-dark));
     box-shadow:0 1px 2px rgba(0,0,0,.4);
   }
   .drawer .label{
-    display:flex; align-items:center; gap:10px;
+    display:flex; align-items:center; gap:11px;
     font-weight:700; color:var(--ink);
     font-size:14px;
   }
@@ -161,16 +193,16 @@
     font-size:11px; color:var(--ink-soft); font-weight:500;
   }
   .drawer .counts{
-    display:flex; align-items:center; gap:8px;
+    display:flex; align-items:center; gap:7px;
   }
   .chip{
     background:#fff; border:1px solid var(--line);
-    border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700;
+    border-radius:999px; padding:4px 11px; font-size:11.5px; font-weight:700;
     color:var(--ink-soft);
   }
   .chip.due{ background:var(--rust); color:#fff; border-color:var(--rust-dark); }
   .drawer.mastered{
-    background: linear-gradient(180deg, #dfe9dc, #cfe0ca);
+    background: linear-gradient(180deg, #e2ecdd, #d2e2cb);
     border-color:#a9c2a1;
   }
 
@@ -178,56 +210,99 @@
   .actions{
     display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:24px;
   }
-  .btn{
-    border:none; border-radius:12px; padding:13px 20px;
-    font-weight:700; font-size:14px;
-    display:flex; align-items:center; gap:8px;
-    box-shadow: var(--shadow);
-    transition: transform .12s ease, box-shadow .12s ease;
+  /* Dashboard button grid: two even columns, with the main "start review" button spanning
+     the full row above them (kept out of the generic .actions rule since that class is
+     reused all over the app for simple 1–3 button rows). */
+  .home-actions{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:26px;
   }
-  .btn:hover{ transform: translateY(-2px); }
-  .btn:active{ transform: translateY(0); }
-  .btn-primary{ background: linear-gradient(180deg, var(--sage), var(--sage-dark)); color:#fdfaf0; }
+  .home-actions #startReviewBtn{ grid-column:1 / -1; padding:11px 16px; font-size:13px; box-shadow:0 4px 11px rgba(79,107,73,.28); }
+  .btn{
+    border:none; border-radius:var(--radius-sm); padding:13px 18px;
+    font-weight:700; font-size:13.5px;
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+  }
+  .btn:hover{ transform: translateY(-1px); box-shadow:var(--shadow); }
+  .btn:active{ transform: translateY(0) scale(.98); box-shadow:none; }
+  .btn-primary{ background: linear-gradient(180deg, var(--sage), var(--sage-dark)); color:#fdfaf0; box-shadow:0 6px 16px rgba(79,107,73,.32); padding:15px 18px; font-size:14.5px; }
   .btn-secondary{ background:var(--panel); color:var(--ink); border:1px solid var(--line); }
   .btn-ghost{ background:transparent; color:var(--ink-soft); box-shadow:none; border:1px dashed var(--line); }
   .btn-small{ padding:8px 12px; font-size:12px; border-radius:9px; }
-  .btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
+  .btn:disabled{ opacity:.42; cursor:not-allowed; transform:none; box-shadow:none; }
+  /* Compact icon-only buttons — used wherever a long button label can be replaced by a single
+     recognizable icon (with a native tooltip via title=""), to save horizontal space. */
+  .btn-icon{ padding:0; width:46px; height:46px; border-radius:50%; font-size:19px; flex:none; }
+  .btn-icon.btn-small{ width:36px; height:36px; font-size:15px; }
+
+  /* ===== Quick actions — unified equal-size grid for all secondary home-page entry points
+     (add / list / browse / episode / text-import), replacing the old mismatched
+     icon-row + ribbon-row combo so every button reads at the same visual weight. ===== */
+  .quick-actions-grid{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:9px; margin-bottom:20px;
+  }
+  .qa-btn{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+    background:var(--panel); color:var(--ink); border:1px solid var(--line);
+    border-radius:var(--radius-sm); padding:12px 6px;
+    box-shadow:var(--shadow-sm);
+    transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+  }
+  .qa-btn:hover{ transform: translateY(-1px); box-shadow:var(--shadow); }
+  .qa-btn:active{ transform: translateY(0) scale(.98); box-shadow:none; }
+  .qa-btn .qa-icon{ font-size:19px; line-height:1; }
+  .qa-btn .qa-label{ font-size:11px; font-weight:700; color:var(--ink-soft); white-space:nowrap; }
 
   /* ===== Panels / Modal ===== */
   .overlay{
-    position:fixed; inset:0; background:rgba(34,48,63,.45);
+    position:fixed; inset:0; background:rgba(34,48,63,.5);
     display:flex; align-items:flex-end; justify-content:center;
-    z-index:50; backdrop-filter: blur(2px);
+    z-index:50; backdrop-filter: blur(3px);
   }
   @media(min-width:640px){ .overlay{ align-items:center; } }
   .panel{
     background:var(--panel);
     width:100%; max-width:560px;
-    border-radius: 20px 20px 0 0;
-    padding:22px 20px 26px;
-    box-shadow:0 -10px 40px rgba(0,0,0,.25);
+    border-radius: 22px 22px 0 0;
+    padding:20px 20px 24px;
+    box-shadow:0 -12px 44px rgba(0,0,0,.28);
     max-height:88vh; overflow-y:auto;
-    animation: slideup .22s ease;
+    animation: slideup .22s cubic-bezier(.2,.8,.3,1);
   }
-  @media(min-width:640px){ .panel{ border-radius:20px; } }
-  @keyframes slideup{ from{ transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;} }
-  .panel-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-  .panel-head h2{ margin:0; font-size:18px; }
-  .close-x{ background:none; border:none; font-size:20px; color:var(--ink-soft); box-shadow:none; padding:4px 8px;}
+  @media(min-width:640px){ .panel{ border-radius:var(--radius-lg); } }
+  @keyframes slideup{ from{ transform:translateY(28px); opacity:0;} to{transform:translateY(0); opacity:1;} }
+  .panel-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--line-soft); }
+  .panel-head h2{ margin:0; font-size:17px; font-weight:800; }
+  .close-x{ background:var(--parchment-dark); border:none; font-size:17px; color:var(--ink-soft); box-shadow:none; padding:6px 10px; border-radius:50%; line-height:1; }
+  .close-x:active{ background:var(--line); }
 
-  label{ display:block; font-size:13px; font-weight:600; color:var(--ink-soft); margin:14px 0 6px; }
+  label{ display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin:16px 0 6px; }
   input[type=text], textarea{
-    width:100%; border:1px solid var(--line); border-radius:10px;
-    padding:11px 12px; font-family:inherit; font-size:14px; background:#fffef9; color:var(--ink);
+    width:100%; border:1px solid var(--line); border-radius:var(--radius-sm);
+    padding:11px 13px; font-family:inherit; font-size:14px; background:#fffef9; color:var(--ink);
+    transition:border-color .12s ease;
   }
+  input[type=text]:focus, textarea:focus{ outline:none; border-color:var(--sage); }
+  select{
+    width:100%; border:1px solid var(--line); border-radius:var(--radius-sm);
+    padding:10px 13px; font-family:inherit; font-size:13.5px; background:#fffef9; color:var(--ink);
+    appearance:none; -webkit-appearance:none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+    background-position: 18px calc(1em + 2px), 13px calc(1em + 2px);
+    background-size: 5px 5px, 5px 5px;
+    background-repeat:no-repeat;
+    padding-left:32px;
+  }
+  select:focus{ outline:none; border-color:var(--sage); }
   input.en, textarea.en{ font-family:'Lora', serif; direction:ltr; text-align:left; }
   textarea{ min-height:70px; resize:vertical; }
 
   /* ===== Flashcard ===== */
   .card{
     background:var(--panel);
-    border-radius:20px;
-    padding:26px 22px;
+    border-radius:var(--radius-lg);
+    padding:28px 22px 24px;
     box-shadow:var(--shadow);
     border:1px solid var(--line);
     position:relative;
@@ -235,56 +310,59 @@
   }
   .card .box-tag{
     position:absolute; top:16px; left:16px;
-    font-size:11px; color:var(--brass-dark); font-weight:700;
-    background:#f5e9cb; padding:4px 10px; border-radius:999px;
+    font-size:10.5px; color:var(--brass-dark); font-weight:700;
+    background:var(--brass-tint); padding:5px 11px; border-radius:999px;
+    letter-spacing:.02em;
   }
   .card .word{
-    font-size:34px; font-weight:600; text-align:center; color:var(--ink);
-    margin:18px 0 6px; direction:ltr;
+    font-size:33px; font-weight:600; text-align:center; color:var(--ink);
+    margin:20px 0 6px; direction:ltr;
   }
-  .card .sub{ text-align:center; color:var(--ink-soft); font-size:13px; margin-bottom:18px; }
+  .card .sub{ text-align:center; color:var(--ink-soft); font-size:13px; margin-bottom:20px; }
 
-  .linkrow{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:18px; }
+  .linkrow{ display:flex; flex-wrap:wrap; gap:7px; justify-content:center; margin-bottom:20px; }
   .link-btn{
-    text-decoration:none; font-size:12.5px; font-weight:700;
+    text-decoration:none; font-size:12px; font-weight:700;
     padding:8px 13px; border-radius:9px;
     display:inline-flex; align-items:center; gap:6px;
     border:1px solid var(--line); background:#fffef9; color:var(--ink);
+    transition:background .12s ease;
   }
-  .link-btn:hover{ background:var(--parchment-dark); }
-  .dot{ width:7px; height:7px; border-radius:50%; }
+  .link-btn:active{ background:var(--parchment-dark); }
+  .dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 
   .reveal-box{
-    border-top:1px dashed var(--line); margin-top:6px; padding-top:16px;
+    border-top:1px dashed var(--line); margin-top:4px; padding-top:18px;
   }
-  .fa-meaning{ font-size:19px; font-weight:700; text-align:center; margin-bottom:8px; }
-  .example{ background:var(--parchment-dark); border-radius:10px; padding:10px 14px; font-size:13.5px; color:var(--ink-soft); margin-bottom:10px; }
-  .example .en{ display:block; margin-bottom:2px; color:var(--ink); }
+  .fa-meaning{ font-size:19px; font-weight:700; text-align:center; margin-bottom:10px; }
+  .example{ background:var(--parchment-dark); border-radius:var(--radius-sm); padding:11px 15px; font-size:13.5px; color:var(--ink-soft); margin-bottom:12px; line-height:1.7; }
+  .example .en{ display:block; margin-bottom:3px; color:var(--ink); }
 
-  .note-area{ margin-top:6px; }
+  .note-area{ margin-top:8px; }
 
-  .grade-row{ display:flex; gap:10px; margin-top:18px; }
+  .grade-row{ display:flex; gap:10px; margin-top:20px; }
   .grade-row .btn{ flex:1; justify-content:center; }
 
   .empty{
-    text-align:center; padding:50px 20px; color:var(--ink-soft);
+    text-align:center; padding:56px 20px; color:var(--ink-soft);
   }
-  .empty .big{ font-size:40px; margin-bottom:10px; }
+  .empty .big{ font-size:42px; margin-bottom:12px; }
 
   /* ===== Word list — compact wrapping chip grid ===== */
   #listItems{ display:flex; flex-wrap:wrap; gap:7px; }
   .list-item{
     background:var(--panel); border:1px solid var(--line); border-radius:999px;
-    padding:6px 8px 6px 12px; display:inline-flex; align-items:center; gap:5px;
+    padding:7px 9px 7px 13px; display:inline-flex; align-items:center; gap:6px;
     cursor:pointer; -webkit-user-select:none; user-select:none;
     touch-action:manipulation; transition:background .12s ease, border-color .12s ease;
   }
   .list-item:active{ background:var(--parchment-dark); }
-  .list-item.selected{ background:#eef3ea; border-color:var(--sage); }
-  .list-item .li-word{ font-family:'Lora',serif; font-weight:600; font-size:15px; direction:ltr; }
+  .list-item.selected{ background:var(--sage-tint); border-color:var(--sage); }
+  .list-item .li-word{ font-family:'Lora',serif; font-weight:600; font-size:14.5px; direction:ltr; }
   .list-item .li-check{ width:14px; height:14px; pointer-events:none; }
   .li-actions{ display:flex; }
-  .icon-btn{ background:transparent; border:none; box-shadow:none; font-size:12px; padding:2px 4px; color:var(--ink-soft); }
+  .icon-btn{ background:transparent; border:none; box-shadow:none; font-size:12px; padding:3px 5px; color:var(--ink-soft); border-radius:6px; }
+  .icon-btn:active{ background:rgba(34,48,63,.07); }
 
   .help-toggle{
     display:inline-flex; align-items:center; justify-content:center;
@@ -295,59 +373,111 @@
   .help-toggle:active{ background:var(--parchment-dark); }
 
   /* ===== Compact tool reorder list (Settings > دیکشنری و ابزارها) ===== */
-  .tool-row{ display:flex; align-items:center; justify-content:space-between; padding:5px 2px; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .tool-row{ display:flex; align-items:center; justify-content:space-between; padding:7px 2px; border-bottom:1px solid var(--line-soft); font-size:12.5px; }
   .tool-row:last-child{ border-bottom:none; }
-  .tool-row .tool-row-label{ display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tool-row .tool-row-label{ display:flex; align-items:center; gap:7px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .tool-row .tool-row-actions{ display:flex; gap:0; flex-shrink:0; }
-  .tool-row .icon-btn{ padding:3px 6px; font-size:12px; line-height:1; }
+  .tool-row .icon-btn{ padding:4px 7px; font-size:12px; line-height:1; }
   .tool-row .icon-btn:disabled{ opacity:.3; }
-  .search-input{ margin-bottom:10px; }
-  .list-hint{ font-size:12px; color:var(--ink-soft); margin:0 0 14px; line-height:1.6; }
+  .search-input{ margin-bottom:12px; }
+  .list-hint{ font-size:12px; color:var(--ink-soft); margin:0 0 16px; line-height:1.7; }
 
   .lang-toggle{ display:flex; gap:6px; margin:2px 0 4px; }
   .lang-btn{
     flex:1; border:1px solid var(--line); background:#fff; color:var(--ink-soft);
-    border-radius:9px; padding:7px 10px; font-size:12.5px; font-weight:700; box-shadow:none;
+    border-radius:9px; padding:8px 10px; font-size:12.5px; font-weight:700; box-shadow:none;
   }
   .lang-btn.active{ background:linear-gradient(180deg, var(--sage), var(--sage-dark)); color:#fdfaf0; border-color:var(--sage-dark); }
 
   /* ===== AI assistant ===== */
-  .ai-msg{ background:var(--parchment-dark); border-radius:12px; padding:12px 14px; font-size:13.5px; line-height:1.9; margin-bottom:10px; }
+  .ai-msg{ background:var(--parchment-dark); border-radius:var(--radius-sm); padding:13px 15px; font-size:13.5px; line-height:1.9; margin-bottom:10px; }
   .ai-msg div{ margin:2px 0; }
   .ai-msg ul{ margin:4px 0 4px 0; padding-inline-start:20px; }
   .ai-msg li{ margin:2px 0; }
-  .ai-msg code{ background:rgba(34,48,63,.08); padding:1px 6px; border-radius:5px; font-family:'Lora',monospace; font-size:12.5px; direction:ltr; display:inline-block; }
-  .ai-msg.user{ background:#e4ecdf; }
+  .ai-msg code{ background:rgba(34,48,63,.08); padding:2px 6px; border-radius:5px; font-family:'Lora',monospace; font-size:12.5px; direction:ltr; display:inline-block; }
+  .ai-msg.user{ background:var(--sage-tint); }
   .ai-suggestions{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
   .suggestion-chip{
-    font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px;
+    font-size:12px; font-weight:700; padding:7px 13px; border-radius:999px;
     border:1px solid var(--line); background:#fffef9; color:var(--brass-dark); cursor:pointer;
+    transition:background .12s ease;
   }
   .suggestion-chip:active{ background:var(--parchment-dark); }
   .ai-note{
-    font-size:12px; color:var(--ink-soft); background:#f5e9cb; border-radius:10px; padding:10px 12px; margin-bottom:14px; line-height:1.9;
+    font-size:12px; color:var(--ink-soft); background:var(--brass-tint); border-radius:var(--radius-sm); padding:11px 13px; margin-bottom:16px; line-height:1.9;
   }
   .spinner{ display:inline-block; width:14px; height:14px; border:2px solid var(--line); border-top-color:var(--brass); border-radius:50%; animation:spin .7s linear infinite; }
   @keyframes spin{ to{ transform:rotate(360deg);} }
 
   /* ===== Inline AI suggestion in the add-word form ===== */
-  .field-label-row{ display:flex; align-items:center; justify-content:space-between; margin:14px 0 6px; }
+  .field-label-row{ display:flex; align-items:center; justify-content:space-between; margin:16px 0 6px; }
   .field-label-row label{ margin:0; }
   .suggest-trigger{
-    background:transparent; border:none; box-shadow:none; padding:2px 4px;
+    background:transparent; border:none; box-shadow:none; padding:3px 5px;
     font-size:12px; font-weight:700; color:var(--brass-dark); display:inline-flex; align-items:center; gap:4px;
   }
   .suggest-trigger:disabled{ opacity:.4; cursor:not-allowed; }
   .suggest-box{
-    background:#f5e9cb; border:1px solid var(--line); border-radius:10px;
-    padding:10px 12px; margin-top:8px; font-size:13px; line-height:1.8; color:var(--ink);
+    background:var(--brass-tint); border:1px solid var(--line); border-radius:var(--radius-sm);
+    padding:11px 13px; margin-top:9px; font-size:13px; line-height:1.8; color:var(--ink);
   }
-  .suggest-box .suggest-text{ margin-bottom:8px; }
+  .suggest-box .suggest-text{ margin-bottom:9px; }
   .suggest-box .suggest-text .en{ direction:ltr; display:inline-block; }
   .suggest-actions{ display:flex; gap:8px; flex-wrap:wrap; }
   .suggest-actions .btn{ padding:7px 12px; font-size:12px; border-radius:9px; }
 
-  footer{ text-align:center; color:var(--ink-soft); font-size:11.5px; margin-top:30px; }
+  /* ===== Word detail panel (📖 توضیح کامل کلمه / tap on a subtitle word) ===== */
+  .wd-header{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px; }
+  .wd-word{ font-family:'Lora',serif; font-weight:700; font-size:27px; direction:ltr; color:var(--ink); }
+  .wd-speak-btn{
+    background:var(--parchment-dark); border:1px solid var(--line); border-radius:50%;
+    width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center;
+    font-size:15px; box-shadow:none; padding:0; color:var(--brass-dark); flex-shrink:0;
+  }
+  .wd-speak-btn:active{ background:var(--line); }
+  .wd-quickmeaning{ text-align:center; font-size:14px; font-weight:600; color:var(--ink); margin-bottom:16px; min-height:20px; }
+  .wd-tab-placeholder{ display:flex; justify-content:center; padding:22px 0; }
+
+  /* Shown when the tapped word turns out to be part of an idiom/phrasal verb in its real
+     sentence — either grounded locally against the analyzed idiom list, or checked live via AI. */
+  .wd-idiom-box{
+    background:#e6eef9; border:1px solid #c7d9f0; border-radius:var(--radius-sm);
+    padding:11px 13px; margin-bottom:16px;
+  }
+  .wd-idiom-head{ font-size:12.5px; font-weight:700; color:#2b579a; margin-bottom:4px; }
+  .wd-idiom-phrase{ direction:ltr; unicode-bidi:embed; }
+  .wd-idiom-fa{ font-weight:700; font-size:13.5px; color:var(--ink); margin-bottom:3px; }
+  .wd-idiom-def{ font-size:12px; color:var(--ink-soft); direction:ltr; text-align:left; margin-bottom:9px; }
+  .wd-idiom-box .btn{ width:100%; justify-content:center; }
+
+  .wd-freq{ display:flex; align-items:center; gap:9px; margin-bottom:18px; }
+  .wd-freq-label{ font-size:11px; color:var(--ink-soft); flex-shrink:0; }
+  .wd-freq-track{ flex:1; height:7px; border-radius:999px; background:var(--line); overflow:hidden; }
+  .wd-freq-fill{ height:100%; background:linear-gradient(90deg, var(--sage), var(--sage-dark)); border-radius:999px; }
+  .wd-freq-count{ font-size:11.5px; font-weight:700; color:var(--brass-dark); flex-shrink:0; direction:ltr; }
+  .wd-history{ display:flex; flex-wrap:wrap; align-items:baseline; gap:6px; margin-bottom:18px; }
+  .wd-history-label{ font-size:11px; color:var(--ink-soft); flex-shrink:0; font-weight:700; }
+  .wd-history-detail{ font-size:11.5px; color:var(--ink); }
+
+  .wd-status-row{ display:flex; gap:8px; margin-bottom:18px; }
+  .wd-status-row .btn{ flex:1; justify-content:center; padding:10px 4px; font-size:11.5px; }
+
+  #wdTabContent{ margin-top:4px; }
+  .wd-dict-box{ background:var(--parchment-dark); border-radius:var(--radius); padding:4px 15px; margin-top:14px; }
+  .wd-dict-row{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; padding:9px 0; }
+  .wd-dict-row + .wd-dict-row{ border-top:1px dashed var(--line); }
+  .wd-dict-word{ font-family:'Lora',serif; font-weight:700; direction:ltr; font-size:14px; color:var(--ink); }
+  .wd-dict-pos{ font-size:11px; font-weight:700; color:var(--brass-dark); direction:ltr; }
+  .wd-dict-meanings{ font-size:13px; color:var(--ink); }
+
+  .wd-example-block{ background:var(--parchment-dark); border-radius:var(--radius); padding:13px 15px; margin-bottom:11px; }
+  .wd-example-src{ font-size:11px; font-weight:700; color:var(--brass-dark); margin-bottom:7px; }
+  .wd-example-en{ font-family:'Lora',serif; direction:ltr; text-align:left; font-size:14px; color:var(--ink); display:flex; align-items:center; gap:8px; justify-content:space-between; }
+  .wd-example-en .en{ flex:1; }
+  .wd-example-en .wd-speak-btn{ width:26px; height:26px; font-size:12px; }
+  .wd-example-fa{ font-size:13px; color:var(--ink-soft); margin-top:5px; }
+
+  footer{ text-align:center; color:var(--ink-faint); font-size:11px; margin-top:32px; line-height:1.7; padding:0 24px; }
 
   /* ===== Generic full page (word list / settings) ===== */
   .page-full{
@@ -357,43 +487,193 @@
   }
   .page-top{
     display:flex; align-items:center; justify-content:space-between;
-    padding:16px 18px; flex-shrink:0; border-bottom:1px solid var(--line);
+    padding:16px 18px; flex-shrink:0; border-bottom:1px solid var(--line); background:rgba(255,250,240,.6);
   }
-  .page-top h2{ margin:0; font-size:17px; }
-  .page-body{ flex:1; overflow-y:auto; padding:16px 18px calc(16px + env(safe-area-inset-bottom)); }
-  .settings-section{ margin-bottom:28px; }
-  .settings-section h3{ margin:0 0 10px; font-size:14.5px; color:var(--brass-dark); }
+  .page-top h2{ margin:0; font-size:17px; font-weight:800; }
+  .page-body{ flex:1; overflow-y:auto; padding:18px 18px calc(18px + env(safe-area-inset-bottom)); }
+  .settings-section{ margin-bottom:30px; }
+  .settings-section h3{ margin:0 0 12px; font-size:14px; font-weight:800; color:var(--brass-dark); letter-spacing:.01em; }
   .selection-banner{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
-    background:#eef3ea; border:1px solid var(--sage); border-radius:12px;
-    padding:10px 14px; margin-bottom:12px; font-size:13px; font-weight:700; color:var(--sage-dark);
+    background:var(--sage-tint); border:1px solid var(--sage); border-radius:var(--radius-sm);
+    padding:11px 15px; margin-bottom:14px; font-size:13px; font-weight:700; color:var(--sage-dark);
   }
 
   /* ===== Episode word-suggestion page ===== */
-  .ep-form-row{ display:flex; gap:8px; }
-  .ep-form-row input{ flex:1; }
+  .ep-filter-row{ display:flex; gap:10px; margin-top:10px; }
+  .ep-filter-row > div{ flex:1; }
+  .ep-checkbox-label{
+    display:flex; align-items:center; gap:8px; margin-top:10px;
+    font-size:13.5px; color:var(--ink); cursor:pointer;
+  }
+  .ep-checkbox-label input[type=checkbox]{ width:auto; margin:0; }
   .ep-word-card{
     display:flex; align-items:flex-start; gap:10px;
-    background:var(--panel); border:1px solid var(--line); border-radius:12px;
-    padding:12px 14px; margin-bottom:10px; cursor:pointer;
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-sm);
+    padding:13px 15px; margin-bottom:10px; cursor:pointer;
+    transition:background .12s ease, border-color .12s ease;
   }
-  .ep-word-card.selected{ background:#eef3ea; border-color:var(--sage); }
+  .ep-word-card.selected{ background:var(--sage-tint); border-color:var(--sage); }
   .ep-word-card input[type=checkbox]{ margin-top:4px; flex-shrink:0; pointer-events:none; }
+  .ep-en-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
   .ep-word-card .ep-en{ font-family:'Lora',serif; font-weight:700; font-size:16px; direction:ltr; }
-  .ep-word-card .ep-fa{ font-weight:700; margin:2px 0 4px; }
+  .ep-type-badge{
+    font-size:10.5px; padding:3px 9px; border-radius:999px; font-weight:700;
+    background:#f0e6d2; color:#7a5c00; direction:rtl; flex-shrink:0;
+  }
+  .ep-type-badge.idiom{ background:#e6eef9; color:#2b579a; }
+  .ep-level-badge{
+    font-size:10.5px; padding:3px 9px; border-radius:999px; font-weight:800;
+    background:#fffef9; color:var(--brass-dark); border:1px solid var(--line); direction:ltr; flex-shrink:0;
+  }
+  .ep-word-card .ep-fa{ font-weight:700; margin:3px 0 5px; }
   .ep-word-card .ep-ex{ font-size:12.5px; color:var(--ink-soft); direction:ltr; text-align:left; }
-  .ep-word-card .ep-def{ font-size:12px; color:var(--ink-soft); direction:ltr; text-align:left; margin-bottom:4px; }
-  .ep-show-all-btn{ direction:rtl; }
-  .ep-all-examples{
-    margin-top:8px; padding-top:8px; border-top:1px dashed var(--line);
-    display:flex; flex-direction:column; gap:6px;
+  .ep-word-card .ep-def{ font-size:12px; color:var(--ink-soft); direction:ltr; text-align:left; margin-bottom:5px; }
+  .ep-tools-row{ display:flex; gap:6px; margin:6px 0 2px; }
+  .ep-show-in-srt-btn{ direction:rtl; }
+  .ep-show-in-srt-btn.active{ background:var(--sage-tint); border-color:var(--sage); color:var(--sage-dark); }
+  .ep-type-filter-row{ display:flex; gap:8px; margin-bottom:16px; }
+  .ep-type-filter-btn{
+    flex:1; text-align:center; padding:9px 6px; border-radius:var(--radius-sm); cursor:pointer;
+    border:1px solid var(--line); background:var(--panel); font-size:13px; font-weight:600; color:var(--ink-soft);
+    transition:background .12s ease;
   }
-  .ep-ex-item{
-    font-size:12.5px; color:var(--ink-soft); direction:ltr; text-align:left;
-    background:var(--bg,#f7f5f0); border-radius:8px; padding:6px 8px;
+  .ep-type-filter-btn.active{ background:var(--sage); border-color:var(--sage); color:#fff; }
+  input[type=file]{ width:100%; font-size:12.5px; }
+
+  /* Full-subtitle reference panel */
+  .srt-full-wrap{
+    border:1px solid var(--line); border-radius:var(--radius); padding:13px 15px; margin-bottom:16px;
+    background:var(--panel);
   }
-  .ep-divider{ text-align:center; color:var(--ink-soft); font-size:12px; margin:18px 0; }
-  input[type=file]{ width:100%; }
+  .srt-full-head{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;
+    font-weight:700; font-size:14px; color:var(--brass-dark);
+  }
+  .srt-full-active{ font-size:12px; font-weight:700; color:var(--sage-dark); direction:rtl; }
+  .srt-full-body{
+    max-height:280px; overflow-y:auto; border:1px solid var(--line); border-radius:var(--radius-sm);
+    padding:9px 11px; background:var(--bg,#f7f5f0); margin-top:10px;
+  }
+  .srt-line{
+    font-size:12.5px; color:var(--ink-soft); direction:ltr; text-align:left; padding:3px 0;
+  }
+  .srt-line-hit{
+    color:var(--ink); background:var(--sage-tint); border-radius:6px; padding:5px 7px; margin:2px -7px;
+  }
+  .srt-hit{
+    background:#f0e6d2; color:#7a5c00; font-weight:700; border-radius:4px; padding:0 2px;
+  }
+  /* Words that match the currently-analyzed level word list get this softer, distinct highlight
+     everywhere in the full-subtitle panel — separate from .srt-hit, which marks the one word the
+     person specifically tapped to look at. */
+  .srt-level-hit{
+    background:var(--sage-tint); color:var(--sage-dark); font-weight:700; border-radius:4px; padding:0 2px;
+  }
+
+  /* Offline video + subtitle sync player */
+  .vsync-wrap{
+    border:1px solid var(--line); border-radius:var(--radius); padding:13px 15px; margin-bottom:18px;
+    background:var(--panel);
+  }
+  .vsync-head{
+    font-weight:800; font-size:15px; color:var(--brass-dark); margin:-13px -15px 14px; letter-spacing:.01em;
+    padding:12px 15px; border-bottom:1px solid var(--line-soft); background:var(--brass-tint);
+    border-radius:var(--radius) var(--radius) 0 0;
+  }
+  .vsync-inputs{ display:flex; flex-direction:column; gap:11px; margin-bottom:11px; }
+  .vsync-inputs label{ display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-bottom:4px; }
+  .vsync-player{
+    position:relative; width:100%; background:#000; border-radius:var(--radius-sm); overflow:hidden; margin-top:4px;
+  }
+  .vsync-player video{ width:100%; display:block; max-height:52vh; background:#000; }
+  .vsync-player:fullscreen, .vsync-player:-webkit-full-screen{
+    display:flex; align-items:center; justify-content:center; border-radius:0;
+  }
+  .vsync-player:fullscreen video, .vsync-player:-webkit-full-screen video{
+    max-height:100%; height:100%; width:100%; object-fit:contain;
+  }
+  /* The caption box itself ignores taps (so the video/controls beneath stay reachable), but
+     each individual word span re-enables pointer events so it can be tapped on its own. */
+  .vsync-caption{
+    position:absolute; left:0; right:0; bottom:6%; display:flex; justify-content:center;
+    pointer-events:none; padding:0 10px;
+  }
+  .vsync-caption-text{
+    background:transparent; color:#ffe140; font-size:calc(17px * var(--cap-scale, 1)); font-weight:800; line-height:1.5;
+    padding:0 10px; border-radius:0; direction:ltr; text-align:center; max-width:100%;
+    white-space:pre-line;
+    text-shadow:
+      -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000,
+      -1.5px 0 0 #000, 1.5px 0 0 #000, 0 -1.5px 0 #000, 0 1.5px 0 #000,
+      0 2px 8px rgba(0,0,0,.55);
+  }
+  .vsync-player:fullscreen .vsync-caption-text, .vsync-player:-webkit-full-screen .vsync-caption-text{
+    font-size:calc(28px * var(--cap-scale, 1));
+    line-height:1.45;
+    text-shadow:
+      -2.5px -2.5px 0 #000, 2.5px -2.5px 0 #000, -2.5px 2.5px 0 #000, 2.5px 2.5px 0 #000,
+      -2.5px 0 0 #000, 2.5px 0 0 #000, 0 -2.5px 0 #000, 0 2.5px 0 #000,
+      0 3px 10px rgba(0,0,0,.55);
+  }
+  .vsync-word{ pointer-events:auto; cursor:pointer; border-radius:4px; padding:0 1px; }
+  .vsync-word:active{ background:rgba(255,255,255,.28); }
+  /* Marks a caption word that's part of the currently-analyzed level word list, so the level
+     picked in "سطح زبان" is visible live on top of the playing video, not just in the word list.
+     Base caption color is now yellow (subtitle-style), so level words use green instead to stay
+     distinguishable, keeping the same black outline for readability. */
+  .vsync-word-level{
+    color:#8bef6a; text-decoration:underline; text-decoration-color:#8bef6a; text-decoration-thickness:2px;
+    text-underline-offset:3px; font-weight:800;
+  }
+  .vsync-btn-row{
+    position:absolute; left:8px; top:8px; z-index:2; display:flex; gap:6px; pointer-events:auto;
+  }
+  .vsync-sync-row{ top:44px; }
+  .vsync-sync-badge{
+    pointer-events:none; background:rgba(0,0,0,.4); color:#fff; font-size:11px; font-weight:700;
+    border-radius:8px; padding:6px 7px; display:flex; align-items:center; direction:ltr; min-width:38px; justify-content:center;
+  }
+  .vsync-fs-btn{
+    pointer-events:auto;
+    background:rgba(0,0,0,.55); color:#fff; border:none; border-radius:8px;
+    font-size:16px; padding:6px 10px; cursor:pointer;
+  }
+  .vsync-cap-size-btn{
+    pointer-events:auto;
+    background:rgba(0,0,0,.55); color:#fff; border:none; border-radius:8px;
+    font-size:13px; font-weight:800; padding:6px 9px; cursor:pointer; line-height:1;
+  }
+  .vsync-cap-size-btn:active{ background:rgba(0,0,0,.8); }
+  /* Rotate button lives at the top (native Chrome controls occupy the bottom strip), and stays
+     hidden until the wrapper is actually fullscreen — it's meaningless outside of fullscreen and
+     shouldn't sit in the way otherwise. */
+  .vsync-rotate-btn{
+    display:none; position:absolute; top:8px; right:8px; z-index:2; pointer-events:auto;
+    background:rgba(0,0,0,.55); color:#fff; border:none; border-radius:8px;
+    font-size:16px; padding:6px 10px; cursor:pointer;
+  }
+  .vsync-player.vsync-fs-active .vsync-rotate-btn{ display:block; }
+  .vsync-rotate-btn.active{ background:var(--brass-dark,#8a6a1f); }
+  /* Manual "force landscape" rotate: lifts the player out of normal flow, rotates it 90deg and
+     swaps its on-screen width/height so a landscape video fills a portrait-locked phone screen.
+     Only meant to be toggled while the wrapper is fullscreen. */
+  .vsync-player.vsync-rotate{
+    position:fixed !important; inset:auto !important; top:50% !important; left:50% !important;
+    width:100vh !important; height:100vw !important; margin:0 !important;
+    transform:translate(-50%,-50%) rotate(90deg) !important;
+    z-index:2147483647; border-radius:0;
+  }
+  .vsync-player.vsync-rotate video{
+    width:100% !important; height:100% !important; max-height:none !important; object-fit:contain;
+  }
+  .vsync-status-row{ display:flex; align-items:center; gap:8px; margin-top:9px; }
+  .vsync-info-btn{
+    background:none; border:1px solid var(--line); border-radius:999px; width:26px; height:26px;
+    font-size:13px; line-height:1; cursor:pointer; color:var(--ink-soft); flex-shrink:0;
+  }
+  .vsync-status{ font-size:12px; color:var(--ink-soft); }
+  .vsync-hint{ font-size:11.5px; color:var(--ink-soft); margin-top:5px; }
 
 
   .browse-full{
@@ -407,29 +687,29 @@
     padding:16px 18px 4px; flex-shrink:0;
   }
   .browse-top .browse-counter{ font-size:13px; font-weight:700; color:var(--ink-soft); }
-  .browse-top .close-x{ font-size:22px; padding:6px 10px; }
-  .browse-progress{ padding:0 18px 10px; flex-shrink:0; }
+  .browse-top .close-x{ font-size:20px; padding:7px 11px; }
+  .browse-progress{ padding:0 18px 12px; flex-shrink:0; }
   .progress-track{ width:100%; height:6px; background:var(--line); border-radius:999px; overflow:hidden; }
   .progress-fill{ height:100%; background:linear-gradient(180deg,var(--sage),var(--sage-dark)); border-radius:999px; transition:width .25s ease; }
   .browse-upcoming{
-    padding:0 18px 10px; flex-shrink:0; font-size:12px; color:var(--ink-soft);
+    padding:0 18px 12px; flex-shrink:0; font-size:12px; color:var(--ink-soft);
     overflow-x:auto; white-space:nowrap;
   }
   .browse-upcoming .up-label{ font-weight:700; margin-left:6px; }
   .browse-upcoming .up-word{
     display:inline-block; direction:ltr; font-family:'Lora',serif; background:var(--parchment-dark);
-    border-radius:999px; padding:3px 10px; margin-left:6px; font-size:12px;
+    border-radius:999px; padding:4px 11px; margin-left:6px; font-size:12px;
   }
   .browse-body{
     flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:10px 22px; text-align:center; overflow-y:auto; min-height:0;
+    padding:12px 22px; text-align:center; overflow-y:auto; min-height:0;
   }
   .browse-body .box-tag{
-    font-size:11px; color:var(--brass-dark); font-weight:700;
-    background:#f5e9cb; padding:4px 10px; border-radius:999px; margin-bottom:18px;
+    font-size:10.5px; color:var(--brass-dark); font-weight:700;
+    background:var(--brass-tint); padding:5px 11px; border-radius:999px; margin-bottom:20px;
   }
-  .browse-word{ font-size:40px; font-weight:600; color:var(--ink); direction:ltr; margin-bottom:10px; word-break:break-word; }
-  .word-row{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:10px; }
+  .browse-word{ font-size:38px; font-weight:600; color:var(--ink); direction:ltr; margin-bottom:12px; word-break:break-word; }
+  .word-row{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:12px; }
   .word-row .browse-word{ margin-bottom:0; }
   .word-row .wod-word{ margin-bottom:0; }
   .pron-btn{
@@ -441,28 +721,31 @@
   .pron-btn:active{ background:var(--parchment-dark); }
   .pron-btn:disabled{ opacity:.5; }
   .li-actions .pron-btn{ width:22px; height:22px; font-size:11px; border:none; background:transparent; color:var(--ink-soft); }
-  .browse-meaning{ font-size:21px; font-weight:700; color:var(--ink); margin-bottom:10px; }
-  .browse-example{ background:var(--parchment-dark); border-radius:10px; padding:10px 14px; font-size:13.5px; color:var(--ink-soft); max-width:420px; }
-  .browse-example .en{ display:block; margin-bottom:2px; color:var(--ink); }
+  .browse-meaning{ font-size:20px; font-weight:700; color:var(--ink); margin-bottom:12px; }
+  .browse-example{ background:var(--parchment-dark); border-radius:var(--radius-sm); padding:11px 15px; font-size:13.5px; color:var(--ink-soft); max-width:420px; line-height:1.7; }
+  .browse-example .en{ display:block; margin-bottom:3px; color:var(--ink); }
   .ai-example-box{
-    background:#f5e9cb; border:1px solid var(--line); border-radius:10px;
-    padding:10px 14px; font-size:13.5px; color:var(--ink); max-width:420px; width:100%;
-    margin-top:10px; text-align:center;
+    background:var(--brass-tint); border:1px solid var(--line); border-radius:var(--radius-sm);
+    padding:11px 15px; font-size:13.5px; color:var(--ink); max-width:420px; width:100%;
+    margin-top:12px; text-align:center;
   }
-  .ai-example-box .ai-example-head{ font-size:11px; font-weight:700; color:var(--brass-dark); margin-bottom:6px; }
-  .ai-example-box .ai-example-en{ direction:ltr; display:block; color:var(--ink); margin-bottom:4px; }
+  .ai-example-box .ai-example-head{ font-size:11px; font-weight:700; color:var(--brass-dark); margin-bottom:7px; }
+  .ai-example-box .ai-example-en{ direction:ltr; display:block; color:var(--ink); margin-bottom:5px; }
   .ai-example-box .ai-example-fa{ color:var(--ink-soft); font-size:12.5px; }
   .ai-example-box .ai-example-error{ color:var(--rust-dark); font-size:12.5px; }
-  .ai-example-box .btn{ margin-top:8px; }
-  .browse-note-toggle{ margin-top:14px; }
+  .ai-example-box .btn{ margin-top:9px; }
+  .browse-note-toggle{ margin-top:16px; }
   .browse-bottom{
-    flex-shrink:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    flex-shrink:0; padding:14px 16px calc(14px + env(safe-area-inset-bottom));
     display:flex; flex-direction:column; gap:10px;
+    border-top:1px solid var(--line-soft);
   }
   .browse-nav{ display:flex; gap:10px; }
   .browse-nav .btn{ flex:1; justify-content:center; }
   .browse-tools-row{ display:flex; gap:10px; }
+  .browse-tools-row{ justify-content:center; }
   .browse-tools-row .btn{ flex:1; justify-content:center; }
+  .browse-tools-row .btn-icon{ flex:none; }
 </style>
 </head>
 <body>
@@ -478,20 +761,23 @@
 
   <div id="wordOfDayWrap"></div>
 
+  <div class="actions home-actions">
+    <button class="btn btn-primary" id="startReviewBtn">▶ شروع مرور امروز</button>
+  </div>
+  <div class="quick-actions-grid">
+    <button class="qa-btn" id="addWordBtn"><span class="qa-icon">+</span><span class="qa-label">افزودن</span></button>
+    <button class="qa-btn" id="listBtn"><span class="qa-icon">📋</span><span class="qa-label">فهرست</span></button>
+    <button class="qa-btn" id="browseBtn"><span class="qa-icon">📖</span><span class="qa-label">مرور آزاد</span></button>
+    <button class="qa-btn" id="episodeBtn"><span class="qa-icon">🎬</span><span class="qa-label">فیلم</span></button>
+    <button class="qa-btn" id="textImportBtn"><span class="qa-icon">📝</span><span class="qa-label">افزودن از متن</span></button>
+  </div>
+
   <div class="cabinet">
     <div class="cabinet-top">
       <span class="today" id="todayLabel"></span>
       <span class="due-badge" id="dueBadge">۰ کلمه برای مرور</span>
     </div>
     <div class="drawers" id="drawers"></div>
-  </div>
-
-  <div class="actions">
-    <button class="btn btn-primary" id="startReviewBtn">▶ شروع مرور امروز</button>
-    <button class="btn btn-secondary" id="addWordBtn">+ افزودن لغت جدید</button>
-    <button class="btn btn-secondary" id="listBtn">فهرست همه لغات</button>
-    <button class="btn btn-secondary" id="browseBtn">📖 مرور آزاد لغات</button>
-    <button class="btn btn-secondary" id="episodeBtn">🎬 کلمات یک قسمت</button>
   </div>
 
   <div id="main"></div>
@@ -506,6 +792,34 @@ const BOX_LABELS = {1:'جعبه ۱ — روزانه',2:'جعبه ۲ — هر ۲ 
 const STORAGE_KEY = 'leitner-words-v1';
 
 let words = [];
+
+/* Two small standalone localStorage sets, separate from the main `words` box system:
+   - KNOWN_WORDS: words the person tapped "✓ بلدم" on — they don't want them added to a
+     review box, but also don't want them re-suggested as "new" vocabulary from subtitles.
+   - IGNORED_WORDS: words the person tapped "🚫 نادیده بگیر" on — never worth suggesting
+     again from subtitle analysis (names, junk, etc), regardless of frequency. */
+const KNOWN_WORDS_KEY = 'leitner-known-words-v1';
+const IGNORED_WORDS_KEY = 'leitner-ignored-words-v1';
+function loadWordSet(key){
+  try{
+    const raw = localStorage.getItem(key);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr : []);
+  }catch(e){ return new Set(); }
+}
+function saveWordSet(key, set){
+  try{ localStorage.setItem(key, JSON.stringify([...set])); }catch(e){}
+}
+function markWordKnown(en){
+  const s = loadWordSet(KNOWN_WORDS_KEY);
+  s.add((en||'').trim().toLowerCase());
+  saveWordSet(KNOWN_WORDS_KEY, s);
+}
+function markWordIgnored(en){
+  const s = loadWordSet(IGNORED_WORDS_KEY);
+  s.add((en||'').trim().toLowerCase());
+  saveWordSet(IGNORED_WORDS_KEY, s);
+}
 
 const $ = sel => document.querySelector(sel);
 const mainEl = $('#main');
@@ -628,8 +942,10 @@ const AI_SETTINGS_KEY = 'leitner-ai-settings-v1';
 function loadAiSettings(){
   try{
     const raw = localStorage.getItem(AI_SETTINGS_KEY);
-    return raw ? JSON.parse(raw) : {provider:'google', key:''};
-  }catch(e){ return {provider:'', key:''}; }
+    const s = raw ? JSON.parse(raw) : {provider:'google', key:''};
+    if(!Array.isArray(s.extraKeys)) s.extraKeys = [];
+    return s;
+  }catch(e){ return {provider:'', key:'', extraKeys:[]}; }
 }
 function saveAiSettings(s){
   try{ localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(s)); }catch(e){}
@@ -689,7 +1005,9 @@ function getOrderedEnabledTools(){
 
 /* Single-turn Gemini call (no chat history) — used for inline suggestions such as
    "پیشنهاد معنی" / "پیشنهاد جمله نمونه" in the add-word form. */
-async function geminiOnce(key, systemPrompt, userMessage){
+/* Does one actual HTTP call to Gemini with a single specific key. Split out of geminiOnce so
+   the rotation logic there can retry with a different key without duplicating the fetch code. */
+async function geminiCallWithKey(key, systemPrompt, userMessage){
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + encodeURIComponent(key);
   const res = await fetch(url, {
     method:'POST',
@@ -702,26 +1020,62 @@ async function geminiOnce(key, systemPrompt, userMessage){
   if(!res.ok){
     let detail = '';
     try{ const errData = await res.json(); detail = errData.error && errData.error.message ? ' — ' + errData.error.message : ''; }catch(e){}
-    throw new Error('HTTP '+res.status+detail);
+    const err = new Error('HTTP '+res.status+detail);
+    err.status = res.status;
+    throw err;
   }
   const data = await res.json();
   const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
   return (parts ? parts.map(p=>p.text||'').join('\n').trim() : '');
 }
 
+/* Single-turn Gemini call (no chat history), with automatic key rotation. If more than one API
+   key is configured (the primary "کلید API" plus any "کلیدهای پشتیبان" from different Google
+   accounts), and the given key comes back quota-exceeded (429) or unauthorized (401/403), the
+   next configured key is tried automatically instead of failing right away. Whichever key ends
+   up succeeding is promoted to the primary slot in settings, so every other AI feature in the
+   app — which all read settings.key fresh right before calling this — picks up the working key
+   on its very next call too, without needing its own rotation logic. */
+async function geminiOnce(key, systemPrompt, userMessage){
+  const settings = loadAiSettings();
+  const pool = [key, ...(settings.extraKeys||[])].map(k=>(k||'').trim()).filter(Boolean);
+  const orderedKeys = pool.length ? [...new Set(pool)] : [key];
+
+  let lastErr = null;
+  for(let i=0; i<orderedKeys.length; i++){
+    const k = orderedKeys[i];
+    try{
+      const result = await geminiCallWithKey(k, systemPrompt, userMessage);
+      if(k !== settings.key){
+        // This key wasn't the primary one but it just worked — make it the primary so the rest
+        // of the app stops hitting the exhausted/broken key first.
+        const rest = orderedKeys.filter(x=>x!==k);
+        saveAiSettings({ ...settings, key: k, extraKeys: rest });
+      }
+      return result;
+    }catch(e){
+      lastErr = e;
+      const rotatable = e && (e.status===429 || e.status===401 || e.status===403);
+      if(!rotatable || i===orderedKeys.length-1) throw e; // not a key-related error, or no more keys to try — surface it
+      // otherwise: this key is exhausted/invalid — silently move on to the next one
+    }
+  }
+  throw lastErr || new Error('درخواست به Gemini ناموفق بود.');
+}
+
 /* Ask Gemini for a suggested Persian meaning + optional example sentence for an English word.
    Requests strict JSON so it can be parsed reliably; falls back gracefully if parsing fails. */
 async function fetchWordSuggestion(key, en){
-  const systemPrompt = 'تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown، بدون توضیح اضافه) با دقیقاً این دو کلید برگردان: {"meaning": "معنی فارسی کوتاه و رایج‌ترین معنی کلمه", "example": "یک جمله نمونه انگلیسی ساده و کوتاه که در آن از همان کلمه استفاده شده"}.';
+  const systemPrompt = 'تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown، بدون توضیح اضافه) با دقیقاً این سه کلید برگردان: {"meaning": "معنی فارسی کوتاه و رایج‌ترین معنی کلمه", "definition": "یک توضیح آموزشی کوتاه به فارسی از معنای کلمه و نحوه استفاده از آن (نه ترجمه، بلکه توضیح)", "example": "یک جمله نمونه انگلیسی ساده و کوتاه که در آن از همان کلمه استفاده شده"}.';
   const userMessage = `کلمه انگلیسی: "${en}"`;
   const raw = await geminiOnce(key, systemPrompt, userMessage);
   let cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
   try{
     const obj = JSON.parse(cleaned);
-    return { meaning: (obj.meaning||'').trim(), example: (obj.example||'').trim() };
+    return { meaning: (obj.meaning||'').trim(), definition: (obj.definition||'').trim(), example: (obj.example||'').trim() };
   }catch(e){
     // Fallback: couldn't parse JSON, just surface the raw text as the meaning suggestion.
-    return { meaning: cleaned, example: '' };
+    return { meaning: cleaned, definition: '', example: '' };
   }
 }
 
@@ -838,6 +1192,26 @@ async function playPronunciation(en, btn){
 function isDue(w){
   if(w.box === 6) return false; // mastered/archived
   return new Date(w.nextReview) <= new Date();
+}
+
+/* Speaks English text via the browser's built-in Web Speech API (no network needed) — used by
+   the word-detail panel's header pronunciation button and its example-sentence buttons. Distinct
+   from playPronunciation(), which fetches a real recorded audio clip for single words. */
+function speakText(text, btn){
+  if(!text) return;
+  const original = btn ? btn.innerHTML : '';
+  if(!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined'){
+    if(btn){ btn.innerHTML = '🔇'; setTimeout(()=>{ if(btn.isConnected) btn.innerHTML = original; }, 1400); }
+    return;
+  }
+  try{
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US';
+    window.speechSynthesis.speak(u);
+  }catch(e){
+    if(btn){ btn.innerHTML = '🔇'; setTimeout(()=>{ if(btn.isConnected) btn.innerHTML = original; }, 1400); }
+  }
 }
 
 /* ---------- Word of the day (AI suggestion based on the user's own vocabulary) ----------
@@ -969,27 +1343,30 @@ function renderWordOfDayCard(){
     <div class="wod-card">
       <button class="wod-close" id="wodCloseBtn">✕</button>
       <div class="wod-head">🌟 پیشنهاد امروز · با توجه به لغات تو</div>
-      <div class="word-row">
-        <span class="wod-word">${escapeHtml(cache.en)}</span>
-        <button class="pron-btn" id="wodPronBtn" title="پخش تلفظ">🔊</button>
+      <div class="wod-clickable" id="wodClickable" title="مرور این کلمه">
+        <div class="word-row">
+          <span class="wod-word">${escapeHtml(cache.en)}</span>
+          <button class="pron-btn" id="wodPronBtn" title="پخش تلفظ">🔊</button>
+        </div>
+        ${cache.definition ? `<div class="wod-definition">${escapeHtml(cache.definition)}</div>` : ''}
+        <div class="wod-meaning">${escapeHtml(cache.fa)}</div>
       </div>
-      <div class="wod-meaning">${escapeHtml(cache.fa)}</div>
-      ${cache.definition ? `<div class="wod-definition">${escapeHtml(cache.definition)}</div>` : ''}
-      ${cache.example ? `<div class="wod-example"><span class="en">${escapeHtml(cache.example)}</span>${cache.translation?escapeHtml(cache.translation):''}</div>` : ''}
       <div class="wod-actions">
         ${cache.added
           ? `<span class="wod-added">✓ به فهرست لغات اضافه شد</span>`
-          : `<button class="btn btn-primary" id="wodAddBtn">➕ افزودن به فهرست لغات</button>`}
-        <button class="btn btn-secondary" id="wodRerollBtn">🔄 پیشنهاد دیگری بده</button>
+          : `<button class="btn btn-primary btn-icon" id="wodAddBtn" title="افزودن به فهرست لغات">➕</button>`}
+        <button class="btn btn-secondary btn-icon" id="wodRerollBtn" title="پیشنهاد دیگر">🔄</button>
       </div>
     </div>`;
 
-  wrap.querySelector('#wodCloseBtn').onclick = ()=>{
+  wrap.querySelector('#wodCloseBtn').onclick = (e)=>{
+    e.stopPropagation();
     saveWordOfDayCache({...cache, dismissed:true});
     wrap.innerHTML = '';
   };
-  wrap.querySelector('#wodPronBtn').onclick = (e)=> playPronunciation(cache.en, e.currentTarget);
-  wrap.querySelector('#wodRerollBtn').onclick = ()=> generateWordOfDay(true);
+  wrap.querySelector('#wodPronBtn').onclick = (e)=>{ e.stopPropagation(); playPronunciation(cache.en, e.currentTarget); };
+  wrap.querySelector('#wodClickable').onclick = ()=> openWordOfDayInDeck(cache);
+  wrap.querySelector('#wodRerollBtn').onclick = (e)=>{ e.stopPropagation(); generateWordOfDay(true); };
   const addBtn = wrap.querySelector('#wodAddBtn');
   if(addBtn){
     addBtn.onclick = async ()=>{
@@ -1009,6 +1386,23 @@ function renderWordOfDayCard(){
   }
 }
 
+/* Opens the "word of the day" suggestion in the exact same fullscreen card UI used for
+   browsing/reviewing regular words. If the word has already been added to the vocab list,
+   we open the real entry from `words` so edits (notes, grading) persist normally; otherwise
+   we build a lightweight stand-in object just for viewing/browsing this one card. */
+function openWordOfDayInDeck(cache){
+  if(!cache) return;
+  let w = words.find(x=> (x.en||'').trim().toLowerCase()===cache.en.trim().toLowerCase());
+  if(!w){
+    w = {
+      id: 'wod_temp_'+Date.now(),
+      en: cache.en, fa: cache.fa, example: cache.example||'', note:'',
+      box: 1, nextReview: todayISO(), createdAt: todayISO(), history: []
+    };
+  }
+  startBrowse([w], 0);
+}
+
 /* ---------- Episode-based word suggestions ----------
    The person types the name of a movie/series (plus season/episode if it's a show) and the
    AI suggests a handful of English words that likely come up in it and fit their current
@@ -1017,11 +1411,62 @@ function renderWordOfDayCard(){
 let episodePageEl = null;
 let episodeLoading = false;
 let episodeError = null;
-let episodeMayNotKnow = false;
-let episodeSourceIsSrt = false; // true when the current results came from a real uploaded .srt, not a guess
-let episodeSuggestions = []; // [{en, fa, example, definition?, allExamples?}]
+let episodeSuggestions = []; // [{en, fa, example, definition?, allExamples?, type:'word'|'idiom', level?}]
 let episodeSelected = new Set(); // indices into episodeSuggestions
-let episodeExpandedExamples = new Set(); // indices into episodeSuggestions whose full sentence list is shown
+let episodeLevel = ''; // '' = any level, else a CEFR code like 'A2'
+// Full plain-text lines of the last uploaded .srt file, kept around so the whole subtitle can
+// be shown in one place and any selected word can be located/highlighted inside it.
+let srtFullLines = [];
+let srtHighlightWord = null; // the word/idiom currently highlighted inside the full-subtitle panel
+let episodeIncludeIdioms = true; // whether to also ask for idioms alongside single words
+let episodeTypeFilter = 'all'; // 'all' | 'word' | 'idiom' — which cards to show in the results list
+let episodeIdiomError = null; // set if the idiom step of an .srt analysis fails, without wiping out the word results
+
+// Offline video + subtitle sync player state — separate from the AI word-analysis flow above.
+// The video and its .srt never leave the device: they're read as local files and shown via
+// object URLs, so this works fully offline.
+let epVideoObjectUrl = null; // object URL for the locally-chosen video file
+let epVideoFileName = '';
+let epSyncSrtFileName = '';
+let epVideoCues = []; // [{start,end,text}] parsed from the sync player's own .srt, timestamps kept in seconds
+let epVsyncLastRenderedSrc = null; // avoids rebuilding the <video> element (and losing playback position) when only the srt changes
+let epVsyncFsChangeHandler = null; // current fullscreenchange listener for the vsync player, so re-renders replace it instead of stacking duplicates
+let epVsyncOrientationLocked = false; // whether screen.orientation.lock('landscape') is currently held for the vsync player
+let epVideoLastTime = 0; // last known playback position, restored when the video element is rebuilt (e.g. after leaving/reopening this page)
+
+// Manual subtitle sync offset (seconds), for when the .srt doesn't line up perfectly with the
+// video's own timing. Positive = captions shown later than their timestamp say, negative = earlier.
+// Reset whenever a new video or a new .srt is picked, since the right offset is specific to that pairing.
+let epSubOffset = 0;
+
+// Auto-triggered, level-based highlight word set for the sync player: the moment an .srt is
+// browsed in "فایل زیرنویس (.srt) همین قسمت", it's analyzed right there against the level picked
+// in "سطح زبان" — no need to also run the "تحلیل زیرنویس و پیشنهاد کلمات" word-suggestion flow
+// just to get the caption highlighting. Re-runs automatically if the level is changed afterward.
+let epSyncSrtRawText = ''; // cached raw text of the last-picked sync .srt, so changing the level alone can re-trigger analysis
+let vsyncLevelWords = new Set(); // lowercased words the AI picked as matching episodeLevel for epSyncSrtRawText
+let vsyncLevelAnalyzing = false;
+let vsyncLevelError = '';
+
+// "افزودن از متن": paste any English text in and get AI-picked vocabulary + Persian meanings to
+// review and add to the box — same underlying pipeline as the .srt word-suggestion flow above
+// (extractSrtVocabulary + a Gemini call), just fed plain pasted text instead of a subtitle file.
+let textImportPageEl = null;
+let tiLoading = false;
+let tiError = null;
+let tiSuggestions = []; // [{en, fa, example, definition, level}]
+let tiSelected = new Set(); // indices into tiSuggestions
+let tiLevel = ''; // '' = any level, else a CEFR code like 'A2'
+
+const CEFR_LEVELS = [
+  { value:'', label:'همه‌ی سطوح' },
+  { value:'A1', label:'A1 (مبتدی)' },
+  { value:'A2', label:'A2 (مبتدی بالا)' },
+  { value:'B1', label:'B1 (متوسط)' },
+  { value:'B2', label:'B2 (متوسط بالا)' },
+  { value:'C1', label:'C1 (پیشرفته)' },
+  { value:'C2', label:'C2 (پیشرفته بالا)' }
+];
 
 // Full candidate-word pool extracted from the last uploaded .srt file, kept around so the
 // "کلمات بیشتر" (more words) button can ask the AI to pick from the leftovers without
@@ -1043,25 +1488,6 @@ const SRT_STOPWORDS = new Set(['a','an','the','and','or','but','if','then','than
   'gonna','wanna','gotta','yeah','okay','ok','oh','uh','um','uhh','umm','hey','hi','hello','bye','well','like','really','right','one','two','three','yes','sure','maybe','please','thanks','thank'
 ]);
 
-async function fetchEpisodeWordSuggestions(key, title, season, episode, knownWords){
-  const knownSample = knownWords.slice(0, 200).join('، ');
-  const levelNote = knownSample ? `کلماتی که کاربر از قبل بلد است (برای سنجش سطح او): ${knownSample}.` : 'کاربر هنوز کلمه‌ای ثبت نکرده؛ سطح او را مبتدی تا متوسط در نظر بگیر.';
-  const episodeNote = [
-    title ? `عنوان: "${title}"` : null,
-    season ? `فصل: ${season}` : null,
-    episode ? `قسمت: ${episode}` : null
-  ].filter(Boolean).join(' — ');
-  const systemPrompt = 'تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. کاربر نام یک فیلم یا یک قسمت خاص از یک سریال را می‌دهد و می‌خواهد کلماتی که احتمالاً در آن به کار رفته و برای سطح زبانی خودش مفید است یاد بگیرد. توجه کن که تو به متن دقیق زیرنویس یا فیلمنامه آن قسمت دسترسی نداری؛ بر اساس دانش عمومی خودت از آن اثر (موضوع، فضا، شخصیت‌ها، ژانر — و اگر آن قسمت خاص را می‌شناسی، رویدادهای آن) حدس بزن چه کلماتی محتمل است در آن به‌کار رفته باشد. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown، بدون توضیح اضافه) با دقیقاً این ساختار برگردان: {"mayNotKnow": boolean (true اگر این عنوان/قسمت خاص را نمی‌شناسی و صرفاً حدس عمومی زدی), "words": [{"en":"کلمه انگلیسی","fa":"معنی فارسی کوتاه","example":"یک جمله نمونه انگلیسی کوتاه، ترجیحاً در فضای همان اثر"}]}. بین ۶ تا ۱۰ کلمه پیشنهاد بده؛ هیچ‌کدام نباید در فهرست کلمات کاربر باشد؛ سطح کلمات باید متناسب یا کمی بالاتر از سطح فعلی او باشد.';
-  const userMessage = `${episodeNote}\n${levelNote}`;
-  const raw = await geminiOnce(key, systemPrompt, userMessage);
-  let cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
-  const obj = JSON.parse(cleaned);
-  const words = Array.isArray(obj.words) ? obj.words.map(w=>({
-    en:(w.en||'').trim(), fa:(w.fa||'').trim(), example:(w.example||'').trim()
-  })).filter(w=>w.en && w.fa) : [];
-  return { mayNotKnow: !!obj.mayNotKnow, words };
-}
-
 /* Strips an .srt file down to just its spoken-line text: drops sequence numbers, timestamps,
    and any <i>/<b>/{...} styling tags, keeping one entry per subtitle line. */
 function parseSrtLines(text){
@@ -1079,17 +1505,407 @@ function parseSrtLines(text){
   return out;
 }
 
+/* Parses an .srt file into timed cues (start/end in seconds, plus the cue text) instead of
+   flattening it to plain lines — used only by the offline video+subtitle sync player below,
+   which needs the real timestamps to show each line while the video is at that point. */
+function parseSrtCues(text){
+  text = text.replace(/^\uFEFF/, '');
+  const blocks = text.split(/\r?\n\r?\n+/);
+  const cues = [];
+  const toSeconds = (h,m,s,ms)=> (+h)*3600 + (+m)*60 + (+s) + (+ms)/1000;
+  for(const block of blocks){
+    const blockLines = block.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length);
+    if(blockLines.length===0) continue;
+    let idx = 0;
+    if(/^\d+$/.test(blockLines[0])) idx = 1; // optional leading sequence number
+    const timeLine = blockLines[idx];
+    if(!timeLine) continue;
+    const m = timeLine.match(/(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{3})/);
+    if(!m) continue;
+    const start = toSeconds(m[1],m[2],m[3],m[4]);
+    const end = toSeconds(m[5],m[6],m[7],m[8]);
+    const cueText = blockLines.slice(idx+1)
+      .map(l=>l.replace(/<[^>]+>/g,'').replace(/\{[^}]*\}/g,''))
+      .join('\n').trim();
+    if(cueText && end>start) cues.push({ start, end, text: cueText });
+  }
+  cues.sort((a,b)=>a.start-b.start);
+  return cues;
+}
+
+/* Called when the person picks a local video file for the sync player. The file is never
+   uploaded anywhere — just wrapped in an object URL so the <video> element can play it. */
+function handleEpVideoFile(file){
+  if(epVideoObjectUrl) URL.revokeObjectURL(epVideoObjectUrl);
+  epVideoObjectUrl = URL.createObjectURL(file);
+  epVideoFileName = file.name;
+  epVideoLastTime = 0;
+  epSubOffset = 0;
+  renderVsyncPlayer();
+}
+
+/* Called when the person picks the .srt file to sync alongside the chosen video. Just caches the
+   raw text and parses cues — the level-based highlight analysis itself is NOT run automatically
+   here; it only runs when the person presses the "های‌لایت کلمات هم‌سطح در پلیر" button (see
+   the click handler wired in renderEpisodePage), since it costs an AI request. */
+async function handleEpSyncSrtFile(file){
+  epSyncSrtFileName = file.name;
+  epSyncSrtRawText = '';
+  epSubOffset = 0;
+  try{
+    const text = await file.text();
+    epVideoCues = parseSrtCues(text);
+    epSyncSrtRawText = text;
+  }catch(e){
+    epVideoCues = [];
+  }
+  renderVsyncPlayer();
+  renderVsyncLevelStatus();
+}
+
+/* Runs right after an .srt is browsed for the sync player (and again whenever the level select
+   changes afterward): extracts real candidate words locally, then asks the AI to pick the ones
+   matching the current episodeLevel — exactly like fetchSrtWordSelection does for the word-
+   suggestion list, but triggered automatically and used only to drive the live caption/full-text
+   highlighting, with no dependency on the person ever opening that word-list feature. */
+async function analyzeVsyncLevelWords(text){
+  vsyncLevelWords = new Set();
+  vsyncLevelError = '';
+  await runVsyncLevelAnalysis(text, false);
+}
+
+/* Does the actual work for analyzeVsyncLevelWords. Split out so a 429 (free-tier rate limit)
+   can trigger exactly one automatic retry after the wait time Google's own error message gives,
+   without wiping the word set/error that a first attempt may have already set. */
+async function runVsyncLevelAnalysis(text, isRetry){
+  const settings = loadAiSettings();
+  if(!(settings.provider==='google' && settings.key)){
+    vsyncLevelError = 'برای های‌لایت خودکار سطح، اول از ⚙ تنظیمات کلید رایگان Gemini را وارد کن.';
+    renderVsyncLevelStatus();
+    return;
+  }
+  vsyncLevelAnalyzing = true;
+  renderVsyncLevelStatus();
+  try{
+    const lines = parseSrtLines(text);
+    if(lines.length===0){ vsyncLevelError = 'از این فایل .srt متنی استخراج نشد؛ مطمئن شو فایل srt معتبر است.'; return; }
+    const knownWords = words.map(w=>w.en).filter(Boolean);
+    const knownLower = new Set(knownWords.map(w=>w.trim().toLowerCase()));
+    loadWordSet(KNOWN_WORDS_KEY).forEach(w=> knownLower.add(w));
+    loadWordSet(IGNORED_WORDS_KEY).forEach(w=> knownLower.add(w));
+    const candidates = extractSrtVocabulary(lines, knownLower).slice(0, 150);
+    if(candidates.length===0){ vsyncLevelError = 'کلمه‌ی جدیدی (غیر از کلمه‌هایی که بلدی) در این زیرنویس پیدا نشد.'; return; }
+    const picked = await fetchSrtWordSelection(settings.key, candidates, knownWords, episodeLevel);
+    vsyncLevelWords = new Set(picked.map(p=>p.en.trim().toLowerCase()).filter(Boolean));
+    vsyncLevelError = vsyncLevelWords.size===0 ? 'از این زیرنویس کلمه‌ی هم‌سطحی برای های‌لایت پیدا نشد.' : '';
+  }catch(e){
+    const msg = e && e.message ? e.message : String(e);
+    const is429 = /HTTP 429/.test(msg);
+    if(is429 && !isRetry){
+      // Free-tier Gemini rate limit — Google's own error tells us how long to wait, so wait
+      // exactly that long and retry once automatically instead of just failing.
+      const waitMatch = msg.match(/retry in\s+([\d.]+)\s*s/i);
+      const waitSec = waitMatch ? Math.ceil(parseFloat(waitMatch[1])) + 2 : 30;
+      vsyncLevelError = `سهمیه‌ی رایگان Gemini برای این دقیقه پر شده؛ ${waitSec} ثانیه دیگر خودش دوباره امتحان می‌کند...`;
+      setTimeout(()=> runVsyncLevelAnalysis(text, true), waitSec*1000);
+      return;
+    }
+    vsyncLevelError = is429
+      ? 'سهمیه‌ی رایگان Gemini پر شده؛ کمی بعد دوباره امتحان کن، یا پلن/سهمیه‌ات را در Google AI Studio بررسی کن.'
+      : 'های‌لایت سطح‌محور انجام نشد (' + msg + ').';
+  }finally{
+    vsyncLevelAnalyzing = false;
+    renderVsyncLevelStatus();
+    updateVsyncCaptionNow();
+    renderSrtFullPanel();
+  }
+}
+
+/* Small status line under the "سطح زبان" select, showing progress/result of the automatic
+   analysis above without requiring the word-suggestion list to be open at all. */
+function renderVsyncLevelStatus(){
+  const el = episodePageEl && episodePageEl.querySelector('#epVsyncLevelStatus');
+  if(!el) return;
+  if(vsyncLevelAnalyzing){
+    el.style.display = 'block';
+    el.innerHTML = `<span class="spinner"></span> در حال یافتن کلمات هم‌سطح در زیرنویس...`;
+  }else if(vsyncLevelError){
+    el.style.display = 'block';
+    el.textContent = vsyncLevelError;
+  }else if(vsyncLevelWords.size>0){
+    el.style.display = 'block';
+    el.textContent = `✨ ${vsyncLevelWords.size} کلمه هم‌سطح در ویدیو های‌لایت می‌شود.`;
+  }else{
+    el.style.display = 'none';
+    el.textContent = '';
+  }
+}
+
+/* Renders (or re-renders) the video element + caption overlay inside the episode page, and
+   wires up the timeupdate listener that keeps the caption in sync with playback. Safe to call
+   repeatedly — e.g. after either file is (re)selected.
+
+   The caption is a custom overlay <div> (not a native <track>) specifically so each word in it
+   can be tapped — tapping opens the same add-word form used everywhere else in the app,
+   prefilled with that word, so the dictionary/AI-assistant tools and "add to box 1" flow all
+   just work. Native browser captions can't be made clickable at all.
+
+   To keep that overlay visible in fullscreen too (a plain <video> fullscreen would leave a
+   sibling overlay div behind), fullscreen is triggered on the whole .vsync-player wrapper via
+   our own button, not the video's built-in one. */
+function renderVsyncPlayer(){
+  if(!episodePageEl) return;
+  const holder = episodePageEl.querySelector('#epVsyncPlayerHolder');
+  const status = episodePageEl.querySelector('#epVsyncStatus');
+  if(!holder) return;
+  if(!epVideoObjectUrl){
+    holder.innerHTML = '';
+    epVsyncLastRenderedSrc = null;
+  }else{
+    let videoEl = holder.querySelector('#epVsyncVideo');
+    if(!videoEl || epVsyncLastRenderedSrc !== epVideoObjectUrl){
+      holder.innerHTML = `
+        <div class="vsync-player" id="epVsyncPlayer">
+          <video id="epVsyncVideo" src="${epVideoObjectUrl}" controls playsinline
+            oncontextmenu="return false;"></video>
+          <div class="vsync-caption"><div class="vsync-caption-text" id="epVsyncCaptionText" style="display:none;"></div></div>
+          <button type="button" class="vsync-rotate-btn" id="epVsyncRotateBtn" title="چرخوندن ویدیو">⤾</button>
+          <div class="vsync-btn-row">
+            <button type="button" class="vsync-cap-size-btn" id="epVsyncCapMinusBtn" title="کوچک‌تر کردن زیرنویس">A−</button>
+            <button type="button" class="vsync-cap-size-btn" id="epVsyncCapPlusBtn" title="بزرگ‌تر کردن زیرنویس">A+</button>
+            <button type="button" class="vsync-fs-btn" id="epVsyncFsBtn" title="فول‌اسکرین">⛶</button>
+          </div>
+          <div class="vsync-btn-row vsync-sync-row">
+            <button type="button" class="vsync-cap-size-btn" id="epVsyncSyncMinusBtn" title="زودتر نمایش بده">−۰.۵s</button>
+            <span class="vsync-sync-badge" id="epVsyncSyncBadge">0.0s</span>
+            <button type="button" class="vsync-cap-size-btn" id="epVsyncSyncPlusBtn" title="دیرتر نمایش بده">+۰.۵s</button>
+          </div>
+        </div>`;
+      videoEl = holder.querySelector('#epVsyncVideo');
+      epVsyncLastRenderedSrc = epVideoObjectUrl;
+
+      // Jump back to where playback was left off last time this page was open, once the
+      // browser knows the video's duration (setting currentTime any earlier is unreliable).
+      if(epVideoLastTime > 0){
+        videoEl.addEventListener('loadedmetadata', ()=>{
+          try{ videoEl.currentTime = Math.min(epVideoLastTime, videoEl.duration || epVideoLastTime); }catch(e){}
+        }, { once:true });
+      }
+
+      const captionText = holder.querySelector('#epVsyncCaptionText');
+      videoEl.ontimeupdate = ()=>{
+        epVideoLastTime = videoEl.currentTime;
+        updateVsyncCaptionNow();
+      };
+      captionText.onclick = (e)=>{
+        const span = e.target.closest('.vsync-word');
+        if(!span) return;
+        const cueIdx = findActiveCueIndex(epVideoCues, videoEl.currentTime - epSubOffset);
+        const cueText = cueIdx!==-1 ? epVideoCues[cueIdx].text : '';
+        handleVsyncWordTap(videoEl, span.dataset.w, cueText);
+      };
+
+      const fsBtn = holder.querySelector('#epVsyncFsBtn');
+      const rotateBtn = holder.querySelector('#epVsyncRotateBtn');
+      const capMinusBtn = holder.querySelector('#epVsyncCapMinusBtn');
+      const capPlusBtn = holder.querySelector('#epVsyncCapPlusBtn');
+      const playerEl = holder.querySelector('#epVsyncPlayer');
+
+      /* Subtitle size is a personal preference (screen size, eyesight, taste), so it's kept in
+         localStorage and applied as a CSS scale multiplier read by both the normal and
+         fullscreen font-size rules — one shared control instead of two separate sizes to tune. */
+      const CAP_SCALE_MIN = 0.6, CAP_SCALE_MAX = 2.2, CAP_SCALE_STEP = 0.15;
+      let capScale = parseFloat(localStorage.getItem('vsyncCapScale')) || 1;
+      const applyCapScale = ()=>{ playerEl.style.setProperty('--cap-scale', capScale); };
+      applyCapScale();
+      capMinusBtn.onclick = ()=>{
+        capScale = Math.max(CAP_SCALE_MIN, +(capScale - CAP_SCALE_STEP).toFixed(2));
+        localStorage.setItem('vsyncCapScale', capScale);
+        applyCapScale();
+      };
+      capPlusBtn.onclick = ()=>{
+        capScale = Math.min(CAP_SCALE_MAX, +(capScale + CAP_SCALE_STEP).toFixed(2));
+        localStorage.setItem('vsyncCapScale', capScale);
+        applyCapScale();
+      };
+
+      /* Manual subtitle sync offset — shifts which cue counts as "active" without touching the
+         .srt file itself, for when its timestamps run a bit early/late compared to this video. */
+      const syncMinusBtn = holder.querySelector('#epVsyncSyncMinusBtn');
+      const syncPlusBtn = holder.querySelector('#epVsyncSyncPlusBtn');
+      const syncBadge = holder.querySelector('#epVsyncSyncBadge');
+      const SUB_OFFSET_STEP = 0.5;
+      const renderSyncBadge = ()=>{
+        const sign = epSubOffset > 0 ? '+' : '';
+        syncBadge.textContent = `${sign}${epSubOffset.toFixed(1)}s`;
+      };
+      renderSyncBadge();
+      syncMinusBtn.onclick = ()=>{
+        epSubOffset = +(epSubOffset - SUB_OFFSET_STEP).toFixed(2);
+        renderSyncBadge();
+        updateVsyncCaptionNow();
+      };
+      syncPlusBtn.onclick = ()=>{
+        epSubOffset = +(epSubOffset + SUB_OFFSET_STEP).toFixed(2);
+        renderSyncBadge();
+        updateVsyncCaptionNow();
+      };
+      syncBadge.onclick = ()=>{
+        epSubOffset = 0;
+        renderSyncBadge();
+        updateVsyncCaptionNow();
+      };
+      syncBadge.style.pointerEvents = 'auto';
+      syncBadge.style.cursor = 'pointer';
+      syncBadge.title = 'برای بازنشانی لمس کن';
+
+      const requestPlayerFullscreen = ()=>{
+        const req = playerEl.requestFullscreen || playerEl.webkitRequestFullscreen || playerEl.msRequestFullscreen;
+        if(req) return req.call(playerEl);
+      };
+      fsBtn.onclick = ()=>{ requestPlayerFullscreen(); };
+      // Rotate: prefer the real Screen Orientation API. When supported (Chrome/Firefox on
+      // Android) this actually locks the device's screen to landscape while fullscreen — the
+      // whole viewport becomes landscape, no physical rotation needed, and the existing
+      // fullscreen video CSS just reflows into it naturally. iOS Safari doesn't implement this
+      // API at all (it throws), so for that case (and anything else that fails) we fall back to
+      // the CSS-transform trick that visually rotates the player instead.
+      rotateBtn.onclick = async ()=>{
+        const orientation = screen.orientation;
+        if(orientation && orientation.lock){
+          try{
+            if(epVsyncOrientationLocked){
+              if(orientation.unlock) orientation.unlock();
+              epVsyncOrientationLocked = false;
+              rotateBtn.classList.remove('active');
+            }else{
+              await orientation.lock('landscape');
+              epVsyncOrientationLocked = true;
+              rotateBtn.classList.add('active');
+            }
+            return;
+          }catch(err){
+            // e.g. lock() rejected/unsupported for this value — fall through to CSS fallback.
+          }
+        }
+        playerEl.classList.toggle('vsync-rotate');
+      };
+      // Show/hide the rotate button with fullscreen state, and reset rotation (both the real
+      // orientation lock and the CSS fallback) the moment fullscreen ends, so nothing gets stuck.
+      // (Old listener removed first so re-renders don't stack duplicates.)
+      if(epVsyncFsChangeHandler) document.removeEventListener('fullscreenchange', epVsyncFsChangeHandler);
+      epVsyncFsChangeHandler = ()=>{
+        const isFs = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+        playerEl.classList.toggle('vsync-fs-active', !!isFs);
+        if(!isFs){
+          playerEl.classList.remove('vsync-rotate');
+          rotateBtn.classList.remove('active');
+          epVsyncOrientationLocked = false;
+          if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+        }
+      };
+      document.addEventListener('fullscreenchange', epVsyncFsChangeHandler);
+      document.addEventListener('webkitfullscreenchange', epVsyncFsChangeHandler);
+    }
+  }
+  const syncBadgeEl = holder.querySelector('#epVsyncSyncBadge');
+  if(syncBadgeEl){
+    const sign = epSubOffset > 0 ? '+' : '';
+    syncBadgeEl.textContent = `${sign}${epSubOffset.toFixed(1)}s`;
+  }
+  if(status){
+    const videoPart = epVideoFileName ? `ویدیو: ${epVideoFileName}` : 'هنوز ویدیویی انتخاب نشده.';
+    const srtPart = epSyncSrtFileName ? `زیرنویس: ${epSyncSrtFileName} (${epVideoCues.length} خط)` : 'هنوز زیرنویسی برای هم‌زمانی انتخاب نشده.';
+    status.textContent = `${videoPart} — ${srtPart}`;
+  }
+}
+
+/* Wraps each word of a (already-safe, since it's user-supplied local subtitle text) caption
+   line in a clickable span, so any word can be tapped during playback. Text is escaped first so
+   only the spans this function itself adds ever reach innerHTML. */
+function wordSpansHtml(text, levelWords){
+  const escaped = escapeHtml(text);
+  return escaped.replace(/([A-Za-z']+)/g, (m)=>{
+    const isLevelWord = !!levelWords && levelWords.has(m.toLowerCase());
+    const cls = isLevelWord ? 'vsync-word vsync-word-level' : 'vsync-word';
+    return `<span class="${cls}" data-w="${m.replace(/"/g,'')}">${m}</span>`;
+  });
+}
+
+/* Re-draws whatever caption is currently showing over the video, right now, using the latest
+   level word list — used right after runSrtAnalysis()/loadMoreSrtWords() add level-picked words,
+   so a caption already on screen (e.g. while the video is paused) updates immediately instead of
+   waiting for the next timeupdate tick. */
+function updateVsyncCaptionNow(){
+  if(!episodePageEl) return;
+  const videoEl = episodePageEl.querySelector('#epVsyncVideo');
+  const captionText = episodePageEl.querySelector('#epVsyncCaptionText');
+  if(!videoEl || !captionText) return;
+  const idx = findActiveCueIndex(epVideoCues, videoEl.currentTime - epSubOffset);
+  if(idx===-1){
+    captionText.style.display = 'none'; captionText.innerHTML = '';
+  }else{
+    captionText.style.display = 'inline-block';
+    captionText.innerHTML = wordSpansHtml(epVideoCues[idx].text, buildLevelWordSet());
+  }
+}
+
+/* Called when a word inside the synced caption is tapped: pauses the video (and exits
+   fullscreen, since an overlay opened on <body> wouldn't be visible over a fullscreen element
+   anyway), then opens the normal add-word form pre-filled with that word. */
+/* Called when a word inside the synced caption is tapped: pauses the video, then opens the
+   new word-detail panel pre-loaded with the real subtitle line (cueText) as context, so its
+   grammar/examples tabs are grounded in the actual sentence rather than a generic one. The
+   panel mounts inside the fullscreen element itself via getOverlayMountEl(), so it stays
+   visible without kicking the person out of fullscreen. */
+function handleVsyncWordTap(videoEl, word, cueText){
+  if(!word) return;
+  if(videoEl) videoEl.pause();
+  openWordDetailPanel({en: word}, { sentence: cueText || '' });
+}
+
+/* Finds the cue that should be showing at time t (seconds). Cues are sorted ascending, so the
+   scan can stop as soon as it passes t — fine even for a two-hour movie's worth of lines. */
+function findActiveCueIndex(cues, t){
+  for(let i=0;i<cues.length;i++){
+    if(t>=cues[i].start && t<=cues[i].end) return i;
+    if(cues[i].start>t) break;
+  }
+  return -1;
+}
+
+/* Builds a small window of subtitle lines around a given line index — a few lines before and
+   after — with the matching line flagged, so a word or idiom can be shown inside its real
+   scene/dialogue instead of in isolation. Shared by both the word extractor and the idiom
+   fetcher below. */
+function buildContextBlock(lines, lineIdx, before, after){
+  before = (before==null) ? 2 : before;
+  after = (after==null) ? 2 : after;
+  const start = Math.max(0, lineIdx - before);
+  const end = Math.min(lines.length - 1, lineIdx + after);
+  const block = [];
+  for(let li = start; li <= end; li++){
+    block.push({ text: lines[li], isMatch: li === lineIdx });
+  }
+  return block;
+}
+
 /* Builds a frequency-ranked list of candidate words from real subtitle lines: skips function
    words, words the user already knows, and words that only ever appear capitalized mid-line
-   (a decent signal they're a character/place name rather than a word worth learning). Keeps
-   the first real line each word appeared in, to use as an authentic example sentence later. */
+   (a decent signal they're a character/place name rather than a word worth learning). For each
+   occurrence, also keeps a small window of the surrounding subtitle lines (a few before/after)
+   so the word can later be shown inside its real scene/dialogue, not just in isolation. */
 function extractSrtVocabulary(lines, knownLowerSet){
   const freq = {};
-  const examples = {}; // word -> array of distinct subtitle lines it appeared in (capped)
+  const contexts = {};      // word -> array of context blocks: [{text, isMatch}, ...]
+  const lastCovered = {};   // word -> last line index already included in a context block, to avoid near-duplicate overlapping blocks
   const midCap = new Set();
   const anyLower = new Set();
-  const MAX_EXAMPLES_PER_WORD = 30;
-  lines.forEach(line=>{
+  const MAX_EXAMPLES_PER_WORD = 12;
+  const CONTEXT_BEFORE = 2;
+  const CONTEXT_AFTER = 2;
+
+  lines.forEach((line, lineIdx)=>{
     const matches = [...line.matchAll(/[A-Za-z']+/g)];
     matches.forEach((m, i)=>{
       const raw = m[0];
@@ -1101,40 +1917,127 @@ function extractSrtVocabulary(lines, knownLowerSet){
       if(isCap && i>0) midCap.add(lower);
       if(!isCap) anyLower.add(lower);
       freq[lower] = (freq[lower]||0) + 1;
-      if(!examples[lower]) examples[lower] = [];
-      const list = examples[lower];
-      if(list.length < MAX_EXAMPLES_PER_WORD && list[list.length-1] !== line){
-        list.push(line);
-      }
+
+      if(!contexts[lower]) contexts[lower] = [];
+      const list = contexts[lower];
+      const prevCovered = lastCovered[lower];
+      if(prevCovered !== undefined && lineIdx <= prevCovered) return; // already inside a previous context block
+      if(list.length >= MAX_EXAMPLES_PER_WORD) return;
+      const block = buildContextBlock(lines, lineIdx, CONTEXT_BEFORE, CONTEXT_AFTER);
+      list.push(block);
+      lastCovered[lower] = lineIdx + CONTEXT_AFTER;
     });
   });
+
   return Object.keys(freq)
     .filter(w => !(midCap.has(w) && !anyLower.has(w)))
     .sort((a,b)=> freq[b]-freq[a])
-    .map(w => ({ en:w, count:freq[w], example:examples[w][0], allExamples:examples[w] }));
+    .map(w => {
+      const blocks = contexts[w] || [];
+      const firstMatchLine = blocks.length ? (blocks[0].find(l=>l.isMatch) || {}).text : '';
+      return { en:w, count:freq[w], example: firstMatchLine || '', allExamples: blocks };
+    });
 }
 
 /* Given real candidate words pulled from the subtitle file (with how often each occurs),
    asks the AI to pick the subset worth learning at the user's level and supply meanings —
    it must choose only from this exact list, so every word and example stays grounded in the
    real file rather than being invented. */
-async function fetchSrtWordSelection(key, candidates, knownWords){
+async function fetchSrtWordSelection(key, candidates, knownWords, level){
   const knownSample = knownWords.slice(0, 200).join('، ');
-  const levelNote = knownSample ? `کلماتی که کاربر از قبل بلد است (برای سنجش سطح او): ${knownSample}.` : 'کاربر هنوز کلمه‌ای ثبت نکرده؛ سطح او را مبتدی تا متوسط در نظر بگیر.';
+  const levelNote = level
+    ? `کاربر می‌خواهد فقط کلماتی هم‌سطح ${level} (طبق چارچوب CEFR) ببیند؛ فقط از میان کاندیدها همان‌هایی را انتخاب کن که تقریباً همین سطح‌اند.`
+    : (knownSample ? `کلماتی که کاربر از قبل بلد است (برای سنجش سطح او): ${knownSample}.` : 'کاربر هنوز کلمه‌ای ثبت نکرده؛ سطح او را مبتدی تا متوسط در نظر بگیر.');
   const candidateList = candidates.map(c => `${c.en}(${c.count})`).join('، ');
-  const systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. در ادامه فهرستی از کلمات واقعی استخراج‌شده از زیرنویس یک فیلم/سریال به‌همراه تعداد تکرار هرکدام می‌آید. با توجه به سطح فعلی کاربر، دقیقاً از میان همین فهرست (بدون تغییر املا و بدون افزودن کلمه‌ی تازه) بین ۱۰ تا ۱۵ کلمه انتخاب کن که یادگیری‌شان برای او مفید و هم‌سطح باشد؛ کلمات خیلی بدیهی یا خیلی کمیاب/غیرضروری و همچنین اسم خاص یا نام شخصیت‌ها را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa) و یک شرح انگلیسی ساده از معنایش (definition) بنویس. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با این ساختار برگردان: {"words":[{"en":"...","fa":"...","definition":"..."}]}.';
+  const systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. در ادامه فهرستی از کلمات واقعی استخراج‌شده از زیرنویس یک فیلم/سریال به‌همراه تعداد تکرار هرکدام می‌آید. با توجه به سطح فعلی کاربر، دقیقاً از میان همین فهرست (بدون تغییر املا و بدون افزودن کلمه‌ی تازه) بین ۱۰ تا ۱۵ کلمه انتخاب کن که یادگیری‌شان برای او مفید و هم‌سطح باشد؛ کلمات خیلی بدیهی یا خیلی کمیاب/غیرضروری و همچنین اسم خاص یا نام شخصیت‌ها را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با این ساختار برگردان: {"words":[{"en":"...","fa":"...","definition":"...","level":"..."}]}.';
   const userMessage = `${levelNote}\nفهرست کلمات کاندید از زیرنویس، به‌صورت کلمه(تعداد تکرار): ${candidateList}`;
   const raw = await geminiOnce(key, systemPrompt, userMessage);
   let cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
   const obj = JSON.parse(cleaned);
   return Array.isArray(obj.words) ? obj.words.map(w=>({
-    en:(w.en||'').trim(), fa:(w.fa||'').trim(), definition:(w.definition||'').trim()
+    en:(w.en||'').trim(), fa:(w.fa||'').trim(), definition:(w.definition||'').trim(), level:(w.level||'').trim()
   })).filter(w=>w.en && w.fa) : [];
+}
+
+/* Splits a plain pasted text (not a subtitle file) into sentence-ish chunks, so the exact same
+   extractSrtVocabulary() context-window logic above can be reused as-is for "افزودن از متن"
+   instead of duplicating it for a different kind of input. */
+function splitTextIntoSentences(text){
+  return text
+    .replace(/\r\n/g, '\n')
+    .split(/\n+/)
+    .flatMap(chunk => chunk.split(/(?<=[.!?])\s+/))
+    .map(s=>s.trim())
+    .filter(Boolean);
+}
+
+/* Same idea and JSON shape as fetchSrtWordSelection above, just worded for a plain pasted text
+   ("افزودن از متن" feature) instead of a subtitle file specifically. */
+async function fetchTextWordSelection(key, candidates, knownWords, level){
+  const knownSample = knownWords.slice(0, 200).join('، ');
+  const levelNote = level
+    ? `کاربر می‌خواهد فقط کلماتی هم‌سطح ${level} (طبق چارچوب CEFR) ببیند؛ فقط از میان کاندیدها همان‌هایی را انتخاب کن که تقریباً همین سطح‌اند.`
+    : (knownSample ? `کلماتی که کاربر از قبل بلد است (برای سنجش سطح او): ${knownSample}.` : 'کاربر هنوز کلمه‌ای ثبت نکرده؛ سطح او را مبتدی تا متوسط در نظر بگیر.');
+  const candidateList = candidates.map(c => `${c.en}(${c.count})`).join('، ');
+  const systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. در ادامه فهرستی از کلمات واقعی استخراج‌شده از یک متن انگلیسی که کاربر داده به‌همراه تعداد تکرار هرکدام می‌آید. با توجه به سطح فعلی کاربر، دقیقاً از میان همین فهرست (بدون تغییر املا و بدون افزودن کلمه‌ی تازه) بین ۱۰ تا ۲۰ کلمه انتخاب کن که یادگیری‌شان برای او مفید و هم‌سطح باشد؛ کلمات خیلی بدیهی یا خیلی کمیاب/غیرضروری را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با این ساختار برگردان: {"words":[{"en":"...","fa":"...","definition":"...","level":"..."}]}.';
+  const userMessage = `${levelNote}\nفهرست کلمات کاندید از متن، به‌صورت کلمه(تعداد تکرار): ${candidateList}`;
+  const raw = await geminiOnce(key, systemPrompt, userMessage);
+  let cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+  const obj = JSON.parse(cleaned);
+  return Array.isArray(obj.words) ? obj.words.map(w=>({
+    en:(w.en||'').trim(), fa:(w.fa||'').trim(), definition:(w.definition||'').trim(), level:(w.level||'').trim()
+  })).filter(w=>w.en && w.fa) : [];
+}
+
+/* Finds real idioms/idiomatic expressions in the actual subtitle text (not single words, which
+   extractSrtVocabulary already handles locally). Idioms are multi-word phrases, so they can't be
+   found with simple frequency counting — this sends a (size-capped, evenly-sampled if needed)
+   chunk of the real subtitle lines to the AI and asks it to point out idioms it actually sees,
+   quoting the exact line each one came from. Every returned idiom is then checked against the
+   real lines and dropped if its quoted line doesn't literally exist in the file, so nothing
+   invented slips through. */
+async function fetchSrtIdiomSelection(key, lines, knownWords, level){
+  const MAX_CHARS = 12000;
+  let sampleLines = lines;
+  if(lines.join('\n').length > MAX_CHARS){
+    const approxTargetLines = Math.max(50, Math.floor(MAX_CHARS/40));
+    const step = Math.max(1, Math.ceil(lines.length/approxTargetLines));
+    sampleLines = lines.filter((_,i)=> i % step === 0);
+  }
+  let fullText = sampleLines.join('\n');
+  if(fullText.length > MAX_CHARS) fullText = fullText.slice(0, MAX_CHARS);
+
+  const knownSample = knownWords.slice(0, 200).join('، ');
+  const levelNote = level
+    ? `فقط اصطلاحاتی را انتخاب کن که سطح زبانی‌شان تقریباً ${level} (طبق چارچوب CEFR) است.`
+    : 'سطح اصطلاحات پیشنهادی را متناسب با یک زبان‌آموز مبتدی تا متوسط در نظر بگیر.';
+  const systemPrompt = 'تو یک مربی زبان انگلیسی برای فارسی‌زبانان هستی. در ادامه بخشی از خطوط واقعی زیرنویس یک فیلم/سریال می‌آید (هر خط در یک سطر جدا). اصطلاحات و عبارات idiomatic انگلیسی (نه تک‌کلمه‌های ساده) را که عیناً و کلمه‌به‌کلمه در همین متن آمده‌اند پیدا کن. ' + levelNote + ' برای هر اصطلاح: دقیقاً همان خط از متن ورودی که اصطلاح در آن آمده را بدون کوچک‌ترین تغییری در فیلد "line" کپی کن (باید عیناً با یکی از خط‌های ورودی یکی باشد)، معنای فارسی کوتاه در "fa"، و توضیح ساده انگلیسی در "definition" بنویس. اگر اصطلاح واقعی پیدا نکردی، آرایه خالی برگردان — چیزی از خودت اختراع نکن. فقط و فقط یک آبجکت JSON خالص (بدون Markdown) با این ساختار برگردان: {"idioms":[{"en":"...","fa":"...","definition":"...","line":"..."}]}';
+  const userMessage = `${knownSample ? `کلماتی که کاربر می‌داند: ${knownSample}\n` : ''}متن زیرنویس:\n${fullText}`;
+  const raw = await geminiOnce(key, systemPrompt, userMessage);
+  let cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+  const obj = JSON.parse(cleaned);
+  const rawIdioms = Array.isArray(obj.idioms) ? obj.idioms : [];
+
+  const lineIndexMap = new Map();
+  lines.forEach((l, idx)=>{ if(!lineIndexMap.has(l)) lineIndexMap.set(l, idx); });
+
+  const out = [];
+  rawIdioms.forEach(it=>{
+    const en = (it.en||'').trim();
+    const fa = (it.fa||'').trim();
+    const definition = (it.definition||'').trim();
+    const line = (it.line||'').trim();
+    if(!en || !fa || !line) return;
+    if(!lineIndexMap.has(line)) return; // not grounded in the real subtitle text — discard rather than risk a hallucinated example
+    out.push({ en, fa, definition, lineIdx: lineIndexMap.get(line) });
+  });
+  return out;
 }
 
 /* Runs the whole SRT pipeline: read file → strip to plain lines → extract real candidate
    words locally → ask the AI to pick the level-appropriate ones and translate them →
-   re-attach each pick to its real example line from the file. */
+   re-attach each pick to its real example line from the file. If idioms are requested, also
+   asks the AI to find real idioms in the text and grounds each one against the actual lines. */
 async function runSrtAnalysis(){
   const fileInput = episodePageEl.querySelector('#epSrtFile');
   const file = fileInput.files && fileInput.files[0];
@@ -1143,35 +2046,60 @@ async function runSrtAnalysis(){
   episodeLoading = true;
   episodeError = null;
   episodeMoreError = null;
+  episodeIdiomError = null;
   episodeSuggestions = [];
   episodeSelected = new Set();
-  episodeExpandedExamples = new Set();
-  episodeSourceIsSrt = true;
+  episodeTypeFilter = 'all';
   srtCandidatesPool = [];
+  srtFullLines = [];
+  srtHighlightWord = null;
   renderEpisodeResults();
   try{
     const text = await file.text();
     const lines = parseSrtLines(text);
     if(lines.length===0) throw new Error('متنی از این فایل استخراج نشد؛ مطمئن شو فایل srt معتبر است.');
+    srtFullLines = lines;
     const knownWords = words.map(w=>w.en).filter(Boolean);
     const knownLower = new Set(knownWords.map(w=>w.trim().toLowerCase()));
+    loadWordSet(KNOWN_WORDS_KEY).forEach(w=> knownLower.add(w));
+    loadWordSet(IGNORED_WORDS_KEY).forEach(w=> knownLower.add(w));
     const allCandidates = extractSrtVocabulary(lines, knownLower);
     srtCandidatesPool = allCandidates; // keep the full pool around for the "more words" button
     const candidates = allCandidates.slice(0, 150);
-    if(candidates.length===0) throw new Error('کلمه‌ی جدیدی (که قبلاً بلد نباشی) در این زیرنویس پیدا نشد.');
-    const picked = await fetchSrtWordSelection(settings.key, candidates, knownWords);
-    const byWord = {};
-    candidates.forEach(c=>{ byWord[c.en] = c; });
-    episodeSuggestions = picked.map(p=>{
-      const c = byWord[p.en.trim().toLowerCase()];
-      return { en: p.en, fa: p.fa, definition: p.definition, example: c ? c.example : '', allExamples: c ? c.allExamples : [] };
-    }).filter(w=>w.en && w.fa);
+
+    let wordItems = [];
+    if(candidates.length > 0){
+      const picked = await fetchSrtWordSelection(settings.key, candidates, knownWords, episodeLevel);
+      const byWord = {};
+      candidates.forEach(c=>{ byWord[c.en] = c; });
+      wordItems = picked.map(p=>{
+        const c = byWord[p.en.trim().toLowerCase()];
+        return { en: p.en, fa: p.fa, definition: p.definition, example: c ? c.example : '', allExamples: c ? c.allExamples : [], type:'word', level: p.level || '' };
+      }).filter(w=>w.en && w.fa);
+    }
+
+    let idiomItems = [];
+    if(episodeIncludeIdioms){
+      try{
+        const idiomPicks = await fetchSrtIdiomSelection(settings.key, lines, knownWords, episodeLevel);
+        idiomItems = idiomPicks.map(it=>({
+          en: it.en, fa: it.fa, definition: it.definition,
+          example: lines[it.lineIdx], allExamples: [buildContextBlock(lines, it.lineIdx)],
+          type: 'idiom'
+        }));
+      }catch(e){
+        episodeIdiomError = 'دریافت اصطلاحات از این زیرنویس ناموفق بود (' + (e && e.message ? e.message : e) + ')؛ کلمات همچنان نمایش داده می‌شوند.';
+      }
+    }
+
+    episodeSuggestions = wordItems.concat(idiomItems);
     if(episodeSuggestions.length===0) episodeError = 'از تحلیل این زیرنویس پیشنهادی به‌دست نیامد.';
   }catch(e){
     episodeError = 'تحلیل زیرنویس ناموفق بود (' + (e && e.message ? e.message : e) + ').';
   }finally{
     episodeLoading = false;
     renderEpisodeResults();
+    updateVsyncCaptionNow();
   }
 }
 
@@ -1194,13 +2122,13 @@ async function loadMoreSrtWords(){
     }
     const knownWords = words.map(w=>w.en).filter(Boolean).concat([...shownLower]);
     const batch = remaining.slice(0, 150);
-    const picked = await fetchSrtWordSelection(settings.key, batch, knownWords);
+    const picked = await fetchSrtWordSelection(settings.key, batch, knownWords, episodeLevel);
     const byWord = {};
     batch.forEach(c=>{ byWord[c.en] = c; });
     const newOnes = picked
       .map(p=>{
         const c = byWord[p.en.trim().toLowerCase()];
-        return { en: p.en, fa: p.fa, definition: p.definition, example: c ? c.example : '', allExamples: c ? c.allExamples : [] };
+        return { en: p.en, fa: p.fa, definition: p.definition, example: c ? c.example : '', allExamples: c ? c.allExamples : [], type:'word', level: p.level || '' };
       })
       .filter(w=>w.en && w.fa && !shownLower.has(w.en.trim().toLowerCase()));
     if(newOnes.length===0){
@@ -1213,26 +2141,228 @@ async function loadMoreSrtWords(){
   }finally{
     episodeMoreLoading = false;
     renderEpisodeResults();
+    updateVsyncCaptionNow();
   }
 }
 
 function closeEpisodePage(){
-  if(episodePageEl){ episodePageEl.remove(); episodePageEl = null; }
+  // Deliberately NOT removing episodePageEl from the DOM (and not revoking epVideoObjectUrl or
+  // clearing epSyncSrtFileName/epVideoCues either): the person expects the whole page — video,
+  // playback position, subtitle analysis results, everything — to be exactly as they left it
+  // when they come back, not to start over. So "closing" just hides it; the main page's own
+  // buttons/subtitle section underneath become reachable again instead of it being torn down.
+  if(episodePageEl){ episodePageEl.style.display = 'none'; }
+}
+
+/* ---------- "افزودن از متن" page: paste any English text in, get AI-picked vocabulary +
+   Persian meanings back to review and add to the box. Mirrors the .srt word-suggestion flow
+   above closely (same card UI, same underlying extraction pipeline) but for plain pasted text. */
+function closeTextImportPage(){
+  if(textImportPageEl){ textImportPageEl.style.display = 'none'; }
+}
+
+function openTextImportPage(){
+  if(textImportPageEl){
+    textImportPageEl.style.display = '';
+    return;
+  }
+  textImportPageEl = document.createElement('div');
+  textImportPageEl.className = 'page-full';
+  document.body.appendChild(textImportPageEl);
+  renderTextImportPage();
+}
+
+function renderTextImportPage(){
+  if(!textImportPageEl) return;
+  const settings = loadAiSettings();
+  const ready = !!(settings.provider==='google' && settings.key);
+
+  textImportPageEl.innerHTML = `
+    <div class="page-top">
+      <h2>📝 افزودن از متن</h2>
+      <button class="close-x" id="tiCloseBtn">✕</button>
+    </div>
+    <div class="page-body">
+      ${!ready ? `<div class="ai-note">برای دریافت کلمات از دکمه ⚙ تنظیمات، کلید رایگان Gemini را وارد کنید.</div>` : ''}
+
+      <div class="vsync-wrap">
+        <div class="vsync-head">📝 متن انگلیسی</div>
+        <label>متن دلخواهت را اینجا بچسبان (مقاله، پاراگراف، هر چیزی)</label>
+        <textarea id="tiTextArea" rows="8" placeholder="یک متن انگلیسی اینجا بچسبان..."></textarea>
+
+        <div class="ep-filter-row" style="margin-top:14px;">
+          <div>
+            <label>سطح زبان</label>
+            <select id="tiLevelSelect" ${!ready?'disabled':''}>
+              ${CEFR_LEVELS.map(l=>`<option value="${l.value}" ${tiLevel===l.value?'selected':''}>${escapeHtml(l.label)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div class="actions" style="margin-top:16px;">
+          <button class="btn btn-primary" id="tiGoBtn" ${!ready?'disabled':''}>🔎 استخراج کلمات از متن</button>
+          ${!ready ? `<button class="btn btn-secondary" id="tiSettingsBtn">رفتن به تنظیمات</button>` : ''}
+        </div>
+      </div>
+
+      <div id="tiResults" style="margin-top:20px;"></div>
+    </div>`;
+
+  textImportPageEl.querySelector('#tiCloseBtn').onclick = closeTextImportPage;
+  const settingsBtn = textImportPageEl.querySelector('#tiSettingsBtn');
+  if(settingsBtn) settingsBtn.onclick = ()=>{ closeTextImportPage(); openSettingsPage(); };
+  const levelSel = textImportPageEl.querySelector('#tiLevelSelect');
+  if(levelSel) levelSel.onchange = ()=>{ tiLevel = levelSel.value; };
+  const goBtn = textImportPageEl.querySelector('#tiGoBtn');
+  if(goBtn) goBtn.onclick = runTextImportAnalysis;
+
+  renderTiResults();
+}
+
+/* Reads the pasted text, extracts real candidate words locally (reusing extractSrtVocabulary),
+   then asks the AI to pick the ones worth learning at the chosen level and write their meanings —
+   exactly like the .srt flow, just fed sentence-split plain text instead of subtitle lines. */
+async function runTextImportAnalysis(){
+  const settings = loadAiSettings();
+  if(!(settings.provider==='google' && settings.key)) return;
+  const textArea = textImportPageEl.querySelector('#tiTextArea');
+  const text = textArea ? textArea.value.trim() : '';
+  if(!text){
+    tiError = 'اول یک متن انگلیسی بچسبان.';
+    renderTiResults();
+    return;
+  }
+  tiLoading = true; tiError = null; tiSuggestions = []; tiSelected = new Set();
+  renderTiResults();
+  try{
+    const sentences = splitTextIntoSentences(text);
+    if(sentences.length===0){ tiError = 'متنی برای تحلیل پیدا نشد.'; return; }
+    const knownWords = words.map(w=>w.en).filter(Boolean);
+    const knownLower = new Set(knownWords.map(w=>w.trim().toLowerCase()));
+    loadWordSet(KNOWN_WORDS_KEY).forEach(w=> knownLower.add(w));
+    loadWordSet(IGNORED_WORDS_KEY).forEach(w=> knownLower.add(w));
+    const candidates = extractSrtVocabulary(sentences, knownLower).slice(0, 150);
+    if(candidates.length===0){ tiError = 'کلمه‌ی جدیدی (غیر از کلمه‌هایی که بلدی) در این متن پیدا نشد.'; return; }
+    const candidateByEn = {};
+    candidates.forEach(c=>{ candidateByEn[c.en] = c; });
+    const picked = await fetchTextWordSelection(settings.key, candidates, knownWords, tiLevel);
+    if(picked.length===0){ tiError = 'کلمه‌ی مناسبی برای پیشنهاد در این متن پیدا نشد.'; return; }
+    tiSuggestions = picked.map(w=>{
+      const c = candidateByEn[w.en.trim().toLowerCase()];
+      return { en:w.en, fa:w.fa, definition:w.definition, level:w.level, example: c ? c.example : '' };
+    });
+    tiSelected = new Set(tiSuggestions.map((_,i)=>i)); // select all by default — one tap away from "add all"
+  }catch(e){
+    tiError = 'استخراج کلمات از متن ناموفق بود (' + (e && e.message ? e.message : e) + ').';
+  }finally{
+    tiLoading = false;
+    renderTiResults();
+  }
+}
+
+function renderTiResults(){
+  const box = textImportPageEl && textImportPageEl.querySelector('#tiResults');
+  if(!box) return;
+
+  if(tiLoading){
+    box.innerHTML = `<div class="ai-note"><span class="spinner"></span> در حال پیدا کردن کلمات مناسب...</div>`;
+    return;
+  }
+  if(tiError){
+    box.innerHTML = `<div class="ai-note">${escapeHtml(tiError)}</div>`;
+    return;
+  }
+  if(tiSuggestions.length===0){
+    box.innerHTML = '';
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="selection-banner" id="tiSelBanner" style="display:none;">
+      <span id="tiSelCount"></span>
+      <button class="btn btn-primary btn-icon btn-small" id="tiAddBtn" title="افزودن به فهرست لغات">➕</button>
+    </div>
+    ${tiSuggestions.map((w,i)=>`
+      <div class="ep-word-card ${tiSelected.has(i)?'selected':''}" data-idx="${i}">
+        <input type="checkbox" ${tiSelected.has(i)?'checked':''}>
+        <div style="flex:1;">
+          <div class="ep-en-row">
+            <div class="ep-en">${escapeHtml(w.en)}</div>
+            ${w.level ? `<span class="ep-level-badge">${escapeHtml(w.level)}</span>` : ''}
+          </div>
+          <div class="ep-fa">${escapeHtml(w.fa)}</div>
+          ${w.definition ? `<div class="ep-def">${escapeHtml(w.definition)}</div>` : ''}
+          ${w.example ? `<div class="ep-ex">${escapeHtml(w.example)}</div>` : ''}
+        </div>
+      </div>
+    `).join('')}
+  `;
+
+  const updateBanner = ()=>{
+    const bar = box.querySelector('#tiSelBanner');
+    const count = tiSelected.size;
+    bar.style.display = count>0 ? 'flex' : 'none';
+    box.querySelector('#tiSelCount').textContent = `${count} کلمه انتخاب شده`;
+  };
+  updateBanner();
+
+  box.querySelectorAll('.ep-word-card').forEach(card=>{
+    card.onclick = ()=>{
+      const idx = +card.dataset.idx;
+      if(tiSelected.has(idx)) tiSelected.delete(idx); else tiSelected.add(idx);
+      renderTiResults();
+    };
+  });
+
+  const addBtn = box.querySelector('#tiAddBtn');
+  if(addBtn){
+    addBtn.onclick = async (e)=>{
+      e.stopPropagation();
+      const existingLower = new Set(words.map(w=>(w.en||'').trim().toLowerCase()));
+      let addedCount = 0;
+      tiSelected.forEach(idx=>{
+        const w = tiSuggestions[idx];
+        if(!w || existingLower.has(w.en.trim().toLowerCase())) return;
+        words.push({
+          id: 'w_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+          en: w.en, fa: w.fa, example: w.example||'', note:'',
+          type: 'word',
+          box: 1, nextReview: todayISO(), createdAt: todayISO()
+        });
+        existingLower.add(w.en.trim().toLowerCase());
+        addedCount++;
+      });
+      await saveWords();
+      renderDrawers();
+      if(listPageRedraw) listPageRedraw();
+      closeTextImportPage();
+      alert(addedCount>0 ? `${addedCount} کلمه به فهرست لغات اضافه شد.` : 'کلمه‌ای اضافه نشد (احتمالاً همه قبلاً در فهرست بودند).');
+    };
+  }
 }
 
 function openEpisodePage(){
+  // If the page already exists (person has been here before this session), just reveal it again
+  // exactly as it was left — do NOT recreate it or reset any of its state/video playback.
+  if(episodePageEl){
+    episodePageEl.style.display = '';
+    return;
+  }
   episodePageEl = document.createElement('div');
   episodePageEl.className = 'page-full';
   document.body.appendChild(episodePageEl);
   episodeError = null;
   episodeSuggestions = [];
   episodeSelected = new Set();
-  episodeExpandedExamples = new Set();
-  episodeMayNotKnow = false;
-  episodeSourceIsSrt = false;
+  episodeTypeFilter = 'all';
   srtCandidatesPool = [];
+  srtFullLines = [];
+  srtHighlightWord = null;
   episodeMoreLoading = false;
   episodeMoreError = null;
+  episodeIdiomError = null;
+  // Video/subtitle state (epVideoObjectUrl, epSyncSrtFileName, epVideoCues, epVsyncLastRenderedSrc)
+  // is intentionally left alone here — it should survive leaving and returning to this page.
   renderEpisodePage();
 }
 
@@ -1243,38 +2373,53 @@ function renderEpisodePage(){
 
   episodePageEl.innerHTML = `
     <div class="page-top">
-      <h2>🎬 کلمات یک قسمت</h2>
+      <h2>🎬 فیلم</h2>
       <button class="close-x" id="epCloseBtn">✕</button>
     </div>
     <div class="page-body">
-      <div class="ai-note">
-        نام فیلم یا سریال (و فصل/قسمت اگر سریال است) را بنویس. هوش مصنوعی به زیرنویس دقیق آن دسترسی ندارد؛ بر اساس شناختش از آن اثر و موضوعش، چند کلمه‌ی مرتبط و متناسب با سطح زبان تو (بر اساس لغات فعلی‌ات) حدس می‌زند — نه استخراج دقیق از متن.
-      </div>
-      ${!ready ? `<div class="ai-note">هنوز کلید Google Gemini را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید رایگان خودتان را وارد کنید.</div>` : ''}
+      ${!ready ? `<div class="ai-note">برای دریافت کلمات از دکمه ⚙ تنظیمات، کلید رایگان Gemini را وارد کنید.</div>` : ''}
 
-      <label>نام فیلم یا سریال</label>
-      <input type="text" id="epTitle" placeholder="مثلاً: Friends" ${!ready?'disabled':''}>
-      <div class="ep-form-row" style="margin-top:10px;">
-        <div style="flex:1;">
-          <label>فصل (اختیاری)</label>
-          <input type="text" id="epSeason" placeholder="مثلاً: 3" ${!ready?'disabled':''}>
+      <div class="vsync-wrap">
+        <div class="vsync-head">🎥 پخش هم‌زمان فیلم با زیرنویس</div>
+        <div class="vsync-inputs">
+          <div>
+            <label>فایل ویدیو (اختیاری)</label>
+            <input type="file" id="epVideoFile" accept="video/*">
+          </div>
         </div>
-        <div style="flex:1;">
-          <label>قسمت (اختیاری)</label>
-          <input type="text" id="epEpisode" placeholder="مثلاً: 7" ${!ready?'disabled':''}>
+        <div id="epVsyncPlayerHolder"></div>
+        <div class="vsync-status-row">
+          <button type="button" class="vsync-info-btn" id="epVsyncInfoBtn" title="نام فایل‌ها">ℹ️</button>
+          <div class="vsync-status" id="epVsyncStatus" style="display:none;"></div>
         </div>
-      </div>
-      <div class="actions" style="margin-top:14px;">
-        <button class="btn btn-primary" id="epGoBtn" ${!ready?'disabled':''}>🔍 پیشنهاد بده</button>
-        ${!ready ? `<button class="btn btn-secondary" id="epSettingsBtn">رفتن به تنظیمات</button>` : ''}
       </div>
 
-      <div class="ep-divider">— یا، برای دقت بیشتر —</div>
-      <label>فایل زیرنویس (.srt) همین قسمت را آپلود کن</label>
-      <input type="file" id="epSrtFile" accept=".srt" ${!ready?'disabled':''}>
-      <div class="ai-note" style="margin-top:8px;">با این روش، کلمات مستقیماً از متن واقعی همان زیرنویس استخراج می‌شوند و حدسی نیستند.</div>
-      <div class="actions" style="margin-top:10px;">
-        <button class="btn btn-primary" id="epSrtGoBtn" ${!ready?'disabled':''}>📄 تحلیل زیرنویس و پیشنهاد کلمات</button>
+      <div class="vsync-wrap">
+        <div class="vsync-head">📄 تحلیل زیرنویس و پیشنهاد کلمات</div>
+        <label>فایل زیرنویس (.srt) همین قسمت</label>
+        <input type="file" id="epSrtFile" accept=".srt">
+
+        <div class="ep-filter-row" style="margin-top:14px;">
+          <div>
+            <label>سطح زبان</label>
+            <select id="epLevelSelect" ${!ready?'disabled':''}>
+              ${CEFR_LEVELS.map(l=>`<option value="${l.value}" ${episodeLevel===l.value?'selected':''}>${escapeHtml(l.label)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="actions" style="margin-top:12px;">
+          <button class="btn btn-secondary btn-small" id="epVsyncLevelBtn" ${!ready?'disabled':''}>🎯 های‌لایت کلمات هم‌سطح در پلیر</button>
+        </div>
+        <div class="ai-note" id="epVsyncLevelStatus" style="display:none; margin-top:10px;"></div>
+        <label class="ep-checkbox-label">
+          <input type="checkbox" id="epIncludeIdioms" ${episodeIncludeIdioms?'checked':''} ${!ready?'disabled':''}>
+          اصطلاحات (idioms) را هم پیشنهاد بده
+        </label>
+
+        <div class="actions" style="margin-top:16px;">
+          <button class="btn btn-primary" id="epSrtGoBtn" ${!ready?'disabled':''}>📄 تحلیل زیرنویس و پیشنهاد کلمات</button>
+          ${!ready ? `<button class="btn btn-secondary" id="epSettingsBtn">رفتن به تنظیمات</button>` : ''}
+        </div>
       </div>
 
       <div id="epResults" style="margin-top:20px;"></div>
@@ -1283,40 +2428,105 @@ function renderEpisodePage(){
   episodePageEl.querySelector('#epCloseBtn').onclick = closeEpisodePage;
   const settingsBtn = episodePageEl.querySelector('#epSettingsBtn');
   if(settingsBtn) settingsBtn.onclick = ()=>{ closeEpisodePage(); openSettingsPage(); };
-  const goBtn = episodePageEl.querySelector('#epGoBtn');
-  if(goBtn) goBtn.onclick = runEpisodeSearch;
+  const levelSel = episodePageEl.querySelector('#epLevelSelect');
+  if(levelSel) levelSel.onchange = ()=>{ episodeLevel = levelSel.value; };
+  const vsyncLevelBtn = episodePageEl.querySelector('#epVsyncLevelBtn');
+  if(vsyncLevelBtn) vsyncLevelBtn.onclick = ()=>{
+    if(!epSyncSrtRawText){
+      vsyncLevelError = 'اول از «فایل زیرنویس (.srt) همین قسمت» بالاتر یک فایل انتخاب کن.';
+      renderVsyncLevelStatus();
+      return;
+    }
+    analyzeVsyncLevelWords(epSyncSrtRawText);
+  };
+  const idiomChk = episodePageEl.querySelector('#epIncludeIdioms');
+  if(idiomChk) idiomChk.onchange = ()=>{ episodeIncludeIdioms = idiomChk.checked; };
   const srtGoBtn = episodePageEl.querySelector('#epSrtGoBtn');
   if(srtGoBtn) srtGoBtn.onclick = runSrtAnalysis;
+  const epVideoFileInput = episodePageEl.querySelector('#epVideoFile');
+  if(epVideoFileInput) epVideoFileInput.onchange = ()=>{
+    const f = epVideoFileInput.files && epVideoFileInput.files[0];
+    if(f) handleEpVideoFile(f);
+  };
+  // The same .srt input feeds both the AI word-suggestion flow (via the button above) and the
+  // video caption sync — as soon as it's picked, parse it for cues so the video (if any is
+  // already loaded) starts showing synced captions right away.
+  const epSrtFileInput = episodePageEl.querySelector('#epSrtFile');
+  if(epSrtFileInput) epSrtFileInput.onchange = ()=>{
+    const f = epSrtFileInput.files && epSrtFileInput.files[0];
+    if(f) handleEpSyncSrtFile(f);
+  };
+  const epVsyncInfoBtn = episodePageEl.querySelector('#epVsyncInfoBtn');
+  if(epVsyncInfoBtn) epVsyncInfoBtn.onclick = ()=>{
+    const statusEl = episodePageEl.querySelector('#epVsyncStatus');
+    if(statusEl) statusEl.style.display = statusEl.style.display==='none' ? 'block' : 'none';
+  };
+  renderVsyncPlayer();
+  renderVsyncLevelStatus();
 
   renderEpisodeResults();
 }
 
-async function runEpisodeSearch(){
-  const title = episodePageEl.querySelector('#epTitle').value.trim();
-  const season = episodePageEl.querySelector('#epSeason').value.trim();
-  const episode = episodePageEl.querySelector('#epEpisode').value.trim();
-  if(!title){ alert('لطفاً نام فیلم یا سریال را بنویس.'); return; }
-  const settings = loadAiSettings();
-  episodeLoading = true;
-  episodeError = null;
-  episodeSuggestions = [];
-  episodeSelected = new Set();
-  episodeExpandedExamples = new Set();
-  episodeSourceIsSrt = false;
-  srtCandidatesPool = [];
-  episodeMoreError = null;
-  renderEpisodeResults();
-  try{
-    const knownWords = words.map(w=>w.en).filter(Boolean);
-    const res = await fetchEpisodeWordSuggestions(settings.key, title, season, episode, knownWords);
-    episodeMayNotKnow = res.mayNotKnow;
-    episodeSuggestions = res.words;
-    if(episodeSuggestions.length===0) episodeError = 'پیشنهادی دریافت نشد. دوباره تلاش کن یا عنوان را دقیق‌تر بنویس.';
-  }catch(e){
-    episodeError = 'درخواست ناموفق بود (' + (e && e.message ? e.message : e) + ').';
-  }finally{
-    episodeLoading = false;
-    renderEpisodeResults();
+function escapeRegExp(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+/* The set of level-matching words currently driving the highlight — sourced from the automatic,
+   sync-player-triggered analysis (vsyncLevelWords), NOT from the separate "تحلیل زیرنویس و
+   پیشنهاد کلمات" word-suggestion list. This is what both the full-subtitle panel and the live
+   video-player caption highlight against, so the highlighting works purely off browsing an .srt
+   for the sync player + picking a level — no need to also run/use the word-suggestion feature. */
+function buildLevelWordSet(){
+  return vsyncLevelWords;
+}
+
+/* Builds the HTML for one subtitle line, wrapping every occurrence of any word in `levelWords`
+   (the level-picked word/idiom list) in a <mark class="srt-level-hit">, and every occurrence of
+   `activeWord` (the single word the person tapped "دیدن در متن کامل زیرنویس" on, if any) in
+   <mark class="srt-hit"> instead so it stands out from the rest. Whole-word matching is used for
+   single words; a plain (still case-insensitive) substring match is used for idioms, since
+   they're multi-word phrases. */
+function highlightLineHtml(text, levelWords, activeWord){
+  const activeNorm = activeWord ? activeWord.trim().toLowerCase() : '';
+  const targets = new Set(levelWords || []);
+  if(activeNorm) targets.add(activeNorm);
+  if(targets.size===0) return escapeHtml(text);
+  // Longer phrases first, so e.g. an idiom is matched whole rather than one of its words alone.
+  const sorted = Array.from(targets).filter(Boolean).sort((a,b)=>b.length-a.length);
+  if(sorted.length===0) return escapeHtml(text);
+  const pattern = sorted.map(w=>{
+    const esc = escapeRegExp(w);
+    return /\s/.test(w) ? esc : ('\\b' + esc + '\\b');
+  }).join('|');
+  let re;
+  try{ re = new RegExp(pattern, 'gi'); }catch(e){ return escapeHtml(text); }
+  let out = '', lastIndex = 0, m;
+  while((m = re.exec(text))){
+    out += escapeHtml(text.slice(lastIndex, m.index));
+    const cls = m[0].trim().toLowerCase()===activeNorm ? 'srt-hit' : 'srt-level-hit';
+    out += `<mark class="${cls}">${escapeHtml(m[0])}</mark>`;
+    lastIndex = m.index + m[0].length;
+    if(m[0].length===0) re.lastIndex++;
+  }
+  out += escapeHtml(text.slice(lastIndex));
+  return out;
+}
+
+/* Renders the whole uploaded subtitle as a scrollable list of lines, highlighting every
+   occurrence of `srtHighlightWord` (set when the user taps "دیدن در متن کامل زیرنویس" on a
+   word card) so the word can be seen inside its real surrounding dialogue. When scrollToMatch
+   is true, the panel auto-scrolls to the first highlighted line. */
+function renderSrtFullPanel(scrollToMatch){
+  const body = episodePageEl && episodePageEl.querySelector('#epFullSrtBody');
+  if(!body) return;
+  if(srtFullLines.length===0){ body.innerHTML=''; return; }
+  const levelWords = buildLevelWordSet();
+  body.innerHTML = srtFullLines.map((line, idx)=>{
+    const html = highlightLineHtml(line, levelWords, srtHighlightWord);
+    const isHit = !!srtHighlightWord && html.indexOf('class="srt-hit"')!==-1;
+    return `<div class="srt-line${isHit?' srt-line-hit':''}" data-idx="${idx}">${html}</div>`;
+  }).join('');
+  if(scrollToMatch && srtHighlightWord){
+    const first = body.querySelector('.srt-line-hit');
+    if(first) first.scrollIntoView({ block:'center', behavior:'smooth' });
   }
 }
 
@@ -1338,44 +2548,72 @@ function renderEpisodeResults(){
   }
 
   box.innerHTML = `
-    ${episodeSourceIsSrt
-      ? `<div class="ai-note">این کلمات مستقیماً از متن واقعی فایل زیرنویسی که آپلود کردی استخراج شده‌اند.</div>`
-      : (episodeMayNotKnow ? `<div class="ai-note">این عنوان یا قسمت خاص را دقیق نمی‌شناسم، پس این‌ها حدسی مبتنی بر موضوع/ژانر عمومی هستند، نه استخراج‌شده از متن واقعی آن.</div>` : '')}
+    ${episodeIdiomError ? `<div class="ai-note">${escapeHtml(episodeIdiomError)}</div>` : ''}
+
+    ${srtFullLines.length>0 ? `
+      <div class="srt-full-wrap" id="epFullSrtWrap">
+        <div class="srt-full-head">
+          <span>📜 متن کامل زیرنویس</span>
+          ${srtHighlightWord ? `<span class="srt-full-active">کلمه‌ی نشان‌داده‌شده: <b dir="ltr">${escapeHtml(srtHighlightWord)}</b></span>` : ''}
+        </div>
+        <div class="srt-full-body" id="epFullSrtBody"></div>
+      </div>` : ''}
+
     <div class="selection-banner" id="epSelBanner" style="display:none;">
       <span id="epSelCount"></span>
-      <button class="btn btn-primary btn-small" id="epAddBtn">➕ افزودن به فهرست لغات</button>
+      <button class="btn btn-primary btn-icon btn-small" id="epAddBtn" title="افزودن به فهرست لغات">➕</button>
     </div>
+    ${(()=>{
+      const wordCount = episodeSuggestions.filter(w=>w.type!=='idiom').length;
+      const idiomCount = episodeSuggestions.filter(w=>w.type==='idiom').length;
+      if(wordCount>0 && idiomCount>0){
+        return `
+        <div class="ep-type-filter-row">
+          <div class="ep-type-filter-btn ${episodeTypeFilter==='all'?'active':''}" data-filter="all">همه (${episodeSuggestions.length})</div>
+          <div class="ep-type-filter-btn ${episodeTypeFilter==='word'?'active':''}" data-filter="word">🔤 کلمات (${wordCount})</div>
+          <div class="ep-type-filter-btn ${episodeTypeFilter==='idiom'?'active':''}" data-filter="idiom">🗣️ اصطلاحات (${idiomCount})</div>
+        </div>`;
+      }
+      return '';
+    })()}
     ${episodeSuggestions.map((w,i)=>{
-      const hasMore = episodeSourceIsSrt && Array.isArray(w.allExamples) && w.allExamples.length>1;
-      const expanded = episodeExpandedExamples.has(i);
+      if(episodeTypeFilter==='word' && w.type==='idiom') return '';
+      if(episodeTypeFilter==='idiom' && w.type!=='idiom') return '';
+      const isActive = srtHighlightWord && srtHighlightWord.trim().toLowerCase()===w.en.trim().toLowerCase();
       return `
       <div class="ep-word-card ${episodeSelected.has(i)?'selected':''}" data-idx="${i}">
         <input type="checkbox" ${episodeSelected.has(i)?'checked':''}>
         <div style="flex:1;">
-          <div class="ep-en">${escapeHtml(w.en)}</div>
+          <div class="ep-en-row">
+            <div class="ep-en">${escapeHtml(w.en)}</div>
+            ${w.type==='idiom' ? `<span class="ep-type-badge idiom">🗣️ اصطلاح</span>` : ''}
+            ${w.level ? `<span class="ep-level-badge">${escapeHtml(w.level)}</span>` : ''}
+          </div>
           <div class="ep-fa">${escapeHtml(w.fa)}</div>
           ${w.definition ? `<div class="ep-def">${escapeHtml(w.definition)}</div>` : ''}
           ${w.example ? `<div class="ep-ex">${escapeHtml(w.example)}</div>` : ''}
-          ${hasMore ? `
-            <button class="btn btn-secondary btn-small ep-show-all-btn" data-idx="${i}" style="margin-top:6px;">
-              ${expanded ? '▲ بستن جمله‌ها' : `💬 دیدن همه‌ی جمله‌های این کلمه (${w.allExamples.length})`}
+          <div class="ep-tools-row">
+            <button type="button" class="btn btn-secondary btn-icon btn-small ep-tools-btn" data-idx="${i}" title="دیکشنری و ابزارها">🔗</button>
+            <button type="button" class="btn btn-secondary btn-icon btn-small ep-ai-btn" data-idx="${i}" title="دستیار هوشمند">🤖</button>
+            <button type="button" class="btn btn-secondary btn-icon btn-small ep-explain-btn" data-idx="${i}" title="توضیح کامل کلمه">📖</button>
+          </div>
+          ${srtFullLines.length>0 ? `
+            <button class="btn btn-secondary btn-small ep-show-in-srt-btn ${isActive?'active':''}" data-idx="${i}" style="margin-top:6px;">
+              ${isActive ? '📍 نمایش‌داده‌شده در متن کامل' : '📍 دیدن در متن کامل زیرنویس'}
             </button>
-            ${expanded ? `
-              <div class="ep-all-examples">
-                ${w.allExamples.map(ex=>`<div class="ep-ex-item">${escapeHtml(ex)}</div>`).join('')}
-              </div>` : ''}
           ` : ''}
         </div>
       </div>`;
     }).join('')}
-    ${episodeSourceIsSrt ? `
-      ${episodeMoreError ? `<div class="ai-note" style="margin-top:10px;">${escapeHtml(episodeMoreError)}</div>` : ''}
-      <div class="actions" style="margin-top:14px;">
-        <button class="btn btn-secondary" id="epMoreBtn" ${episodeMoreLoading?'disabled':''}>
-          ${episodeMoreLoading ? '<span class="spinner"></span> در حال دریافت کلمات بیشتر...' : '➕ کلمات بیشتر'}
-        </button>
-      </div>` : ''}
+    ${episodeMoreError ? `<div class="ai-note" style="margin-top:10px;">${escapeHtml(episodeMoreError)}</div>` : ''}
+    <div class="actions" style="margin-top:14px;">
+      <button class="btn btn-secondary" id="epMoreBtn" ${episodeMoreLoading?'disabled':''}>
+        ${episodeMoreLoading ? '<span class="spinner"></span> در حال دریافت کلمات بیشتر...' : '➕ کلمات بیشتر'}
+      </button>
+    </div>
   `;
+
+  renderSrtFullPanel(false);
 
   const updateBanner = ()=>{
     const bar = box.querySelector('#epSelBanner');
@@ -1385,6 +2623,13 @@ function renderEpisodeResults(){
   };
   updateBanner();
 
+  box.querySelectorAll('.ep-type-filter-btn').forEach(btn=>{
+    btn.onclick = ()=>{
+      episodeTypeFilter = btn.dataset.filter;
+      renderEpisodeResults();
+    };
+  });
+
   box.querySelectorAll('.ep-word-card').forEach(card=>{
     card.onclick = ()=>{
       const idx = +card.dataset.idx;
@@ -1393,12 +2638,42 @@ function renderEpisodeResults(){
     };
   });
 
-  box.querySelectorAll('.ep-show-all-btn').forEach(btn=>{
+  box.querySelectorAll('.ep-show-in-srt-btn').forEach(btn=>{
     btn.onclick = (e)=>{
       e.stopPropagation();
       const idx = +btn.dataset.idx;
-      if(episodeExpandedExamples.has(idx)) episodeExpandedExamples.delete(idx); else episodeExpandedExamples.add(idx);
+      const w = episodeSuggestions[idx];
+      if(!w) return;
+      srtHighlightWord = w.en;
       renderEpisodeResults();
+      const wrap = episodePageEl.querySelector('#epFullSrtWrap');
+      if(wrap) wrap.scrollIntoView({ block:'start', behavior:'smooth' });
+      renderSrtFullPanel(true);
+    };
+  });
+
+  /* Same dictionary/AI-assistant/full-info panels used by the manual add-word form — reused here
+     so a suggested word can be looked up or explained without first adding it to the list. The
+     only difference is the source of the word: typed manually vs picked from the subtitle. */
+  box.querySelectorAll('.ep-tools-btn').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const w = episodeSuggestions[+btn.dataset.idx];
+      if(w) openBrowseToolsPanel(w);
+    };
+  });
+  box.querySelectorAll('.ep-ai-btn').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const w = episodeSuggestions[+btn.dataset.idx];
+      if(w) openAiPanel(w);
+    };
+  });
+  box.querySelectorAll('.ep-explain-btn').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const w = episodeSuggestions[+btn.dataset.idx];
+      if(w) openWordDetailPanel(w, { sentence: w.example || '' });
     };
   });
 
@@ -1417,6 +2692,7 @@ function renderEpisodeResults(){
         words.push({
           id: 'w_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
           en: w.en, fa: w.fa, example: w.example||'', note:'',
+          type: w.type || 'word',
           box: 1, nextReview: todayISO(), createdAt: todayISO()
         });
         existingLower.add(w.en.trim().toLowerCase());
@@ -1501,7 +2777,22 @@ function renderHome(){
 }
 
 /* ---------- Add / Edit word ---------- */
-function openAddForm(existing){
+/* Shared "save a brand-new word" logic — used by the add-word form's save button,
+   and also by the "➕ افزودن به فهرست لغات" button inside the full explanation panel. */
+async function addWordToList(en, fa, example, note){
+  words.push({
+    id: 'w_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    en, fa, example: example||'', note: note||'',
+    box: 1,
+    nextReview: todayISO(),
+    createdAt: todayISO()
+  });
+  await saveWords();
+  renderDrawers();
+  if(listPageRedraw) listPageRedraw();
+}
+
+function openAddForm(existing, prefillEn){
   const isEdit = !!existing;
   const overlay = document.createElement('div');
   overlay.className='overlay';
@@ -1512,10 +2803,11 @@ function openAddForm(existing){
         <button class="close-x">✕</button>
       </div>
       <label>کلمه انگلیسی</label>
-      <input type="text" class="en" id="f-en" placeholder="e.g. resilient" value="${isEdit?existing.en:''}">
+      <input type="text" class="en" id="f-en" placeholder="e.g. resilient" value="${isEdit?existing.en:(prefillEn||'')}">
       <div class="linkrow" id="f-tools-row" style="margin-top:10px;margin-bottom:4px;">
-        <button type="button" class="btn btn-secondary btn-small" id="f-toolsBtn" disabled>🔗 دیکشنری و ابزارها</button>
-        <button type="button" class="btn btn-secondary btn-small" id="f-aiBtn" disabled>🤖 دستیار هوشمند</button>
+        <button type="button" class="btn btn-secondary btn-icon btn-small" id="f-toolsBtn" disabled title="دیکشنری و ابزارها">🔗</button>
+        <button type="button" class="btn btn-secondary btn-icon btn-small" id="f-aiBtn" disabled title="دستیار هوشمند">🤖</button>
+        <button type="button" class="btn btn-secondary btn-icon btn-small" id="f-explainBtn" disabled title="توضیح کامل کلمه">📖</button>
       </div>
 
       <div class="field-label-row">
@@ -1524,6 +2816,13 @@ function openAddForm(existing){
       </div>
       <input type="text" id="f-fa" placeholder="مثلاً: تاب‌آور، مقاوم" value="${isEdit?existing.fa:''}">
       <div id="f-fa-suggestBox"></div>
+
+      <div class="field-label-row">
+        <label>توضیح آموزشی (اختیاری)</label>
+        <button type="button" class="suggest-trigger" id="f-def-suggest" disabled>✨ پیشنهاد بده</button>
+      </div>
+      <div class="ep-def" id="f-def-preview" style="display:none;"></div>
+      <div id="f-def-suggestBox"></div>
 
       <div class="field-label-row">
         <label>جمله نمونه (اختیاری)</label>
@@ -1539,7 +2838,7 @@ function openAddForm(existing){
         ${isEdit?'<button class="btn btn-ghost" id="f-delete">حذف لغت</button>':''}
       </div>
     </div>`;
-  document.body.appendChild(overlay);
+  getOverlayMountEl().appendChild(overlay);
   overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
   overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
 
@@ -1550,7 +2849,10 @@ function openAddForm(existing){
   const exInput = overlay.querySelector('#f-ex');
   const toolsBtn = overlay.querySelector('#f-toolsBtn');
   const aiBtn = overlay.querySelector('#f-aiBtn');
+  const explainBtn = overlay.querySelector('#f-explainBtn');
   const faSuggestBtn = overlay.querySelector('#f-fa-suggest');
+  const defSuggestBtn = overlay.querySelector('#f-def-suggest');
+  const defPreview = overlay.querySelector('#f-def-preview');
   const exSuggestBtn = overlay.querySelector('#f-ex-suggest');
 
   function currentWord(){
@@ -1560,14 +2862,17 @@ function openAddForm(existing){
     const hasEn = !!enInput.value.trim();
     toolsBtn.disabled = !hasEn;
     aiBtn.disabled = !hasEn;
+    explainBtn.disabled = !hasEn;
     faSuggestBtn.disabled = !hasEn;
+    defSuggestBtn.disabled = !hasEn;
     exSuggestBtn.disabled = !hasEn;
   }
-  enInput.addEventListener('input', updateToolButtonsState);
+  enInput.addEventListener('input', ()=>{ updateToolButtonsState(); defPreview.style.display='none'; defPreview.textContent=''; });
   updateToolButtonsState();
 
   toolsBtn.onclick = ()=>{ if(enInput.value.trim()) openBrowseToolsPanel(currentWord()); };
   aiBtn.onclick = ()=>{ if(enInput.value.trim()) openAiPanel(currentWord()); };
+  explainBtn.onclick = ()=>{ if(enInput.value.trim()) openWordDetailPanel(currentWord()); };
 
   /* --- "پیشنهاد بده" (suggest) for meaning + example: cached per English word so the two
      buttons don't trigger two separate API calls when clicked back-to-back. --- */
@@ -1632,6 +2937,37 @@ function openAddForm(existing){
   faSuggestBtn.onclick = ()=> handleSuggestClick('fa', faSuggestBtn, overlay.querySelector('#f-fa-suggestBox'));
   exSuggestBtn.onclick = ()=> handleSuggestClick('example', exSuggestBtn, overlay.querySelector('#f-ex-suggestBox'));
 
+  /* Definition (توضیح آموزشی) is display-only, mirroring how subtitle-mode word cards show
+     `w.definition` directly under the meaning — no accept/dismiss needed since it isn't saved
+     into a form field, just shown as extra context while filling in the word. */
+  defSuggestBtn.onclick = async ()=>{
+    const en = enInput.value.trim();
+    if(!en){ alert('اول کلمه انگلیسی را وارد کن.'); return; }
+    const originalLabel = defSuggestBtn.textContent;
+    defSuggestBtn.disabled = true;
+    defSuggestBtn.innerHTML = `<span class="spinner"></span> در حال دریافت...`;
+    defPreview.style.display = 'none';
+    try{
+      const suggestion = await getSuggestion();
+      if(suggestion.definition){
+        defPreview.textContent = suggestion.definition;
+        defPreview.style.display = '';
+      } else {
+        overlay.querySelector('#f-def-suggestBox').innerHTML = `<div class="suggest-box">توضیحی دریافت نشد. دوباره تلاش کن.</div>`;
+      }
+    }catch(e){
+      const boxEl = overlay.querySelector('#f-def-suggestBox');
+      if(e.message==='NO_KEY'){
+        boxEl.innerHTML = `<div class="suggest-box">هنوز کلید Google Gemini را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید رایگان خودتان را وارد کنید.</div>`;
+      } else {
+        boxEl.innerHTML = `<div class="suggest-box">درخواست ناموفق بود (${escapeHtml(e.message||'')}). محتمل‌ترین دلیل: نبود دسترسی به این سرویس از ایران بدون فیلترشکن، یا نامعتبر بودن کلید API.</div>`;
+      }
+    }finally{
+      defSuggestBtn.disabled = !enInput.value.trim();
+      defSuggestBtn.textContent = originalLabel;
+    }
+  };
+
   overlay.querySelector('#f-save').onclick = async ()=>{
     const en = overlay.querySelector('#f-en').value.trim();
     const fa = overlay.querySelector('#f-fa').value.trim();
@@ -1641,19 +2977,13 @@ function openAddForm(existing){
 
     if(isEdit){
       Object.assign(existing, {en, fa, example, note});
+      await saveWords();
+      renderDrawers();
+      if(listPageRedraw) listPageRedraw();
     } else {
-      words.push({
-        id: 'w_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
-        en, fa, example, note,
-        box: 1,
-        nextReview: todayISO(),
-        createdAt: todayISO()
-      });
+      await addWordToList(en, fa, example, note);
     }
-    await saveWords();
     overlay.remove();
-    renderDrawers();
-    if(listPageRedraw) listPageRedraw();
   };
 
   if(isEdit){
@@ -1846,13 +3176,13 @@ function openExportPanel(selectedWords){
         <h2>خروجی برای هوش مصنوعی</h2>
         <button class="close-x">✕</button>
       </div>
-      <div class="ai-note">فقط خودِ کلمات (بدون معنی و یادداشت) کپی می‌شود — چون این کلمات رو یاد گرفتی، می‌تونی این متن رو به هر هوش مصنوعی بدی و بگی: «این کلمات رو بلدم، حالا کلمات دیگه‌ای در همین سطح یا موضوع بهم پیشنهاد بده» یا هر کار دیگه‌ای بخوای.</div>
+      <div class="ai-note">فقط خودِ کلمات کپی می‌شود.</div>
       <textarea id="exportText" style="min-height:120px;" readonly>${escapeHtml(fullText)}</textarea>
       <div class="actions" style="margin-top:14px;">
         <button class="btn btn-primary" id="copyExportBtn">📋 کپی متن</button>
       </div>
     </div>`;
-  document.body.appendChild(overlay);
+  getOverlayMountEl().appendChild(overlay);
   overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
   overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
   overlay.querySelector('#copyExportBtn').onclick = async ()=>{
@@ -1914,6 +3244,15 @@ function handleRestoreFile(e){
 
 function escapeHtml(s){
   return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* Where a full-screen overlay (add-word form, dictionary/AI tools panel, etc.) should be
+   appended. Normally document.body, but the Fullscreen API only renders elements inside the
+   currently-fullscreen element's subtree — so if e.g. the video sync player is fullscreen and
+   the person taps a caption word, the resulting overlay needs to mount inside that same
+   fullscreen element or it would be invisible behind the fullscreen video. */
+function getOverlayMountEl(){
+  return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || document.body;
 }
 
 /* Turns a small, safe subset of markdown (the kind AI assistants naturally write —
@@ -2017,11 +3356,21 @@ function closeDeck(){
   }
 }
 
+/* Auto-fires once per card right after the meaning is revealed, so the AI example appears
+   without an extra tap — but only if an AI key is configured (silently does nothing otherwise,
+   so people without a key don't see an unprompted error) and only if nothing was generated yet. */
+function maybeAutoGenerateDeckExample(){
+  if(!deckRevealed || deckExampleText || deckExampleLoading) return;
+  const settings = loadAiSettings();
+  if(!(settings.provider==='google' && settings.key)) return;
+  generateDeckExample();
+}
+
 function deckKeyHandler(e){
   if(e.key==='Escape') closeDeck();
   else if(e.key==='ArrowRight') deckGo(-1); // RTL: right arrow = previous
   else if(e.key==='ArrowLeft') deckGo(1);
-  else if(e.key===' '){ e.preventDefault(); deckRevealed = !deckRevealed; if(deckRevealed) deckInteracted = true; renderDeckCard(); }
+  else if(e.key===' '){ e.preventDefault(); deckRevealed = !deckRevealed; if(deckRevealed){ deckInteracted = true; } renderDeckCard(); maybeAutoGenerateDeckExample(); }
 }
 
 function deckTouchStart(e){
@@ -2185,12 +3534,13 @@ function renderDeckCard(){
     </div>
     <div class="browse-bottom">
       <div class="browse-tools-row">
-        <button class="btn btn-secondary" id="deckToolsBtn">🔗 دیکشنری و ابزارها</button>
-        <button class="btn btn-secondary" id="deckAskAiBtn">🤖 دستیار هوشمند</button>
+        <button class="btn btn-secondary btn-icon" id="deckToolsBtn" title="دیکشنری و ابزارها">🔗</button>
+        <button class="btn btn-secondary btn-icon" id="deckAskAiBtn" title="دستیار هوشمند">🤖</button>
+        <button class="btn btn-secondary btn-icon" id="deckExplainBtn" title="توضیح کامل کلمه">📖</button>
       </div>
       <div class="browse-nav">
-        ${deckInteracted ? `<button class="btn" style="background:linear-gradient(180deg,var(--rust),var(--rust-dark));color:#fff8ef;flex:1;justify-content:center;" id="deckFailBtn">✗ نمی‌دانم</button>` : ''}
-        <button class="btn btn-primary" id="deckPassBtn">✓ می‌دانم</button>
+        ${deckInteracted ? `<button class="btn" style="background:linear-gradient(180deg,var(--rust),var(--rust-dark));color:#fff8ef;flex:1;justify-content:center;" id="deckFailBtn" title="نمی‌دانم">✗</button>` : ''}
+        <button class="btn btn-primary" id="deckPassBtn" title="می‌دانم" style="flex:1;justify-content:center;">✓</button>
       </div>
       <div class="browse-nav">
         <button class="btn btn-secondary" id="deckNextBtn" ${deckIndex>=deck.length-1?'disabled':''}>بعدی ▶</button>
@@ -2202,7 +3552,7 @@ function renderDeckCard(){
   deckEl.querySelector('#deckCloseBtn').onclick = closeDeck;
   deckEl.querySelector('#deckPronBtn').onclick = (e)=> playPronunciation(w.en, e.currentTarget);
   const revealBtn = deckEl.querySelector('#deckRevealBtn');
-  if(revealBtn) revealBtn.onclick = ()=>{ deckRevealed=true; deckInteracted=true; renderDeckCard(); };
+  if(revealBtn) revealBtn.onclick = ()=>{ deckRevealed=true; deckInteracted=true; renderDeckCard(); maybeAutoGenerateDeckExample(); };
 
   const noteToggle = deckEl.querySelector('#deckNoteToggle');
   if(noteToggle){
@@ -2221,6 +3571,7 @@ function renderDeckCard(){
   const exampleBtn = deckEl.querySelector('#deckExampleBtn');
   if(exampleBtn) exampleBtn.onclick = generateDeckExample;
   deckEl.querySelector('#deckAskAiBtn').onclick = ()=>{ deckInteracted=true; renderDeckCard(); openAiPanel(w); };
+  deckEl.querySelector('#deckExplainBtn').onclick = ()=>{ deckInteracted=true; renderDeckCard(); openWordDetailPanel(w); };
   deckEl.querySelector('#deckToolsBtn').onclick = ()=>{ deckInteracted=true; renderDeckCard(); openBrowseToolsPanel(w); };
   deckEl.querySelector('#deckPrevBtn').onclick = ()=> deckGo(-1);
   deckEl.querySelector('#deckNextBtn').onclick = ()=> deckGo(1);
@@ -2265,6 +3616,13 @@ function renderPresetOptions(word, lang){
     + `<option value="custom">${lang==='en' ? '— custom text —' : '— متن دلخواه —'}</option>`;
 }
 
+/* Renders each preset as a tappable chip (reuses .suggestion-chip styling) instead of a <select>
+   option — tapping one asks immediately, no separate confirm step needed. */
+function renderPresetChips(word, lang){
+  lang = lang || 'fa';
+  return AI_PROMPT_PRESETS.map((p,i)=>`<button type="button" class="suggestion-chip" data-preset-idx="${i}">${escapeHtml(p.label[lang])}</button>`).join('');
+}
+
 /* Small FA/EN toggle reused everywhere a preset is offered, so the same questions can be asked in either language. */
 function renderLangToggle(lang){
   lang = lang || 'fa';
@@ -2299,7 +3657,7 @@ function openPromptComposer(word, opts){
         <button class="btn btn-primary" id="pcConfirm">${escapeHtml(opts.confirmLabel)}</button>
       </div>
     </div>`;
-  document.body.appendChild(overlay);
+  getOverlayMountEl().appendChild(overlay);
   overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
   overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
 
@@ -2345,7 +3703,7 @@ function openBrowseToolsPanel(w){
       </div>
       <div class="linkrow">${linksHtml}</div>
     </div>`;
-  document.body.appendChild(overlay);
+  getOverlayMountEl().appendChild(overlay);
   overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
   overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
 
@@ -2399,9 +3757,14 @@ function openSettingsPage(){
         </div>
         <label>کلید API</label>
         <input type="text" class="en" id="s-key" placeholder="AIza..." value="${escapeHtml(s.key||'')}">
+        <label style="margin-top:14px;">کلیدهای پشتیبان (اختیاری — هر خط یک کلید)</label>
+        <div class="ai-note" style="margin-bottom:8px;">
+          اگر چند حساب گوگل داری، از هرکدام یک کلید رایگان بساز و اینجا وارد کن. وقتی سهمیه‌ی کلید اصلی تمام بشه، اپ خودکار سراغ کلید بعدی می‌رود — دیگر نیازی به عوض‌کردن دستی نیست.
+        </div>
+        <textarea id="s-extra-keys" class="en" rows="3" placeholder="AIza...&#10;AIza...">${escapeHtml((s.extraKeys||[]).join('\n'))}</textarea>
         <div class="actions" style="margin-top:16px;">
           <button class="btn btn-primary" id="s-save">ذخیره</button>
-          <button class="btn btn-ghost" id="s-clear">حذف کلید</button>
+          <button class="btn btn-ghost" id="s-clear">حذف همه‌ی کلیدها</button>
         </div>
       </div>
 
@@ -2475,14 +3838,20 @@ function openSettingsPage(){
   });
 
   sp('#s-save').onclick = ()=>{
+    const extraKeys = sp('#s-extra-keys').value
+      .split('\n')
+      .map(k=>k.trim())
+      .filter(Boolean);
     saveAiSettings({
       provider: 'google',
-      key: sp('#s-key').value.trim()
+      key: sp('#s-key').value.trim(),
+      extraKeys
     });
   };
   sp('#s-clear').onclick = ()=>{
-    saveAiSettings({provider:'google', key:''});
+    saveAiSettings({provider:'google', key:'', extraKeys:[]});
     sp('#s-key').value = '';
+    sp('#s-extra-keys').value = '';
   };
 
   sp('#g-save').onclick = async ()=>{
@@ -2542,37 +3911,39 @@ function openAiPanel(word){
       ${ready ? `
       <label style="margin-top:12px;">زبان سوال</label>
       <div id="aiLangWrap">${renderLangToggle('fa')}</div>
-      <label>یک دستور آماده انتخاب کن یا خودت بنویس</label>
-      <select id="aiPresetSelect" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-family:inherit;font-size:13px;background:#fffef9;color:var(--ink);">
-        ${renderPresetOptions(word, 'fa')}
-      </select>` : ''}
-      <textarea id="aiInput" placeholder="مثلاً: چند مثال دیگر با این کلمه بزن / تفاوتش با فلان کلمه چیه؟" ${!ready?'disabled':''}>${ready ? escapeHtml(AI_PROMPT_PRESETS[0].template.fa(word)) : ''}</textarea>
+      <label>یکی از این‌ها را بزن تا خودکار پرسیده شود</label>
+      <div class="ai-suggestions" id="aiPresetChips" style="border-top:none;padding-top:0;margin-top:0;margin-bottom:12px;">
+        ${renderPresetChips(word, 'fa')}
+      </div>
+      <label>یا خودت سوالت را بنویس</label>` : ''}
+      <textarea id="aiInput" placeholder="مثلاً: چند مثال دیگر با این کلمه بزن / تفاوتش با فلان کلمه چیه؟" ${!ready?'disabled':''}></textarea>
       <div class="actions" style="margin-top:12px;">
         <button class="btn btn-primary" id="aiAskBtn" ${!ready?'disabled':''}>پرسیدن</button>
         ${!ready ? `<button class="btn btn-secondary" id="aiSettingsShortcut">رفتن به تنظیمات</button>` : ''}
       </div>
     </div>`;
-  document.body.appendChild(overlay);
+  getOverlayMountEl().appendChild(overlay);
   overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
   overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
   const shortcutBtn = overlay.querySelector('#aiSettingsShortcut');
   if(shortcutBtn) shortcutBtn.onclick = ()=>{ overlay.remove(); openSettingsPage(); };
-  const presetSelect = overlay.querySelector('#aiPresetSelect');
+  const presetChipsWrap = overlay.querySelector('#aiPresetChips');
   let aiLang = 'fa';
-  if(presetSelect){
-    presetSelect.addEventListener('change', (e)=>{
-      const v = e.target.value;
-      if(v==='custom') return;
-      overlay.querySelector('#aiInput').value = AI_PROMPT_PRESETS[+v].template[aiLang](word);
+  function wirePresetChips(){
+    if(!presetChipsWrap) return;
+    presetChipsWrap.querySelectorAll('[data-preset-idx]').forEach(btn=>{
+      btn.onclick = ()=> ask(AI_PROMPT_PRESETS[+btn.dataset.presetIdx].template[aiLang](word));
     });
+  }
+  wirePresetChips();
+  if(presetChipsWrap){
     overlay.querySelector('#aiLangWrap').addEventListener('click', (e)=>{
       const btn = e.target.closest('.lang-btn');
       if(!btn) return;
       aiLang = btn.dataset.lang;
       overlay.querySelector('#aiLangWrap').innerHTML = renderLangToggle(aiLang);
-      presetSelect.innerHTML = renderPresetOptions(word, aiLang);
-      const idx = presetSelect.value==='custom' ? null : +presetSelect.value;
-      if(idx!==null) overlay.querySelector('#aiInput').value = AI_PROMPT_PRESETS[idx].template[aiLang](word);
+      presetChipsWrap.innerHTML = renderPresetChips(word, aiLang);
+      wirePresetChips();
     });
   }
 
@@ -2655,12 +4026,511 @@ ${activityNote}
   });
 }
 
+/* ---------- AI helper calls used by the word-detail panel below ---------- */
+
+/* Short comma-separated Persian equivalents (not a full sentence) — shown right under the
+   headword. Deliberately separate from fetchWordSuggestion()'s single "most common meaning". */
+async function fetchQuickMeaningsLine(key, en){
+  const systemPrompt = 'تو یک دستیار واژگان زبان انگلیسی برای فارسی‌زبانان هستی. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با دقیقاً این کلید برگردان: {"meanings": "۲ تا ۴ معادل فارسی کوتاه و رایج برای این کلمه، پشت‌سرهم و جدا شده با «، » — فقط خود کلمات معادل، نه یک جمله کامل و نه توضیح اضافه"}.';
+  const userMessage = `کلمه انگلیسی: "${en}"`;
+  const raw = await geminiOnce(key, systemPrompt, userMessage);
+  const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+  try{ return (JSON.parse(cleaned).meanings || '').trim(); }catch(e){ return cleaned; }
+}
+
+/* Explains the word's grammatical role inside a specific real sentence (or a natural fallback
+   sentence if none is available), plus a small dictionary-style breakdown: meanings specific to
+   that role, and separately, the word's more general meanings across other roles/uses. */
+async function fetchGrammarExplanation(key, en, sentence){
+  const markedSentence = sentence ? markTargetWordInSentence(sentence, en) : '';
+  const sentenceNote = markedSentence
+    ? `جمله‌ی واقعی که این کلمه در آن به‌کار رفته دقیقاً همین است: "${markedSentence}" (کلمه‌ی هدف بین ** ** مشخص شده است). معنی را دقیقاً بر اساس همین جمله بده، نه یک تعریف کلی از دیکشنری. اگر معنی کلمه در همین جمله با رایج‌ترین معنی‌اش فرق دارد (مثلاً little که معمولاً «کوچک» است ولی گاهی «کمی، تا حدی» معنی می‌دهد)، حتماً همان معنی خاص همین جمله را در inContextMeanings بگذار.`
+    : `جمله‌ی مشخصی برای این کلمه در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برای آن در نظر بگیر و بر پایه‌ی همان جمله معنی بده.`;
+  const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات دانشگاهی یا زبان‌شناسی. ${sentenceNote}
+فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown، بدون فنس \`\`\`json، بدون هیچ متن اضافه) با دقیقاً این ساختار برگردان:
+{"paragraph": "یک یا دو جمله‌ی ساده‌ی فارسی که می‌گوید کلمه \\"${en}\\" در همین جمله دقیقاً چه معنایی دارد و چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده — فقط اگر واقعاً نکته‌ی مفیدی هست بگو، وگرنه کوتاه رد شو", "inContextMeanings": ["۱ تا ۳ معادل فارسی کوتاه، مخصوص همین جمله"], "generalMeanings": ["۲ تا ۴ معادل فارسی کوتاه رایج این کلمه در حالت کلی"]}`;
+  const userMessage = `کلمه انگلیسی: "${en}"`;
+  const raw = await geminiOnce(key, systemPrompt, userMessage);
+  const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+  const obj = JSON.parse(cleaned);
+  return {
+    paragraph: (obj.paragraph||'').trim(),
+    inContextMeanings: Array.isArray(obj.inContextMeanings) ? obj.inContextMeanings.filter(x=>typeof x==='string' && x.trim()) : [],
+    generalMeanings: Array.isArray(obj.generalMeanings) ? obj.generalMeanings.filter(x=>typeof x==='string' && x.trim()) : []
+  };
+}
+
+/* Marks the target word inside a sentence with **word** so the model gets an unambiguous pointer
+   to which occurrence is meant (case-insensitive, whole-word match). If the word can't be found
+   verbatim in the sentence, it's appended as a fallback note instead of silently failing. */
+function markTargetWordInSentence(sentence, word){
+  if(!sentence || !word) return sentence || '';
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('\\b(' + escaped + ')\\b', 'i');
+  return re.test(sentence) ? sentence.replace(re, '**$1**') : (sentence + ' (کلمه‌ی هدف: **' + word + '**)');
+}
+
+/* A short, free-flowing 3–4 sentence Persian paragraph (plain text, not JSON) covering: the
+   word's grammatical role in this exact sentence, its precise contextual meaning, and why the
+   speaker likely chose this word over a simpler synonym. Shown above the dictionary-style box
+   in the "دستور زبان" tab. `sentence` should be the real subtitle/example line the word came
+   from; falls back to wordObj.example if not given, and to a model-invented natural sentence if
+   neither is available. */
+async function fetchContextGrammarExplanation(key, wordObj, sentence){
+  const en = ((wordObj && wordObj.en) || '').trim();
+  const rawSentence = (sentence || (wordObj && wordObj.example) || '').trim();
+  const systemPrompt = 'تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. یک جمله و یک کلمه‌ی مشخص در آن جمله بهت داده می‌شود. با زبانی ساده و روزمره (نه اصطلاحات دستور زبان یا زبان‌شناسی) در حد ۲ تا ۳ جمله‌ی فارسی پیوسته بگو این کلمه دقیقاً در همین جمله چه معنایی می‌دهد. فقط اگر واقعاً نکته‌ی مفیدی برای یادگیری هست اضافه کن — مثلاً اگر معنی این کلمه در این جمله با معنی رایج‌ترش فرق دارد (مثلاً وقتی little یعنی «کمی، تا حدی» نه «کوچک»)، همین تفاوت را ساده بگو؛ یا اگر چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده نکته‌ی جالبی دارد، آن را هم بگو. اگر نکته‌ی خاصی نیست، فقط معنی را در همان بافت با یک جمله‌ی کوتاه توضیح بده. فقط و فقط متن پاراگراف فارسی را برگردان، بدون Markdown و بدون عنوان یا مقدمه.';
+  let userMessage;
+  if(rawSentence){
+    const marked = markTargetWordInSentence(rawSentence, en);
+    userMessage = `جمله: "${marked}"\nکلمه‌ی هدف که در جمله‌ی بالا بین ** ** مشخص شده: "${en}"`;
+  }else{
+    userMessage = `جمله‌ی مشخصی در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برای کلمه‌ی هدف در نظر بگیر و طوری فرض کن که همان کلمه در آن جمله بین ** ** مشخص شده، سپس بر پایه‌ی همان جمله توضیح بده. کلمه‌ی هدف: "${en}"`;
+  }
+  const raw = await geminiOnce(key, systemPrompt, userMessage);
+  return raw.trim();
+}
+
+/* Practical, production-focused usage notes — plain markdown-lite text (not JSON), rendered
+   through renderMarkdownLite(). Covers 5 things that a dictionary/grammar-role
+   explanation doesn't: common collocations, idioms/phrasal verbs, near-synonyms Persian
+   speakers mix this word up with, a typical L1-interference mistake, and a short synonym
+   list. Fetched automatically the first time the "توضیح" tab opens (no button click needed). */
+async function fetchPracticalUsageNotes(key, en, fa, sentence){
+  const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات تخصصی. درباره‌ی کلمه‌ی انگلیسی داده‌شده، هر کدام از این موارد را فقط اگر واقعاً نکته‌ی مفیدی برای گفتنش داری بنویس؛ هر مورد بی‌فایده را کلاً حذف کن (مجبور نیستی همه را پر کنی). هر عنوان را با ** ** پررنگ کن و زیرش با خط تیره «- » بنویس:
+**ترکیب‌های رایج**: ۲ تا ۳ ترکیب پرکاربرد با همین کلمه، هرکدام با معنی فارسی کوتاه.
+**اصطلاح‌ها**: اگر این کلمه در یک اصطلاح یا فعل دوکلمه‌ای رایج به‌کار می‌رود، ۱ تا ۳ مورد با معنی فارسی‌شان.
+**کلمات مشابه**: ۲ تا ۳ کلمه‌ی نزدیک‌معنی که معمولاً با این کلمه قاطی می‌شوند، هرکدام با یک تفاوت کوتاه.
+**نکته‌ی رایج فارسی‌زبانان**: یک اشتباه معمول که فارسی‌زبانان با این کلمه می‌کنند، اگر چنین چیزی وجود دارد.
+**مترادف‌ها**: ۲ تا ۴ مترادف نزدیک انگلیسی، جدا شده با «، ».
+کوتاه و کاربردی بنویس، بدون مقدمه یا جمع‌بندی، و فقط همین متن را برگردان، بدون JSON و بدون فنس.`;
+  const userMessage = `کلمه انگلیسی: "${en}"${fa ? ` (معنی: ${fa})` : ''}${sentence ? `\nجمله‌ای که این کلمه در آن به‌کار رفته: "${sentence}"` : ''}`;
+  const raw = await geminiOnce(key, systemPrompt, userMessage);
+  return raw.trim();
+}
+
+/* Persian translation of one exact sentence — used for the "نمونه از همین متن" row, so the
+   real subtitle/context line the word came from can be shown with its translation. */
+async function fetchSentenceTranslation(key, sentence){
+  const systemPrompt = 'فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با دقیقاً این کلید برگردان: {"translation": "ترجمه فارسی روان و طبیعی جمله‌ی داده‌شده"}.';
+  const raw = await geminiOnce(key, systemPrompt, sentence);
+  const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+  try{ return (JSON.parse(cleaned).translation || '').trim(); }catch(e){ return ''; }
+}
+
+/* A batch of `count` fresh example sentences (with translations) in a single request — used for
+   the "نمونه‌های بیشتر" row in the examples tab. `avoid` lists sentences already shown (e.g. the
+   real context sentence) so the model doesn't just repeat it. */
+async function fetchExampleBatch(key, en, fa, avoid, count){
+  const avoidNote = (avoid && avoid.length)
+    ? ` این جمله‌ها را عیناً تکرار نکن: ${avoid.map(s=>'"'+s+'"').join('، ')}.`
+    : '';
+  const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با دقیقاً این ساختار برگردان: {"examples": [{"en": "یک جمله نمونه انگلیسی طبیعی و کوتاه با همین کلمه", "fa": "ترجمه فارسی روان همان جمله"}]}. دقیقاً ${count} جمله‌ی متفاوت از هم بساز، هرکدام با موقعیت یا زمینه‌ای متفاوت از بقیه.${avoidNote}`;
+  const userMessage = `کلمه انگلیسی: "${en}"${fa ? ` (معنی فارسی: ${fa})` : ''}`;
+  const raw = await geminiOnce(key, systemPrompt, userMessage);
+  const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+  const obj = JSON.parse(cleaned);
+  return Array.isArray(obj.examples)
+    ? obj.examples.map(e=>({ en:(e.en||'').trim(), fa:(e.fa||'').trim() })).filter(e=>e.en)
+    : [];
+}
+
+/* Checks whether the target word, in this exact sentence, is actually part of an idiom/phrasal
+   verb/fixed expression rather than being used on its own — used as a fallback when no locally-
+   analyzed idiom already covers the word (see findGroundedIdiomForWord). Grounded against the
+   real sentence: the returned phrase must appear verbatim in it, or the result is discarded as a
+   likely hallucination rather than shown to the person. */
+async function fetchIdiomForWord(key, en, sentence){
+  if(!sentence) return null;
+  const marked = markTargetWordInSentence(sentence, en);
+  const systemPrompt = 'تو یک دستیار زبان انگلیسی برای فارسی‌زبانانی. یک جمله و یک کلمه‌ی هدف در همان جمله (بین ** ** مشخص‌شده) به تو داده می‌شود. بررسی کن آیا این کلمه در همین جمله، بخشی از یک اصطلاح، فعل دوکلمه‌ای/سه‌کلمه‌ای (phrasal verb)، یا عبارت idiomatic رایج انگلیسی است — نه یک کلمه‌ی عادی و مستقل. اگر بله: دقیقاً همان عبارت را عیناً همان‌طور که در جمله آمده (بدون کوچک‌ترین تغییر در املا یا شکل فعل) در فیلد "phrase" بگذار، معنای فارسی کوتاه و رایج در "fa"، و یک توضیح انگلیسی ساده از معنایش در "definition". اگر بخشی از هیچ اصطلاحی نیست، "isIdiom" را false بگذار و بقیه‌ی فیلدها را خالی بگذار — چیزی از خودت اختراع نکن. فقط و فقط یک آبجکت JSON خالص (بدون Markdown) با این ساختار برگردان: {"isIdiom": true, "phrase": "...", "fa": "...", "definition": "..."}';
+  const userMessage = `جمله: "${marked}"\nکلمه‌ی هدف که بین ** ** مشخص شده: "${en}"`;
+  const raw = await geminiOnce(key, systemPrompt, userMessage);
+  const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+  try{
+    const obj = JSON.parse(cleaned);
+    const phrase = (obj.phrase||'').trim();
+    if(!obj.isIdiom || !phrase) return null;
+    if(sentence.toLowerCase().indexOf(phrase.toLowerCase())===-1) return null; // not grounded in the real sentence — discard
+    return { phrase, fa: (obj.fa||'').trim(), definition: (obj.definition||'').trim() };
+  }catch(e){ return null; }
+}
+
+/* Looks for an idiom the SRT idiom analysis already found and grounded to a real subtitle line
+   (episodeSuggestions, type 'idiom') that both (a) contains the tapped word and (b) actually
+   occurs in this exact sentence — free, instant, and already vetted, so it's checked first before
+   ever falling back to a live AI call in fetchIdiomForWord. */
+function findGroundedIdiomForWord(en, sentence){
+  if(!en) return null;
+  const enLower = en.trim().toLowerCase();
+  const wordRe = new RegExp('\\b' + escapeRegExp(enLower) + '\\b', 'i');
+  const hit = episodeSuggestions.find(s=>{
+    if(!s || s.type!=='idiom' || !s.en) return false;
+    if(!wordRe.test(s.en)) return false;
+    if(sentence && s.example) return s.example.toLowerCase().indexOf(s.en.trim().toLowerCase())!==-1
+      && sentence.toLowerCase().indexOf(s.en.trim().toLowerCase())!==-1;
+    return !sentence; // no sentence to check against — accept on word match alone
+  });
+  return hit ? { phrase: hit.en, fa: hit.fa || '', definition: hit.definition || '' } : null;
+}
+
+/* ---------- Word detail panel — opened either by tapping a word in the synced subtitle caption
+   during video playback, or via the "📖 توضیح کامل کلمه" button in the add-word form / review
+   deck. `word` is {en, fa?, example?} (fa/example may be missing, e.g. straight from a subtitle
+   tap). `contextInfo.sentence`, if given, is the real sentence the word was tapped from — this
+   takes priority over word.example as the "real context" used throughout the panel. ---------- */
+function openWordDetailPanel(word, contextInfo){
+  contextInfo = contextInfo || {};
+  const en = (word.en||'').trim();
+  if(!en) return;
+  const enLower = en.toLowerCase();
+  const sentence = (contextInfo.sentence || word.example || '').trim();
+
+  const settings = loadAiSettings();
+  const ready = !!(settings.provider==='google' && settings.key);
+
+  const freqEntry = srtCandidatesPool.find(c=> c.en===enLower);
+  const maxFreq = srtCandidatesPool.length ? Math.max(...srtCandidatesPool.map(c=>c.count)) : 0;
+
+  const wordEntry = words.find(w=> (w.en||'').trim().toLowerCase()===enLower);
+  const wordHistory = (wordEntry && Array.isArray(wordEntry.history)) ? wordEntry.history : [];
+
+  const alreadyAdded = words.some(w=> (w.en||'').trim().toLowerCase()===enLower);
+  const alreadyKnown = loadWordSet(KNOWN_WORDS_KEY).has(enLower);
+  const alreadyIgnored = loadWordSet(IGNORED_WORDS_KEY).has(enLower);
+
+  /* Personal review-history summary — computed once from the word's own `history` entries
+     (pushed by deckGrade() on every review). No AI call involved: purely local data, so it
+     renders instantly alongside the rest of the header. */
+  const historyBlockHtml = (()=>{
+    if(!wordEntry) return '';
+    const boxLabel = wordEntry.box===6 ? 'مسلط‌شدگان' : `جعبه ${wordEntry.box} از ۵`;
+    if(!wordHistory.length){
+      return `<div class="wd-history">
+        <span class="wd-history-label">تاریخچه‌ی مرور</span>
+        <span class="wd-history-detail">هنوز مرور نشده · ${boxLabel}</span>
+      </div>`;
+    }
+    const passed = wordHistory.filter(h=>h.passed).length;
+    const failed = wordHistory.length - passed;
+    const last = wordHistory[wordHistory.length-1];
+    let streak = 0;
+    for(let i=wordHistory.length-1;i>=0;i--){ if(wordHistory[i].passed) streak++; else break; }
+    const streakNote = streak>1 ? ` · ${streak} بار پشت‌سرهم درست` : '';
+    return `<div class="wd-history">
+      <span class="wd-history-label">تاریخچه‌ی مرور</span>
+      <span class="wd-history-detail">${boxLabel} · ${wordHistory.length} مرور (${passed} درست، ${failed} غلط)${streakNote} · آخرین مرور ${fmtDate(last.date)}${last.passed?'':' (غلط)'}</span>
+    </div>`;
+  })();
+
+  const state = { quickMeaning: (word.fa||'').trim(), sentenceTranslation:'', grammar:null, contextGrammar:null, contextGrammarError:'', deepExplain:null, deepExplainError:'', moreExamples:null, activeTab:'grammar', idiom: findGroundedIdiomForWord(en, sentence),
+    /* Each tab only fires its AI requests the first time it's actually opened — not automatically
+       when the panel appears — since every "جزئیات کلمه" open shouldn't cost several API calls
+       before the person has even looked at a tab. Quota is the free Gemini tier's daily limit. */
+    tabLoaded: { grammar:false, explain:false, examples:false } };
+
+  /* Builds the "part of an idiom" callout box for whichever idiom (local or AI-checked) was
+     found for this word/sentence — kept as a closure so it can reach `words`/`sentence` for the
+     already-added check and the add button's example line. */
+  const idiomBoxHtml = (idiom)=>{
+    if(!idiom || !idiom.phrase) return '';
+    const phraseLower = idiom.phrase.trim().toLowerCase();
+    const idiomAlreadyAdded = words.some(w=> (w.en||'').trim().toLowerCase()===phraseLower);
+    return `<div class="wd-idiom-box">
+      <div class="wd-idiom-head">🗣️ این کلمه بخشی از یک اصطلاحه: <span class="wd-idiom-phrase" dir="ltr">${escapeHtml(idiom.phrase)}</span></div>
+      ${idiom.fa ? `<div class="wd-idiom-fa">${escapeHtml(idiom.fa)}</div>` : ''}
+      ${idiom.definition ? `<div class="wd-idiom-def">${escapeHtml(idiom.definition)}</div>` : ''}
+      <button type="button" class="btn btn-secondary btn-small" id="wdIdiomAddBtn" ${idiomAlreadyAdded?'disabled':''}>${idiomAlreadyAdded?'✓ این اصطلاح اضافه شده':'➕ افزودن این اصطلاح به فهرست لغات'}</button>
+    </div>`;
+  };
+  const wireIdiomAddBtn = (container, idiom)=>{
+    const btn = container.querySelector('#wdIdiomAddBtn');
+    if(!btn) return;
+    btn.onclick = async ()=>{
+      btn.disabled = true;
+      btn.textContent = 'در حال افزودن...';
+      await addWordToList(idiom.phrase, idiom.fa || '', sentence, '');
+      btn.textContent = '✓ اضافه شد';
+    };
+  };
+
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <h2>جزئیات کلمه</h2>
+        <button class="close-x">✕</button>
+      </div>
+
+      <div class="wd-header">
+        <span class="wd-word">${escapeHtml(en)}</span>
+        <button type="button" class="wd-speak-btn" id="wdSpeakBtn" title="پخش تلفظ">🔊</button>
+        <button type="button" class="wd-speak-btn" id="wdToolsBtn" title="دیکشنری و ابزارها">🔗</button>
+        <button type="button" class="wd-speak-btn" id="wdAiBtn" title="دستیار هوشمند">🤖</button>
+      </div>
+      <div class="wd-quickmeaning" id="wdQuickMeaning">${state.quickMeaning ? escapeHtml(state.quickMeaning) : (ready ? '<span class="spinner"></span>' : '')}</div>
+
+      <div id="wdIdiomBoxWrap">${idiomBoxHtml(state.idiom)}</div>
+
+      ${freqEntry ? `
+      <div class="wd-freq">
+        <span class="wd-freq-label">تکرار در این زیرنویس</span>
+        <div class="wd-freq-track"><div class="wd-freq-fill" style="width:${maxFreq ? Math.max(6, Math.round(freqEntry.count/maxFreq*100)) : 0}%;"></div></div>
+        <span class="wd-freq-count">${freqEntry.count}×</span>
+      </div>` : ''}
+
+      ${historyBlockHtml}
+
+      <div class="wd-status-row">
+        <button type="button" class="btn btn-secondary btn-small" id="wdKnowBtn" ${alreadyKnown?'disabled':''}>${alreadyKnown?'✓ بلد بودی':'✓ بلدم'}</button>
+        <button type="button" class="btn btn-primary btn-small" id="wdLearnBtn" ${(alreadyAdded || (!state.quickMeaning && !ready))?'disabled':''}>${alreadyAdded?'📖 اضافه شده':'📖 یاد بگیر'}</button>
+        <button type="button" class="btn btn-ghost btn-small" id="wdIgnoreBtn" ${alreadyIgnored?'disabled':''}>${alreadyIgnored?'🚫 نادیده گرفته شد':'🚫 نادیده بگیر'}</button>
+      </div>
+
+      ${!ready ? `<div class="ai-note">هنوز کلید Google Gemini را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید رایگان خودتان را وارد کنید.</div>` : `
+      <div class="ep-type-filter-row" id="wdTabsRow">
+        <div class="ep-type-filter-btn active" data-tab="grammar">دستور زبان</div>
+        <div class="ep-type-filter-btn" data-tab="explain">نکات کاربردی</div>
+        <div class="ep-type-filter-btn" data-tab="examples">نمونه‌ها</div>
+      </div>
+      <div id="wdTabContent"></div>
+      `}
+    </div>`;
+  getOverlayMountEl().appendChild(overlay);
+  overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+  overlay.querySelector('#wdSpeakBtn').onclick = (e)=> speakText(en, e.currentTarget);
+  overlay.querySelector('#wdToolsBtn').onclick = ()=> openBrowseToolsPanel({ en, fa: state.quickMeaning||word.fa||'', example: sentence });
+  overlay.querySelector('#wdAiBtn').onclick = ()=> openAiPanel({ en, fa: state.quickMeaning||word.fa||'', example: sentence });
+
+  if(state.idiom){
+    wireIdiomAddBtn(overlay, state.idiom);
+  }else if(ready && sentence){
+    // No idiom already grounded from the SRT idiom analysis — ask the AI whether this word, in
+    // this exact sentence, is actually part of one. Silent no-op on failure/negative: this is a
+    // nice-to-have, not something that should ever block or clutter the rest of the panel.
+    (async ()=>{
+      try{
+        const found = await fetchIdiomForWord(settings.key, en, sentence);
+        if(found){
+          state.idiom = found;
+          const wrap = overlay.querySelector('#wdIdiomBoxWrap');
+          if(wrap){ wrap.innerHTML = idiomBoxHtml(found); wireIdiomAddBtn(overlay, found); }
+        }
+      }catch(e){ /* idiom check is best-effort */ }
+    })();
+  }
+
+  const knowBtn = overlay.querySelector('#wdKnowBtn');
+  const learnBtn = overlay.querySelector('#wdLearnBtn');
+  const ignoreBtn = overlay.querySelector('#wdIgnoreBtn');
+
+  knowBtn.onclick = ()=>{
+    markWordKnown(en);
+    knowBtn.disabled = true;
+    knowBtn.textContent = '✓ بلد بودی';
+  };
+  ignoreBtn.onclick = ()=>{
+    markWordIgnored(en);
+    ignoreBtn.disabled = true;
+    ignoreBtn.textContent = '🚫 نادیده گرفته شد';
+  };
+  learnBtn.onclick = async ()=>{
+    if(!state.quickMeaning) return;
+    learnBtn.disabled = true;
+    learnBtn.textContent = 'در حال افزودن...';
+    await addWordToList(en, state.quickMeaning, sentence, '');
+    learnBtn.textContent = '✓ اضافه شد';
+  };
+
+  if(!ready){
+    if(word.fa){
+      const qmEl = overlay.querySelector('#wdQuickMeaning');
+      if(qmEl) qmEl.textContent = word.fa;
+    }
+    return; // no AI key — quick meaning falls back to whatever fa was already given, no tabs
+  }
+
+  /* Quick meaning line, fetched once and reused as the fallback fa for "📖 یاد بگیر". */
+  (async ()=>{
+    if(!state.quickMeaning){
+      try{
+        const line = await fetchQuickMeaningsLine(settings.key, en);
+        state.quickMeaning = line || '';
+      }catch(e){ /* leave empty — learn button stays disabled */ }
+    }
+    const qmEl = overlay.querySelector('#wdQuickMeaning');
+    if(qmEl) qmEl.innerHTML = state.quickMeaning ? escapeHtml(state.quickMeaning) : '<span style="opacity:.6;">معنی‌ای دریافت نشد.</span>';
+    if(!alreadyAdded) learnBtn.disabled = !state.quickMeaning;
+  })();
+
+  /* ---------- Tabs ---------- */
+  const tabsRow = overlay.querySelector('#wdTabsRow');
+  const tabContent = overlay.querySelector('#wdTabContent');
+
+  const TAB_LABELS = { grammar:'دستور زبان', explain:'نکات کاربردی', examples:'نمونه‌ها' };
+
+  function renderTabPlaceholder(){
+    tabContent.innerHTML = `
+      <div class="wd-tab-placeholder">
+        <button type="button" class="btn btn-secondary btn-small" id="wdLoadTabBtn">📥 نمایش ${TAB_LABELS[state.activeTab]}</button>
+      </div>`;
+    tabContent.querySelector('#wdLoadTabBtn').onclick = ()=>{
+      state.tabLoaded[state.activeTab] = true;
+      renderTab();
+    };
+  }
+
+  function renderTab(){
+    if(!state.tabLoaded[state.activeTab]){ renderTabPlaceholder(); return; }
+    if(state.activeTab==='grammar') renderGrammarTab();
+    else if(state.activeTab==='explain') renderExplainTab();
+    else renderExamplesTab();
+  }
+
+  function dictBoxHtml(g){
+    const dictRows = [];
+    if(g.inContextMeanings.length){
+      dictRows.push(`<div class="wd-dict-row"><span class="wd-dict-word">${escapeHtml(en)}</span><span class="wd-dict-pos">در این جمله</span><span class="wd-dict-meanings">${escapeHtml(g.inContextMeanings.join('، '))}</span></div>`);
+    }
+    if(g.generalMeanings.length){
+      dictRows.push(`<div class="wd-dict-row"><span class="wd-dict-word">${escapeHtml(en)}</span><span class="wd-dict-pos">به‌طور کلی</span><span class="wd-dict-meanings">${escapeHtml(g.generalMeanings.join('، '))}</span></div>`);
+    }
+    return dictRows.length ? `<div class="wd-dict-box">${dictRows.join('')}</div>` : '';
+  }
+
+  function contextGrammarHtml(){
+    if(state.contextGrammar) return `<div class="ai-msg">${escapeHtml(state.contextGrammar)}</div>`;
+    if(state.contextGrammarError) return `<div class="ai-note">${state.contextGrammarError}</div>`;
+    return `<div class="ai-msg"><span class="spinner"></span> در حال تحلیل جمله...</div>`;
+  }
+
+  function renderGrammarTab(){
+    tabContent.innerHTML = `
+      <div id="wdContextGrammarWrap">${contextGrammarHtml()}</div>
+      <div id="wdDictWrap">${state.grammar ? dictBoxHtml(state.grammar) : `<div class="ai-msg"><span class="spinner"></span> در حال آماده‌سازی توضیح دستوری...</div>`}</div>`;
+
+    if(!state.contextGrammar && !state.contextGrammarError){
+      fetchContextGrammarExplanation(settings.key, word, sentence).then(text=>{
+        state.contextGrammar = text || 'توضیحی دریافت نشد.';
+        if(state.activeTab!=='grammar') return;
+        const wrap = tabContent.querySelector('#wdContextGrammarWrap');
+        if(wrap) wrap.innerHTML = contextGrammarHtml();
+      }).catch(e=>{
+        state.contextGrammarError = `درخواست ناموفق بود (${escapeHtml(e.message||'')}). محتمل‌ترین دلیل: نبود دسترسی به این سرویس از ایران بدون فیلترشکن، یا نامعتبر بودن کلید API.`;
+        if(state.activeTab!=='grammar') return;
+        const wrap = tabContent.querySelector('#wdContextGrammarWrap');
+        if(wrap) wrap.innerHTML = contextGrammarHtml();
+      });
+    }
+
+    if(!state.grammar){
+      fetchGrammarExplanation(settings.key, en, sentence).then(g=>{
+        state.grammar = g;
+        if(state.activeTab!=='grammar') return;
+        const wrap = tabContent.querySelector('#wdDictWrap');
+        if(wrap) wrap.innerHTML = dictBoxHtml(g);
+      }).catch(e=>{
+        if(state.activeTab!=='grammar') return;
+        const wrap = tabContent.querySelector('#wdDictWrap');
+        if(wrap) wrap.innerHTML = `<div class="ai-note">درخواست ناموفق بود (${escapeHtml(e.message||'')}).</div>`;
+      });
+    }
+  }
+
+  function practicalNotesHtml(){
+    if(state.deepExplain) return `<div class="ai-msg">${renderMarkdownLite(state.deepExplain)}</div>`;
+    if(state.deepExplainError) return `<div class="ai-note">${state.deepExplainError}</div>`;
+    return `<div class="ai-msg"><span class="spinner"></span> در حال آماده‌سازی نکات کاربردی...</div>`;
+  }
+
+  function renderExplainTab(){
+    tabContent.innerHTML = `<div id="wdExplainWrap">${practicalNotesHtml()}</div>`;
+    if(state.deepExplain || state.deepExplainError) return;
+    fetchPracticalUsageNotes(settings.key, en, state.quickMeaning, sentence).then(text=>{
+      state.deepExplain = text;
+      if(state.activeTab!=='explain') return;
+      const wrap = tabContent.querySelector('#wdExplainWrap');
+      if(wrap) wrap.innerHTML = practicalNotesHtml();
+    }).catch(e=>{
+      state.deepExplainError = `درخواست ناموفق بود (${escapeHtml(e.message||'')}). محتمل‌ترین دلیل: نبود دسترسی به این سرویس از ایران بدون فیلترشکن، یا نامعتبر بودن کلید API.`;
+      if(state.activeTab!=='explain') return;
+      const wrap = tabContent.querySelector('#wdExplainWrap');
+      if(wrap) wrap.innerHTML = practicalNotesHtml();
+    });
+  }
+
+  function moreExamplesHtml(list){
+    if(!list || !list.length) return `<div class="ai-note">نمونه‌ی بیشتری دریافت نشد.</div>`;
+    return `<div class="wd-example-src" style="margin:12px 2px 6px;">نمونه‌های بیشتر</div>` + list.map(ex=>`
+      <div class="wd-example-block">
+        <div class="wd-example-en"><span class="en">${escapeHtml(ex.en)}</span><button type="button" class="wd-speak-btn" data-speak="${escapeHtml(ex.en)}" title="پخش">🔊</button></div>
+        ${ex.fa ? `<div class="wd-example-fa">${escapeHtml(ex.fa)}</div>` : ''}
+      </div>`).join('');
+  }
+
+  function renderExamplesTab(){
+    let html = '';
+    if(sentence){
+      html += `<div class="wd-example-block">
+        <div class="wd-example-src">نمونه از همین متن</div>
+        <div class="wd-example-en"><span class="en">${escapeHtml(sentence)}</span><button type="button" class="wd-speak-btn" data-speak="${escapeHtml(sentence)}" title="پخش">🔊</button></div>
+        <div class="wd-example-fa" id="wdSentenceTranslation">${state.sentenceTranslation ? escapeHtml(state.sentenceTranslation) : '<span class="spinner"></span>'}</div>
+      </div>`;
+    }
+    html += `<div id="wdMoreExamplesWrap">${state.moreExamples ? moreExamplesHtml(state.moreExamples) : `<div class="ai-msg"><span class="spinner"></span> در حال دریافت نمونه‌های بیشتر...</div>`}</div>`;
+    tabContent.innerHTML = html;
+    tabContent.querySelectorAll('[data-speak]').forEach(btn=>{ btn.onclick = (e)=> speakText(btn.dataset.speak, e.currentTarget); });
+
+    if(sentence && !state.sentenceTranslation){
+      fetchSentenceTranslation(settings.key, sentence).then(t=>{
+        state.sentenceTranslation = t || '';
+        if(state.activeTab!=='examples') return;
+        const el = tabContent.querySelector('#wdSentenceTranslation');
+        if(el) el.innerHTML = state.sentenceTranslation ? escapeHtml(state.sentenceTranslation) : '<span style="opacity:.6;">ترجمه‌ای دریافت نشد.</span>';
+      }).catch(()=>{
+        if(state.activeTab!=='examples') return;
+        const el = tabContent.querySelector('#wdSentenceTranslation');
+        if(el) el.innerHTML = '<span style="opacity:.6;">ترجمه ناموفق بود.</span>';
+      });
+    }
+
+    if(!state.moreExamples){
+      const avoid = sentence ? [sentence] : [];
+      fetchExampleBatch(settings.key, en, state.quickMeaning, avoid, 4).then(list=>{
+        state.moreExamples = list;
+        if(state.activeTab!=='examples') return;
+        const wrap = tabContent.querySelector('#wdMoreExamplesWrap');
+        if(wrap){
+          wrap.innerHTML = moreExamplesHtml(list);
+          wrap.querySelectorAll('[data-speak]').forEach(btn=>{ btn.onclick = (e)=> speakText(btn.dataset.speak, e.currentTarget); });
+        }
+      }).catch(e=>{
+        if(state.activeTab!=='examples') return;
+        const wrap = tabContent.querySelector('#wdMoreExamplesWrap');
+        if(wrap) wrap.innerHTML = `<div class="ai-note">دریافت نمونه‌های بیشتر ناموفق بود (${escapeHtml(e.message||'')}).</div>`;
+      });
+    }
+  }
+
+  tabsRow.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.ep-type-filter-btn');
+    if(!btn || btn.dataset.tab===state.activeTab) return;
+    state.activeTab = btn.dataset.tab;
+    tabsRow.querySelectorAll('.ep-type-filter-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab===state.activeTab));
+    renderTab();
+  });
+  renderTab();
+}
+
 /* ---------- Wire up top buttons ---------- */
 $('#startReviewBtn').onclick = ()=> startReview();
 $('#addWordBtn').onclick = ()=> openAddForm();
 $('#listBtn').onclick = ()=> openListPage();
 $('#browseBtn').onclick = ()=> startBrowse();
 $('#episodeBtn').onclick = ()=> openEpisodePage();
+$('#textImportBtn').onclick = ()=> openTextImportPage();
 $('#settingsBtn').onclick = ()=> openSettingsPage();
 
 /* ---------- Init ---------- */
