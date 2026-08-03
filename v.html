@@ -277,6 +277,31 @@
   .close-x{ background:var(--parchment-dark); border:none; font-size:17px; color:var(--ink-soft); box-shadow:none; padding:6px 10px; border-radius:50%; line-height:1; }
   .close-x:active{ background:var(--line); }
 
+  /* ===== In-app dictionary frame viewer ===== */
+  .frame-overlay{
+    position:fixed; inset:0; background:var(--panel);
+    z-index:60; display:flex; flex-direction:column;
+  }
+  .frame-overlay .fo-head{
+    display:flex; align-items:center; gap:8px; padding:10px 12px;
+    border-bottom:1px solid var(--line-soft); background:var(--panel);
+    flex:0 0 auto;
+  }
+  .frame-overlay .fo-title{ flex:1 1 auto; min-width:0; font-size:13.5px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .frame-overlay .fo-btn{
+    background:var(--parchment-dark); border:none; font-size:12.5px; font-weight:700;
+    color:var(--ink); box-shadow:none; padding:7px 11px; border-radius:10px; line-height:1; white-space:nowrap;
+  }
+  .frame-overlay .fo-btn:active{ background:var(--line); }
+  .frame-overlay .fo-close{ font-size:16px; padding:7px 10px; border-radius:50%; }
+  .frame-overlay .fo-body{ position:relative; flex:1 1 auto; min-height:0; }
+  .frame-overlay iframe{ position:absolute; inset:0; width:100%; height:100%; border:none; background:#fff; }
+  .frame-overlay .fo-hint{
+    position:absolute; left:0; right:0; bottom:0; padding:8px 12px;
+    font-size:11.5px; color:var(--ink-soft); background:var(--panel);
+    border-top:1px solid var(--line-soft); text-align:center;
+  }
+
   label{ display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin:16px 0 6px; }
   input[type=text], textarea{
     width:100%; border:1px solid var(--line); border-radius:var(--radius-sm);
@@ -436,7 +461,10 @@
   }
   .wd-speak-btn:active{ background:var(--line); }
   .wd-quickmeaning{ text-align:center; font-size:14px; font-weight:600; color:var(--ink); margin-bottom:16px; min-height:20px; }
-  .wd-tab-placeholder{ display:flex; justify-content:center; padding:22px 0; }
+  .wd-qm-freedict-row{ display:flex; align-items:center; justify-content:center; gap:9px; flex-wrap:wrap; }
+  .wd-qm-freedict-line{ font-size:13px; font-weight:500; color:var(--ink-soft); direction:ltr; }
+  .wd-tab-placeholder{ display:flex; flex-direction:column; align-items:center; gap:10px; padding:22px 0; }
+  .wd-tab-placeholder .wd-chatgpt-row{ margin:0 !important; }
 
   /* Shown when the tapped word turns out to be part of an idiom/phrasal verb in its real
      sentence — either grounded locally against the analyzed idiom list, or checked live via AI. */
@@ -469,6 +497,26 @@
   .wd-dict-word{ font-family:'Lora',serif; font-weight:700; direction:ltr; font-size:14px; color:var(--ink); }
   .wd-dict-pos{ font-size:11px; font-weight:700; color:var(--brass-dark); direction:ltr; }
   .wd-dict-meanings{ font-size:13px; color:var(--ink); }
+
+  /* ---------- Free dictionary (dictionaryapi.dev) fallback box — shown when the in-app AI
+     (Gemini) has no key configured, or when an AI call fails, so the person still gets real
+     definitions/examples/synonyms with no key and no quota. ---------- */
+  .wd-freedict-box{ background:var(--parchment-dark); border-radius:var(--radius); padding:14px 15px; margin-top:12px; }
+  .wd-freedict-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:10px; padding-bottom:8px; border-bottom:1px dashed var(--line); }
+  .wd-freedict-title{ font-size:11px; font-weight:700; color:var(--brass-dark); letter-spacing:.2px; }
+  .wd-freedict-phonetic{ font-family:'Lora',serif; direction:ltr; font-size:13px; color:var(--ink-soft); }
+  .wd-freedict-group{ margin-bottom:12px; }
+  .wd-freedict-group:last-child{ margin-bottom:0; }
+  .wd-freedict-pos{ display:inline-block; font-size:10.5px; font-weight:700; color:#fff; background:var(--sage); border-radius:20px; padding:2px 11px; margin-bottom:7px; direction:ltr; }
+  .wd-freedict-deflist{ margin:0; padding-inline-start:19px; }
+  .wd-freedict-def{ font-size:13px; color:var(--ink); margin:6px 0; }
+  .wd-freedict-example{ font-size:12px; color:var(--ink-soft); font-style:italic; direction:ltr; text-align:left; margin-top:3px; }
+  .wd-freedict-fa{ font-size:12.5px; color:var(--sage-dark); margin-top:3px; }
+  .wd-freedict-fa:empty{ display:none; }
+  .wd-freedict-syn-row{ margin-top:5px; display:flex; flex-wrap:wrap; gap:5px; }
+  .wd-freedict-syn-chip{ font-size:11px; background:rgba(34,48,63,.07); border-radius:20px; padding:2px 10px; direction:ltr; color:var(--ink-soft); }
+  .wd-freedict-note{ font-size:11px; color:var(--ink-soft); margin-top:8px; text-align:center; }
+  .wd-freedict-loadbtn-row{ margin-top:10px; text-align:center; }
 
   .wd-example-block{ background:var(--parchment-dark); border-radius:var(--radius); padding:13px 15px; margin-bottom:11px; }
   .wd-example-src{ font-size:11px; font-weight:700; color:var(--brass-dark); margin-bottom:7px; }
@@ -596,7 +644,8 @@
   /* The caption box itself ignores taps (so the video/controls beneath stay reachable), but
      each individual word span re-enables pointer events so it can be tapped on its own. */
   .vsync-caption{
-    position:absolute; left:0; right:0; bottom:6%; display:flex; justify-content:center;
+    position:absolute; left:0; right:0; bottom:var(--cap-bottom, 6%); display:flex;
+    flex-direction:column; align-items:center; gap:3px;
     pointer-events:none; padding:0 10px;
   }
   .vsync-caption-text{
@@ -616,6 +665,17 @@
       -2.5px 0 0 #000, 2.5px 0 0 #000, 0 -2.5px 0 #000, 0 2.5px 0 #000,
       0 3px 10px rgba(0,0,0,.55);
   }
+  /* Persian translation line, shown right under the English caption — plain white (not the
+     English caption's yellow) so the two are easy to tell apart at a glance, smaller since it's
+     a reading aid rather than the primary caption, and not word-clickable (no vocab lookup on it,
+     that's what the English line above is for). */
+  .vsync-caption-fa{
+    color:#fff; font-size:calc(14px * var(--cap-scale, 1)); font-weight:700;
+    direction:rtl; text-align:center;
+  }
+  .vsync-player:fullscreen .vsync-caption-fa, .vsync-player:-webkit-full-screen .vsync-caption-fa{
+    font-size:calc(20px * var(--cap-scale, 1));
+  }
   .vsync-word{ pointer-events:auto; cursor:pointer; border-radius:4px; padding:0 1px; }
   .vsync-word:active{ background:rgba(255,255,255,.28); }
   /* Marks a caption word that's part of the currently-analyzed level word list, so the level
@@ -630,6 +690,7 @@
     position:absolute; left:8px; top:8px; z-index:2; display:flex; gap:6px; pointer-events:auto;
   }
   .vsync-sync-row{ top:44px; }
+  .vsync-pos-row{ left:auto; right:8px; top:44px; }
   .vsync-sync-badge{
     pointer-events:none; background:rgba(0,0,0,.4); color:#fff; font-size:11px; font-weight:700;
     border-radius:8px; padding:6px 7px; display:flex; align-items:center; direction:ltr; min-width:38px; justify-content:center;
@@ -645,6 +706,7 @@
     font-size:13px; font-weight:800; padding:6px 9px; cursor:pointer; line-height:1;
   }
   .vsync-cap-size-btn:active{ background:rgba(0,0,0,.8); }
+  .vsync-cap-size-btn.active{ background:var(--brass-dark,#8a6a1f); }
   /* Rotate button lives at the top (native Chrome controls occupy the bottom strip), and stays
      hidden until the wrapper is actually fullscreen — it's meaningless outside of fullscreen and
      shouldn't sit in the way otherwise. */
@@ -830,6 +892,34 @@ function fmtDate(iso){
   try{ return new Date(iso).toLocaleDateString('fa-IR', {month:'short', day:'numeric'}); }catch(e){ return ''; }
 }
 
+/* ---------- Sync provider selection ---------- */
+/* Which remote backend (if any) is active: 'none' | 'github' | 'drive'. Defaults to 'github'
+   if a GitHub sync was already configured before this setting existed, so upgrading doesn't
+   silently disconnect anyone. */
+const SYNC_PROVIDER_KEY = 'leitner-sync-provider-v1';
+function loadSyncProvider(){
+  try{
+    const raw = localStorage.getItem(SYNC_PROVIDER_KEY);
+    if(raw) return raw;
+  }catch(e){}
+  const g = loadGithubSync();
+  return (g.repo && g.token) ? 'github' : 'none';
+}
+function saveSyncProvider(p){ try{ localStorage.setItem(SYNC_PROVIDER_KEY, p); }catch(e){} }
+
+/* Returns {provider, s} for whichever provider is active AND fully configured, or null. */
+function activeSyncConfig(){
+  const provider = loadSyncProvider();
+  if(provider==='github'){
+    const s = loadGithubSync();
+    if(s.repo && s.token) return {provider:'github', s};
+  } else if(provider==='drive'){
+    const s = loadDriveSync();
+    if(s.url && s.secret) return {provider:'drive', s};
+  }
+  return null;
+}
+
 async function loadWords(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -838,23 +928,24 @@ async function loadWords(){
     console.error('خواندن داده‌ها ناموفق بود', e);
     words = [];
   }
-  // If GitHub sync is configured, try to pull the latest version from the repo
-  const sync = loadGithubSync();
-  if(sync.repo && sync.token){
+  // If a remote sync provider is configured, try to pull the latest version first
+  const cfg = activeSyncConfig();
+  if(cfg){
     try{
-      const remote = await githubFetchFile(sync);
+      const remote = cfg.provider==='github' ? await githubFetchFile(cfg.s) : await driveFetchFile(cfg.s);
       if(remote){
         words = remote.words;
-        githubSha = remote.sha;
+        if(cfg.provider==='github') githubSha = remote.version; else driveVersion = remote.version;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(words)); // keep an offline cache
       }
     }catch(e){
-      console.error('دریافت از گیت‌هاب ناموفق بود، از نسخه محلی استفاده می‌شود', e);
+      console.error('دریافت از سرویس ابری ناموفق بود، از نسخه محلی استفاده می‌شود', e);
     }
   }
 }
 
-let githubPushTimer = null;
+let syncPushTimer = null;
+let syncPushPending = false; // true whenever there are local edits not yet confirmed pushed
 async function saveWords(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(words));
@@ -862,10 +953,52 @@ async function saveWords(){
     console.error('ذخیره‌سازی ناموفق بود', e);
     alert('ذخیره‌سازی با مشکل مواجه شد. ممکن است حافظه مرورگر پر باشد.');
   }
-  const sync = loadGithubSync();
-  if(sync.repo && sync.token){
-    clearTimeout(githubPushTimer);
-    githubPushTimer = setTimeout(()=> pushToGithub(sync), 2000); // debounce so rapid edits become one commit
+  const cfg = activeSyncConfig();
+  if(cfg){
+    syncPushPending = true;
+    clearTimeout(syncPushTimer);
+    syncPushTimer = setTimeout(()=>{ syncPushTimer = null; pushRemote(cfg); }, 1200); // debounce so rapid edits become one commit
+  }
+}
+
+async function pushRemote(cfg, opts){
+  if(cfg.provider==='github') return pushToGithub(cfg.s, false, opts);
+  if(cfg.provider==='drive') return pushToDrive(cfg.s, false, opts);
+}
+
+/* Forces any pending (debounced) push to go out right away, instead of waiting for the
+   timer. Called whenever the app is about to be backgrounded/closed — on mobile especially,
+   the 1.2s debounce window often never gets to run otherwise, so edits silently never reach
+   the cloud and each device quietly drifts back to "only my own local storage". keepalive:true
+   asks the browser to let the request finish even after the page itself is gone. */
+function flushSyncPush(){
+  const cfg = activeSyncConfig();
+  if(!cfg) return;
+  if(syncPushTimer){ clearTimeout(syncPushTimer); syncPushTimer = null; }
+  if(syncPushPending) pushRemote(cfg, {keepalive:true});
+}
+
+/* Called whenever the app comes back to the foreground. Cheaply checks whether the remote
+   file has moved on since we last saw it (i.e. edited from another device) and, if so and
+   we don't have our own unpushed edits sitting around, pulls it in — otherwise you'd only
+   ever see another device's changes after a full page reload. */
+async function pullIfStale(){
+  if(syncPushPending || syncPushTimer) return; // don't clobber edits we haven't pushed yet
+  const cfg = activeSyncConfig();
+  if(!cfg) return;
+  try{
+    const remote = cfg.provider==='github' ? await githubFetchFile(cfg.s) : await driveFetchFile(cfg.s);
+    const localVersion = cfg.provider==='github' ? githubSha : driveVersion;
+    if(remote && remote.version !== localVersion){
+      words = remote.words;
+      if(cfg.provider==='github') githubSha = remote.version; else driveVersion = remote.version;
+      await saveWordsLocalOnly();
+      renderDrawers();
+      if(typeof listPageRedraw === 'function' && listPageRedraw) listPageRedraw();
+      updateSyncStatus('لغت‌های تازه از دستگاه دیگر دریافت شد — ' + new Date().toLocaleTimeString('fa-IR'));
+    }
+  }catch(e){
+    console.error('بررسی نسخه‌ی سرویس ابری ناموفق بود', e);
   }
 }
 
@@ -893,10 +1026,11 @@ async function githubFetchFile(sync){
   if(!res.ok) throw new Error('HTTP '+res.status);
   const data = await res.json();
   const parsed = JSON.parse(base64ToUtf8(data.content));
-  return { words: parsed, sha: data.sha };
+  return { words: parsed, version: data.sha };
 }
 
-async function pushToGithub(sync, retry){
+async function pushToGithub(sync, retry, opts){
+  opts = opts || {};
   try{
     const url = `https://api.github.com/repos/${sync.repo}/contents/${encodeURIComponent(sync.path)}`;
     const body = {
@@ -908,21 +1042,130 @@ async function pushToGithub(sync, retry){
     const res = await fetch(url, {
       method:'PUT',
       headers:{ 'Authorization':'token '+sync.token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      keepalive: !!opts.keepalive // lets the request finish even if the page is being unloaded right now
     });
     if(res.status===409 && !retry){
       // someone/something else updated the file — refetch the sha once and retry
       const fresh = await githubFetchFile(sync);
-      if(fresh) githubSha = fresh.sha;
-      return pushToGithub(sync, true);
+      if(fresh) githubSha = fresh.version;
+      return pushToGithub(sync, true, opts);
     }
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
     githubSha = data.content.sha;
+    syncPushPending = false;
     updateSyncStatus('آخرین همگام‌سازی: ' + new Date().toLocaleTimeString('fa-IR'));
   }catch(e){
     console.error('ارسال به گیت‌هاب ناموفق بود', e);
     updateSyncStatus('همگام‌سازی ناموفق بود — بررسی کن توکن و اتصال اینترنت درست باشد.');
+    // leave syncPushPending = true so the next save/flush attempt tries again
+  }
+}
+
+/* ---------- Google Drive sync (via a small Apps Script "Web App" bridge you deploy once —
+   see the setup instructions in the Settings page for the actual script to paste). No OAuth
+   popups: the script runs under your Google account permanently once deployed, and the app
+   just talks to it with a URL + a secret you make up yourself, same shape as the GitHub token. ---------- */
+const DRIVE_SYNC_KEY = 'leitner-drive-sync-v1';
+/* The Apps Script that needs to be deployed once (see Settings page instructions). Kept here
+   as a plain string so the Settings page can show/copy it — this text never runs inside this
+   HTML file itself, it only runs once pasted into script.google.com. */
+const DRIVE_APPS_SCRIPT_CODE = `function doGet(e) {
+  var props = PropertiesService.getScriptProperties();
+  var secret = props.getProperty('SECRET');
+  if (!secret || e.parameter.secret !== secret) {
+    return json_({ error: 'unauthorized' });
+  }
+  var fileId = props.getProperty('FILE_ID');
+  if (!fileId) {
+    return json_({ words: null });
+  }
+  var file = DriveApp.getFileById(fileId);
+  var data = JSON.parse(file.getBlob().getDataAsString());
+  return json_({ words: data.words, updatedAt: data.updatedAt });
+}
+
+function doPost(e) {
+  var props = PropertiesService.getScriptProperties();
+  var secret = props.getProperty('SECRET');
+  var body = JSON.parse(e.postData.contents);
+  if (!secret || body.secret !== secret) {
+    return json_({ error: 'unauthorized' });
+  }
+  var fileId = props.getProperty('FILE_ID');
+  var current = null;
+  var file;
+  if (fileId) {
+    file = DriveApp.getFileById(fileId);
+    current = JSON.parse(file.getBlob().getDataAsString());
+  }
+  if (current && body.expectedUpdatedAt && current.updatedAt !== body.expectedUpdatedAt) {
+    return json_({ conflict: true, currentUpdatedAt: current.updatedAt });
+  }
+  var updatedAt = new Date().toISOString();
+  var payload = JSON.stringify({ words: body.words, updatedAt: updatedAt });
+  if (!fileId) {
+    var folders = DriveApp.getFoldersByName('Leitner Vocab Sync');
+    var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('Leitner Vocab Sync');
+    file = folder.createFile('leitner-words-data.json', payload, MimeType.PLAIN_TEXT);
+    props.setProperty('FILE_ID', file.getId());
+  } else {
+    file.setContent(payload);
+  }
+  return json_({ updatedAt: updatedAt });
+}
+
+function json_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}`;
+let driveVersion = null; // the remote file's updatedAt timestamp, used like githubSha for conflict checks
+function loadDriveSync(){
+  try{
+    const raw = localStorage.getItem(DRIVE_SYNC_KEY);
+    return raw ? JSON.parse(raw) : {url:'', secret:''};
+  }catch(e){ return {url:'', secret:''}; }
+}
+function saveDriveSync(s){
+  try{ localStorage.setItem(DRIVE_SYNC_KEY, JSON.stringify(s)); }catch(e){}
+}
+
+async function driveFetchFile(sync){
+  const url = sync.url + (sync.url.includes('?') ? '&' : '?') + 'secret=' + encodeURIComponent(sync.secret);
+  const res = await fetch(url, { method:'GET' });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const data = await res.json();
+  if(data.error) throw new Error(data.error);
+  if(!data.words) return null; // nothing saved yet — first push will create it
+  return { words: data.words, version: data.updatedAt || null };
+}
+
+async function pushToDrive(sync, retry, opts){
+  opts = opts || {};
+  try{
+    const res = await fetch(sync.url, {
+      method:'POST',
+      // deliberately text/plain (not application/json) so this stays a CORS "simple request" —
+      // Apps Script web apps don't handle preflight OPTIONS requests reliably
+      headers:{ 'Content-Type':'text/plain;charset=UTF-8' },
+      body: JSON.stringify({ secret: sync.secret, words, expectedUpdatedAt: driveVersion }),
+      keepalive: !!opts.keepalive
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    if(data.conflict && !retry){
+      // someone/something else updated the file — take its updatedAt and retry once
+      driveVersion = data.currentUpdatedAt || null;
+      return pushToDrive(sync, true, opts);
+    }
+    driveVersion = data.updatedAt;
+    syncPushPending = false;
+    updateSyncStatus('آخرین همگام‌سازی: ' + new Date().toLocaleTimeString('fa-IR'));
+  }catch(e){
+    console.error('ارسال به گوگل‌درایو ناموفق بود', e);
+    updateSyncStatus('همگام‌سازی ناموفق بود — بررسی کن آدرس اسکریپت و رمز درست باشد.');
+    // leave syncPushPending = true so the next save/flush attempt tries again
   }
 }
 
@@ -954,11 +1197,13 @@ function saveAiSettings(s){
 /* ---------- Dictionary / AI tools shown in the "دیکشنری و ابزارها" panel ----------
    Order and enabled/disabled state are configurable from Settings. */
 const TOOL_DEFS = [
-  {id:'bamooz', label:'بیاموز', color:'#6a4fb3', kind:'link', href:(w)=>{
+  {id:'bamooz', label:'بیاموز', color:'#6a4fb3', kind:'link', embeddable:true, href:(w)=>{
     const enRaw = (w.en||'').trim();
-    return `https://dic.b-amooz.com/en/dictionary/${encodeURIComponent(enRaw.charAt(0).toLowerCase()||'a')}?word=${encodeURIComponent(enRaw)}`;
+    /* URL path is always the literal "w" (not the word's first letter) — b-amooz uses
+       ?word=... as the actual lookup key, e.g. dic.b-amooz.com/en/dictionary/w?word=hello */
+    return `https://dic.b-amooz.com/en/dictionary/w?word=${encodeURIComponent(enRaw)}`;
   }},
-  {id:'fastdic', label:'فست دیکشنری', color:'#1abc9c', kind:'link', href:(w)=>{
+  {id:'fastdic', label:'فست دیکشنری', color:'#1abc9c', kind:'link', embeddable:true, href:(w)=>{
     const enRaw = (w.en||'').trim();
     return `https://fastdic.com/word/${encodeURIComponent(enRaw.toLowerCase().replace(/\s+/g,'-'))}`;
   }},
@@ -1063,6 +1308,23 @@ async function geminiOnce(key, systemPrompt, userMessage){
   throw lastErr || new Error('درخواست به Gemini ناموفق بود.');
 }
 
+/* Cached (per exact source text, across the whole session) so the same English definition/
+   example — which can legitimately show up more than once, e.g. shared between the quick-line
+   summary and the full dictionary box — is only ever sent for translation once, never
+   duplicated as a separate request. Returns null (never throws) if no key is configured or the
+   request fails, so callers can just skip showing a translation rather than handle an error. */
+const translationCache = {}; // kept for API compatibility with callers below
+/* translateapi.ai (the original free-translation source for this) can't be called from the
+   browser — it doesn't send Access-Control-Allow-Origin, so every request is blocked by CORS,
+   and that can't be fixed client-side. Routing this through Gemini instead was tried, but that
+   burns AI quota automatically on every single word tap, which isn't what's wanted here. So this
+   is now a no-op: the free-dictionary box just stays English-only on its own (as it always did
+   when no translation key was configured), and Persian meaning comes from the existing "🤖 معنی
+   با هوش مصنوعی" button instead — which only calls Gemini when the user actually presses it. */
+async function translateToFa(text){
+  return null;
+}
+
 /* Ask Gemini for a suggested Persian meaning + optional example sentence for an English word.
    Requests strict JSON so it can be parsed reliably; falls back gracefully if parsing fails. */
 async function fetchWordSuggestion(key, en){
@@ -1137,6 +1399,25 @@ async function generateDeckExample(){
 const pronunciationCache = {}; // lowercased word -> audio URL, or null if confirmed unavailable
 let pronunciationAudio = null; // currently playing Audio element, so a new click stops the previous one
 
+/* Shared raw fetch+cache for the dictionaryapi.dev entry — used by both the pronunciation
+   lookup above and the full free-dictionary fallback box below, so a word looked up once (for
+   its audio, say) doesn't trigger a second network request when its definitions are needed too.
+   Returns the raw parsed JSON array from the API, or null if the word wasn't found / the
+   request failed for any reason (offline, blocked, rate-limited, etc). */
+const dictionaryApiRawCache = {}; // lowercased word -> raw API array, or null if unavailable
+async function fetchDictionaryApiRaw(en){
+  const key = (en||'').trim().toLowerCase();
+  if(!key) return null;
+  if(key in dictionaryApiRawCache) return dictionaryApiRawCache[key];
+  try{
+    const res = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(key));
+    if(!res.ok){ dictionaryApiRawCache[key] = null; return null; }
+    const data = await res.json();
+    dictionaryApiRawCache[key] = Array.isArray(data) ? data : null;
+  }catch(e){ dictionaryApiRawCache[key] = null; }
+  return dictionaryApiRawCache[key];
+}
+
 /* dictionaryapi.dev audio filenames usually encode the accent, e.g. ".../en-us-word.mp3" or
    ".../word-uk.mp3". Picks the American one when there's a choice; otherwise just the first. */
 function pickPreferredAccentUrl(urls){
@@ -1150,9 +1431,7 @@ async function getPronunciationUrl(en){
   const key = (en||'').trim().toLowerCase();
   if(!key) return null;
   if(key in pronunciationCache) return pronunciationCache[key];
-  const res = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(key));
-  if(!res.ok){ pronunciationCache[key] = null; return null; }
-  const data = await res.json();
+  const data = await fetchDictionaryApiRaw(key);
   const urls = [];
   if(Array.isArray(data)){
     for(const entry of data){
@@ -1164,6 +1443,132 @@ async function getPronunciationUrl(en){
   if(url && url.startsWith('//')) url = 'https:' + url;
   pronunciationCache[key] = url;
   return url;
+}
+
+/* ---------- Free dictionary fallback (dictionaryapi.dev) — a full definitions/examples/
+   synonyms lookup, grouped and labeled by part of speech, shown as a nicely categorized box.
+   Unlike the AI (Gemini) explanations elsewhere in the app, this needs no API key and no quota,
+   so it's used specifically for the moments the AI can't help: no key configured yet, a failed/
+   filtered/quota-exhausted AI call, or no internet access to Google's API (e.g. no VPN from
+   Iran) while dictionaryapi.dev is still reachable. It never replaces the AI content — it's an
+   alternate, always-available source shown alongside or instead of it. ---------- */
+const POS_FA_LABELS = {
+  noun:'اسم', verb:'فعل', adjective:'صفت', adverb:'قید', pronoun:'ضمیر',
+  preposition:'حرف اضافه', conjunction:'حرف ربط', interjection:'صوت',
+  numeral:'عدد', article:'حرف تعریف', determiner:'معین‌کننده'
+};
+
+/* Turns the raw dictionaryapi.dev response into { phonetic, groups:[{pos, definitions:[{definition,
+   example, synonyms}], synonyms}] } — capped to keep the box readable (max 3 definitions per part
+   of speech, max 6 synonym chips per group) rather than dumping the API's full raw output. */
+function parseFreeDictionaryEntry(data){
+  if(!Array.isArray(data) || !data.length) return null;
+  let phonetic = '';
+  const groups = [];
+  for(const entry of data){
+    if(!phonetic){
+      phonetic = (entry.phonetic||'').trim();
+      if(!phonetic && Array.isArray(entry.phonetics)){
+        const withText = entry.phonetics.find(p=> p.text && p.text.trim());
+        if(withText) phonetic = withText.text.trim();
+      }
+    }
+    const meanings = Array.isArray(entry.meanings) ? entry.meanings : [];
+    meanings.forEach(m=>{
+      const pos = (m.partOfSpeech||'').trim();
+      const rawDefs = Array.isArray(m.definitions) ? m.definitions : [];
+      const definitions = rawDefs.slice(0,3).map(d=>({
+        definition: (d.definition||'').trim(),
+        example: (d.example||'').trim(),
+        synonyms: Array.isArray(d.synonyms) ? d.synonyms.filter(Boolean) : []
+      })).filter(d=> d.definition);
+      if(!definitions.length) return;
+      const groupSynonyms = Array.isArray(m.synonyms) ? m.synonyms.filter(Boolean) : [];
+      groups.push({ pos, definitions, synonyms: groupSynonyms.slice(0,6) });
+    });
+  }
+  if(!groups.length) return null;
+  return { phonetic, groups };
+}
+
+/* Cached at the parsed-entry level too (separate from the raw-response cache above), so re-
+   opening the same word's fallback box during a session doesn't re-parse or re-render from
+   scratch — negligible cost either way, but keeps the call sites simple (`await` once, get the
+   ready-to-render shape back). */
+const freeDictionaryEntryCache = {};
+async function fetchFreeDictionaryLookup(en){
+  const key = (en||'').trim().toLowerCase();
+  if(!key) return null;
+  if(key in freeDictionaryEntryCache) return freeDictionaryEntryCache[key];
+  const raw = await fetchDictionaryApiRaw(key);
+  const parsed = parseFreeDictionaryEntry(raw);
+  freeDictionaryEntryCache[key] = parsed;
+  return parsed;
+}
+
+/* Renders the parsed entry as a categorized box: a header row with the phonetic transcription,
+   then one group per part of speech (colored pill label), each with a numbered definitions list
+   (with an italic example under any definition that has one) and a row of synonym chips. Each
+   definition/example gets an empty "-fa" placeholder line right under it (unique id, scoped to
+   this render via `boxSeq`) — left empty here and filled in afterwards by
+   augmentFreeDictionaryTranslations() if a TranslateAPI.ai key is configured, so the box works
+   perfectly fine on its own (English-only) even when it isn't. */
+let freeDictBoxSeq = 0;
+function freeDictionaryBoxHtml(entry){
+  if(!entry || !entry.groups.length) return '';
+  const boxSeq = ++freeDictBoxSeq;
+  const groupsHtml = entry.groups.map((g, gi)=>{
+    const posLabel = POS_FA_LABELS[g.pos] || g.pos || '';
+    const defsHtml = g.definitions.map((d, di)=>{
+      const defFaId = `fd-${boxSeq}-def-${gi}-${di}-fa`;
+      const exFaId = `fd-${boxSeq}-ex-${gi}-${di}-fa`;
+      return `<li class="wd-freedict-def">${escapeHtml(d.definition)}<div class="wd-freedict-fa" id="${defFaId}"></div>${d.example ? `<div class="wd-freedict-example">"${escapeHtml(d.example)}"</div><div class="wd-freedict-fa" id="${exFaId}"></div>` : ''}</li>`;
+    }).join('');
+    const synHtml = g.synonyms.length
+      ? `<div class="wd-freedict-syn-row">${g.synonyms.map(s=>`<span class="wd-freedict-syn-chip">${escapeHtml(s)}</span>`).join('')}</div>`
+      : '';
+    return `<div class="wd-freedict-group">
+      ${posLabel ? `<span class="wd-freedict-pos">${escapeHtml(posLabel)}</span>` : ''}
+      <ol class="wd-freedict-deflist">${defsHtml}</ol>
+      ${synHtml}
+    </div>`;
+  }).join('');
+  return `<div class="wd-freedict-box" data-fd-seq="${boxSeq}">
+    <div class="wd-freedict-head">
+      <span class="wd-freedict-title">📕 دیکشنری آزاد (بدون نیاز به هوش مصنوعی)</span>
+      ${entry.phonetic ? `<span class="wd-freedict-phonetic">${escapeHtml(entry.phonetic)}</span>` : ''}
+    </div>
+    ${groupsHtml}
+  </div>`;
+}
+
+/* No-op for now: was filling the "-fa" placeholder lines with a Persian translation, but the
+   free translation source (translateapi.ai) is blocked by CORS and can't be called from the
+   browser, and auto-routing through Gemini instead would burn AI quota on every word tap. So the
+   free-dictionary box just stays English-only, exactly as it does when translateToFa() is a
+   no-op — kept as a function (rather than removed) in case a working free/CORS-friendly
+   translation source gets added later. */
+async function augmentFreeDictionaryTranslations(containerEl, entry){
+  return;
+}
+
+/* Fetches and mounts the free-dictionary fallback box inside `wrapEl` (any container element),
+   showing a spinner while loading and a friendly not-found note if the word isn't in
+   dictionaryapi.dev's database (it only covers English headwords, so multi-word phrases/idioms
+   and rarer inflected forms often come back empty — that's fine, it's a bonus source, not the
+   only one). Safe to call even if `wrapEl` is null/removed from the DOM by the time it resolves. */
+async function mountFreeDictionaryFallback(wrapEl, en){
+  if(!wrapEl) return;
+  wrapEl.innerHTML = `<div class="ai-msg"><span class="spinner"></span> در حال جست‌وجو در دیکشنری آزاد...</div>`;
+  let entry = null;
+  try{ entry = await fetchFreeDictionaryLookup(en); }catch(e){ entry = null; }
+  if(!wrapEl.isConnected) return;
+  if(!entry){
+    wrapEl.innerHTML = `<div class="ai-note">این کلمه در دیکشنری آزاد پیدا نشد. می‌تونی از دکمه‌ی 🔗 بالا دیکشنری‌های دیگه رو هم امتحان کنی.</div>`;
+    return;
+  }
+  wrapEl.innerHTML = freeDictionaryBoxHtml(entry);
+  augmentFreeDictionaryTranslations(wrapEl, entry); // best-effort, fills in translations if configured — doesn't block the English content already shown
 }
 
 /* Plays the pronunciation for `en` and gives quick visual feedback on the button that
@@ -1427,12 +1832,22 @@ let episodeIdiomError = null; // set if the idiom step of an .srt analysis fails
 // object URLs, so this works fully offline.
 let epVideoObjectUrl = null; // object URL for the locally-chosen video file
 let epVideoFileName = '';
+let epVideoFileSize = 0; // used together with the name to recognize "the same video file" if it's re-picked in a later session
 let epSyncSrtFileName = '';
 let epVideoCues = []; // [{start,end,text}] parsed from the sync player's own .srt, timestamps kept in seconds
 let epVsyncLastRenderedSrc = null; // avoids rebuilding the <video> element (and losing playback position) when only the srt changes
 let epVsyncFsChangeHandler = null; // current fullscreenchange listener for the vsync player, so re-renders replace it instead of stacking duplicates
 let epVsyncOrientationLocked = false; // whether screen.orientation.lock('landscape') is currently held for the vsync player
 let epVideoLastTime = 0; // last known playback position, restored when the video element is rebuilt (e.g. after leaving/reopening this page)
+
+// Persian translation track for the sync player: [{start,end,text}], same length/order/timing as
+// epVideoCues (index-aligned — cue i's translation is epFaCues[i]) since it's produced by handing
+// the whole numbered .srt to an AI and asking for one translated line per cue, in order. Built via
+// "ترجمه‌ی کامل زیرنویس" (see buildSrtTranslationPrompt / importSrtTranslation below), not parsed
+// from a file, since there's no separate Persian .srt — just this app's own line-per-cue mapping.
+let epFaCues = [];
+let epShowFaCaption = true; // whether the Persian line renders under the English one, once epFaCues exists
+
 
 // Manual subtitle sync offset (seconds), for when the .srt doesn't line up perfectly with the
 // video's own timing. Positive = captions shown later than their timestamp say, negative = earlier.
@@ -1533,15 +1948,156 @@ function parseSrtCues(text){
   return cues;
 }
 
+/* ---------- Remembering the last-watched video across sessions ----------
+   The video file itself is never saved anywhere (it's just a local blob, and this app is
+   deliberately dependency-free/offline) — only small metadata is kept in localStorage: which
+   file it was, the .srt paired with it, the last playback position, and when the page was last
+   closed/left. On a later visit the browser still requires the person to re-pick the video file
+   themselves (a security restriction, not something this app can work around), but as soon as
+   they pick a file whose name+size match the saved one, playback jumps back to that saved
+   position automatically instead of starting from 0. */
+const VSYNC_LAST_STATE_KEY = 'leitner-vsync-last-v1';
+function loadVsyncLastState(){
+  try{
+    const raw = localStorage.getItem(VSYNC_LAST_STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function saveVsyncLastState(){
+  if(!epVideoFileName && !epSyncSrtFileName) return; // nothing picked yet — nothing worth remembering
+  try{
+    localStorage.setItem(VSYNC_LAST_STATE_KEY, JSON.stringify({
+      videoName: epVideoFileName,
+      videoSize: epVideoFileSize,
+      srtName: epSyncSrtFileName || '',
+      // Unlike the video (a local binary file, too big/unsafe to store), the subtitle's plain
+      // text is small — so it's saved directly and can be brought back on its own, already
+      // synced with the same manual offset, without ever having to re-browse for the .srt file.
+      srtText: epSyncSrtRawText || '',
+      subOffset: epSubOffset || 0,
+      lastTime: epVideoLastTime || 0,
+      // Just the translated text per cue (same order as epVideoCues) — timings are re-derived
+      // from epVideoCues on restore, so this stays valid even if the offset changes later.
+      faLines: epFaCues.length ? epFaCues.map(c=>c.text) : [],
+      closedAt: Date.now()
+    }));
+  }catch(e){}
+}
+
+/* Brings back the last subtitle (cues + manual sync offset) automatically when the episode page
+   is (re)created, with no action needed from the person — the .srt text itself was saved (see
+   saveVsyncLastState above), so there's nothing to re-pick. Only runs if nothing is loaded yet
+   this session, so it never clobbers a subtitle the person already picked just now. */
+function restoreVsyncSrtFromStorage(){
+  if(epVideoCues.length>0) return;
+  const last = loadVsyncLastState();
+  if(!last || !last.srtText) return;
+  try{
+    const cues = parseSrtCues(last.srtText);
+    if(cues.length===0) return;
+    epVideoCues = cues;
+    epSyncSrtFileName = last.srtName || 'زیرنویس قبلی';
+    epSyncSrtRawText = last.srtText;
+    epSubOffset = last.subOffset || 0;
+    // Only reusable if the count still lines up with the restored English cues — otherwise the
+    // index-based alignment (epFaCues[i] belongs to epVideoCues[i]) would silently mismatch.
+    if(Array.isArray(last.faLines) && last.faLines.length===cues.length){
+      epFaCues = cues.map((c,i)=>({ start:c.start, end:c.end, text: last.faLines[i]||'' }));
+    }
+  }catch(e){}
+}
+
 /* Called when the person picks a local video file for the sync player. The file is never
    uploaded anywhere — just wrapped in an object URL so the <video> element can play it. */
 function handleEpVideoFile(file){
   if(epVideoObjectUrl) URL.revokeObjectURL(epVideoObjectUrl);
   epVideoObjectUrl = URL.createObjectURL(file);
   epVideoFileName = file.name;
-  epVideoLastTime = 0;
-  epSubOffset = 0;
+  epVideoFileSize = file.size;
+  // Same file (by name+size) as what was last saved, possibly from an earlier session? Resume
+  // from that saved position, and keep whatever sync offset is already in memory (either from
+  // this session or just restored from storage) instead of wiping it — only a genuinely
+  // different video resets the offset, since the right offset is specific to a pairing.
+  const last = loadVsyncLastState();
+  const sameFile = !!(last && last.videoName===file.name && last.videoSize===file.size);
+  if(!sameFile) epSubOffset = 0;
+  epVideoLastTime = (sameFile && last.lastTime>0) ? last.lastTime : 0;
   renderVsyncPlayer();
+  saveVsyncLastState();
+}
+
+/* ---------- Reopening the same video WITHOUT re-browsing for it ----------
+   A plain <input type="file"> can never remember a file across sessions — the browser makes the
+   person navigate and pick it again every time, on purpose, for security. The File System Access
+   API (Chromium browsers: desktop Chrome/Edge, Android Chrome — NOT Safari/iOS, NOT Firefox) is
+   the one real way around that: a "file handle" it returns can be stored (here, in IndexedDB,
+   since it can't be JSON-stringified into localStorage) and reused later. Reusing it still shows
+   one quick native "زمینه دسترسی" permission prompt (a browser requirement, not something this
+   app controls) — but that's a single tap, not navigating folders to find the file again. Where
+   this API isn't supported, the code below quietly falls back to the ordinary file input. */
+const SUPPORTS_FS_ACCESS = typeof window.showOpenFilePicker === 'function';
+const VSYNC_HANDLE_DB = 'leitner-vsync-handles';
+const VSYNC_HANDLE_STORE = 'handles';
+const VSYNC_HANDLE_KEY = 'lastVideo';
+
+function openVsyncHandleDb(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(VSYNC_HANDLE_DB, 1);
+    req.onupgradeneeded = ()=>{ req.result.createObjectStore(VSYNC_HANDLE_STORE); };
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+async function saveVsyncFileHandle(handle){
+  try{
+    const db = await openVsyncHandleDb();
+    await new Promise((res,rej)=>{
+      const tx = db.transaction(VSYNC_HANDLE_STORE, 'readwrite');
+      tx.objectStore(VSYNC_HANDLE_STORE).put(handle, VSYNC_HANDLE_KEY);
+      tx.oncomplete = res;
+      tx.onerror = ()=> rej(tx.error);
+    });
+  }catch(e){ /* best-effort — worst case, next time falls back to picking manually */ }
+}
+async function loadVsyncFileHandle(){
+  try{
+    const db = await openVsyncHandleDb();
+    return await new Promise((res,rej)=>{
+      const tx = db.transaction(VSYNC_HANDLE_STORE, 'readonly');
+      const req = tx.objectStore(VSYNC_HANDLE_STORE).get(VSYNC_HANDLE_KEY);
+      req.onsuccess = ()=> res(req.result || null);
+      req.onerror = ()=> rej(req.error);
+    });
+  }catch(e){ return null; }
+}
+
+/* Opens the native file picker via the File System Access API and remembers the resulting handle
+   for next time. Must be called directly from a click handler (a browser requirement for this API). */
+async function pickVideoFileSmart(){
+  try{
+    const [handle] = await window.showOpenFilePicker({
+      types: [{ description:'ویدیو', accept:{'video/*':['.mp4','.mkv','.webm','.mov','.avi','.m4v']} }],
+      multiple: false
+    });
+    const file = await handle.getFile();
+    await saveVsyncFileHandle(handle);
+    handleEpVideoFile(file);
+  }catch(e){ /* person cancelled the picker — nothing to do */ }
+}
+
+/* Tries to silently (or with just one permission tap) reopen the video from the previously
+   saved handle — no folder navigation involved. Returns true if it actually loaded a video. */
+async function resumeVsyncFromHandle(){
+  const handle = await loadVsyncFileHandle();
+  if(!handle) return false;
+  try{
+    let perm = await handle.queryPermission({ mode:'read' });
+    if(perm !== 'granted') perm = await handle.requestPermission({ mode:'read' });
+    if(perm !== 'granted') return false;
+    const file = await handle.getFile();
+    handleEpVideoFile(file);
+    return true;
+  }catch(e){ return false; }
 }
 
 /* Called when the person picks the .srt file to sync alongside the chosen video. Just caches the
@@ -1549,18 +2105,24 @@ function handleEpVideoFile(file){
    here; it only runs when the person presses the "های‌لایت کلمات هم‌سطح در پلیر" button (see
    the click handler wired in renderEpisodePage), since it costs an AI request. */
 async function handleEpSyncSrtFile(file){
+  const last = loadVsyncLastState();
+  const sameFile = !!(last && last.srtName===file.name);
   epSyncSrtFileName = file.name;
   epSyncSrtRawText = '';
-  epSubOffset = 0;
+  if(!sameFile){ epSubOffset = 0; epFaCues = []; }
   try{
     const text = await file.text();
     epVideoCues = parseSrtCues(text);
     epSyncSrtRawText = text;
+    // A translation from a previous, differently-shaped .srt can't stay aligned by index anymore.
+    if(epFaCues.length && epFaCues.length!==epVideoCues.length) epFaCues = [];
   }catch(e){
     epVideoCues = [];
+    epFaCues = [];
   }
   renderVsyncPlayer();
   renderVsyncLevelStatus();
+  saveVsyncLastState();
 }
 
 /* Runs right after an .srt is browsed for the sync player (and again whenever the level select
@@ -1668,17 +2230,25 @@ function renderVsyncPlayer(){
         <div class="vsync-player" id="epVsyncPlayer">
           <video id="epVsyncVideo" src="${epVideoObjectUrl}" controls playsinline
             oncontextmenu="return false;"></video>
-          <div class="vsync-caption"><div class="vsync-caption-text" id="epVsyncCaptionText" style="display:none;"></div></div>
+          <div class="vsync-caption">
+            <div class="vsync-caption-text" id="epVsyncCaptionText" style="display:none;"></div>
+            <div class="vsync-caption-text vsync-caption-fa" id="epVsyncCaptionFaText" style="display:none;"></div>
+          </div>
           <button type="button" class="vsync-rotate-btn" id="epVsyncRotateBtn" title="چرخوندن ویدیو">⤾</button>
           <div class="vsync-btn-row">
             <button type="button" class="vsync-cap-size-btn" id="epVsyncCapMinusBtn" title="کوچک‌تر کردن زیرنویس">A−</button>
             <button type="button" class="vsync-cap-size-btn" id="epVsyncCapPlusBtn" title="بزرگ‌تر کردن زیرنویس">A+</button>
+            <button type="button" class="vsync-cap-size-btn" id="epVsyncFaToggleBtn" title="نمایش/مخفی‌کردن ترجمه فارسی" style="display:none;">فا</button>
             <button type="button" class="vsync-fs-btn" id="epVsyncFsBtn" title="فول‌اسکرین">⛶</button>
           </div>
           <div class="vsync-btn-row vsync-sync-row">
             <button type="button" class="vsync-cap-size-btn" id="epVsyncSyncMinusBtn" title="زودتر نمایش بده">−۰.۵s</button>
             <span class="vsync-sync-badge" id="epVsyncSyncBadge">0.0s</span>
             <button type="button" class="vsync-cap-size-btn" id="epVsyncSyncPlusBtn" title="دیرتر نمایش بده">+۰.۵s</button>
+          </div>
+          <div class="vsync-btn-row vsync-pos-row">
+            <button type="button" class="vsync-cap-size-btn" id="epVsyncPosDownBtn" title="پایین بردن زیرنویس">⬇</button>
+            <button type="button" class="vsync-cap-size-btn" id="epVsyncPosUpBtn" title="بالا بردن زیرنویس">⬆</button>
           </div>
         </div>`;
       videoEl = holder.querySelector('#epVsyncVideo');
@@ -1697,6 +2267,7 @@ function renderVsyncPlayer(){
         epVideoLastTime = videoEl.currentTime;
         updateVsyncCaptionNow();
       };
+      videoEl.onpause = ()=> saveVsyncLastState();
       captionText.onclick = (e)=>{
         const span = e.target.closest('.vsync-word');
         if(!span) return;
@@ -1710,6 +2281,19 @@ function renderVsyncPlayer(){
       const capMinusBtn = holder.querySelector('#epVsyncCapMinusBtn');
       const capPlusBtn = holder.querySelector('#epVsyncCapPlusBtn');
       const playerEl = holder.querySelector('#epVsyncPlayer');
+
+      /* "فا" toggle — only shown once a Persian translation actually exists (see
+         buildSrtTranslationPrompt/importSrtTranslation below). Hidden by default since most
+         episodes won't have one loaded yet; refreshVsyncFaToggleVisibility() reveals it right
+         after a successful import, or immediately if one was already restored from storage. */
+      const faToggleBtn = holder.querySelector('#epVsyncFaToggleBtn');
+      faToggleBtn.classList.toggle('active', epShowFaCaption);
+      faToggleBtn.onclick = ()=>{
+        epShowFaCaption = !epShowFaCaption;
+        faToggleBtn.classList.toggle('active', epShowFaCaption);
+        updateVsyncCaptionNow();
+      };
+      refreshVsyncFaToggleVisibility();
 
       /* Subtitle size is a personal preference (screen size, eyesight, taste), so it's kept in
          localStorage and applied as a CSS scale multiplier read by both the normal and
@@ -1729,6 +2313,28 @@ function renderVsyncPlayer(){
         applyCapScale();
       };
 
+      /* Vertical position of the caption over the video — also a personal preference (some
+         phones/videos have their own on-screen controls or letterboxing that the caption should
+         sit above), kept in localStorage the same way the size is, as a percentage from the
+         bottom of the player. */
+      const CAP_BOTTOM_MIN = 2, CAP_BOTTOM_MAX = 70, CAP_BOTTOM_STEP = 4;
+      let capBottom = parseFloat(localStorage.getItem('vsyncCapBottom'));
+      if(!(capBottom>=CAP_BOTTOM_MIN)) capBottom = 6;
+      const applyCapBottom = ()=>{ playerEl.style.setProperty('--cap-bottom', capBottom+'%'); };
+      applyCapBottom();
+      const posUpBtn = holder.querySelector('#epVsyncPosUpBtn');
+      const posDownBtn = holder.querySelector('#epVsyncPosDownBtn');
+      posUpBtn.onclick = ()=>{
+        capBottom = Math.min(CAP_BOTTOM_MAX, capBottom + CAP_BOTTOM_STEP);
+        localStorage.setItem('vsyncCapBottom', capBottom);
+        applyCapBottom();
+      };
+      posDownBtn.onclick = ()=>{
+        capBottom = Math.max(CAP_BOTTOM_MIN, capBottom - CAP_BOTTOM_STEP);
+        localStorage.setItem('vsyncCapBottom', capBottom);
+        applyCapBottom();
+      };
+
       /* Manual subtitle sync offset — shifts which cue counts as "active" without touching the
          .srt file itself, for when its timestamps run a bit early/late compared to this video. */
       const syncMinusBtn = holder.querySelector('#epVsyncSyncMinusBtn');
@@ -1744,16 +2350,19 @@ function renderVsyncPlayer(){
         epSubOffset = +(epSubOffset - SUB_OFFSET_STEP).toFixed(2);
         renderSyncBadge();
         updateVsyncCaptionNow();
+        saveVsyncLastState();
       };
       syncPlusBtn.onclick = ()=>{
         epSubOffset = +(epSubOffset + SUB_OFFSET_STEP).toFixed(2);
         renderSyncBadge();
         updateVsyncCaptionNow();
+        saveVsyncLastState();
       };
       syncBadge.onclick = ()=>{
         epSubOffset = 0;
         renderSyncBadge();
         updateVsyncCaptionNow();
+        saveVsyncLastState();
       };
       syncBadge.style.pointerEvents = 'auto';
       syncBadge.style.cursor = 'pointer';
@@ -1815,7 +2424,8 @@ function renderVsyncPlayer(){
   }
   if(status){
     const videoPart = epVideoFileName ? `ویدیو: ${epVideoFileName}` : 'هنوز ویدیویی انتخاب نشده.';
-    const srtPart = epSyncSrtFileName ? `زیرنویس: ${epSyncSrtFileName} (${epVideoCues.length} خط)` : 'هنوز زیرنویسی برای هم‌زمانی انتخاب نشده.';
+    const offsetPart = epSubOffset ? ` (افست ${epSubOffset>0?'+':''}${epSubOffset.toFixed(1)}s)` : '';
+    const srtPart = epSyncSrtFileName ? `زیرنویس: ${epSyncSrtFileName} (${epVideoCues.length} خط)${offsetPart}` : 'هنوز زیرنویسی برای هم‌زمانی انتخاب نشده.';
     status.textContent = `${videoPart} — ${srtPart}`;
   }
 }
@@ -1836,10 +2446,121 @@ function wordSpansHtml(text, levelWords){
    level word list — used right after runSrtAnalysis()/loadMoreSrtWords() add level-picked words,
    so a caption already on screen (e.g. while the video is paused) updates immediately instead of
    waiting for the next timeupdate tick. */
+/* Builds one big prompt covering the WHOLE loaded .srt (epVideoCues), numbered line-by-line, so
+   an external AI (ChatGPT or anything else — no in-app API key needed) can translate every line
+   in one pass with the surrounding context of the whole episode, instead of one-line-at-a-time.
+   The instruction is strict about preserving the exact line count/order, since the result gets
+   zipped back onto epVideoCues by index (see renderSrtTranslatePanel's submit handler) — nothing
+   here re-times anything, it only ever reuses the original cues' own start/end. */
+function buildSrtTranslationPrompt(){
+  const numbered = epVideoCues.map((c,i)=> `${i+1}. ${c.text.replace(/\n/g,' ')}`).join('\n');
+  const systemPrompt = `تو یک مترجم حرفه‌ای انگلیسی به فارسی هستی. در ادامه، متن زیرنویس یک ویدیو خط‌به‌خط و به ترتیب زمانی، با شماره‌ی هر خط آورده شده. هر خط را به فارسی روان، طبیعی و دقیق ترجمه کن؛ برای فهم بهتر لحن و معنی از خط‌های قبل و بعدش هم به‌عنوان سیاق کلی گفتگو/داستان استفاده کن، اما در خروجی دقیقاً و فقط باید ترجمه‌ی همون خط مربوطه باشه. حتماً همون تعداد خط ورودی را با همون ترتیب برگردان — هیچ خطی را ادغام، حذف یا اضافه نکن، حتی اگر خیلی کوتاه یا ناقص به‌نظر برسد (چون هرکدوم دقیقاً با یک زمان مشخص در ویدیو متناظره).
+فقط و فقط یک آرایه‌ی JSON معتبر و خالص از رشته‌ها برگردان — بدون Markdown، بدون فنس \`\`\`json، بدون هیچ توضیح قبل یا بعدش — دقیقاً با ${epVideoCues.length} عضو، به همین ترتیب: ["ترجمه‌ی خط ۱", "ترجمه‌ی خط ۲", ...].`;
+  return { systemPrompt, userMessage: numbered };
+}
+
+/* The "🌐 ترجمه‌ی کامل زیرنویس" panel: copy-the-prompt / open-ChatGPT / paste-the-answer-back,
+   same fallback-to-external-AI pattern used in the word-details tabs, just for the whole .srt at
+   once. Uses the clipboard (not the chatgpt.com/?q= URL trick used elsewhere) since a full
+   episode's worth of lines is routinely far past any URL length limit. */
+function renderSrtTranslatePanel(){
+  const panel = episodePageEl && episodePageEl.querySelector('#epSrtTranslatePanel');
+  if(!panel) return;
+  panel.style.display = 'block';
+  if(!epVideoCues.length){
+    panel.innerHTML = `<div class="ai-note">اول از بالا یه فایل زیرنویس (.srt) انتخاب کن.</div>`;
+    return;
+  }
+  const already = epFaCues.length===epVideoCues.length && epFaCues.length>0;
+  panel.innerHTML = `
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">
+      همه‌ی ${epVideoCues.length} خط این زیرنویس رو با شماره آماده می‌کنه تا یک هوش مصنوعی (ChatGPT یا هر مدل دیگه) با در نظر گرفتن سیاق کل قسمت، یک‌جا ترجمه کنه. جواب رو که گرفتی همینجا پیست کن — به‌عنوان زیرنویس فارسی، زیر خط انگلیسی توی پلیر بالا نشون داده می‌شه.
+    </div>
+    ${already ? `<div class="ai-note" style="margin-bottom:8px;">✅ همین الان ${epFaCues.length} خط ترجمه بارگذاری شده و در پلیر فعاله (دکمه‌ی «فا» بالای ویدیو).</div>` : ''}
+    <div class="actions">
+      <button type="button" class="btn btn-primary btn-small" id="epSrtTransShareBtn">📤 اشتراک‌گذاری متن درخواست</button>
+    </div>
+    <div id="epSrtTransCopyMsg" style="display:none;font-size:11.5px;color:var(--ink-soft);margin-top:6px;"></div>
+    <details style="margin-top:8px;">
+      <summary style="font-size:11.5px;color:var(--ink-soft);cursor:pointer;">اشتراک‌گذاری کار نکرد؟ متن رو دستی کپی کن</summary>
+      <textarea id="epSrtTransPromptBox" readonly style="min-height:90px;margin-top:8px;font-size:11.5px;direction:ltr;text-align:left;"></textarea>
+    </details>
+    <label style="margin-top:14px;">جواب هوش مصنوعی رو اینجا پیست کن</label>
+    <textarea id="epSrtTransPasteBox" placeholder="آرایه‌ی JSON پاسخ رو اینجا پیست کن..." style="min-height:110px;"></textarea>
+    <div class="actions" style="margin-top:8px;">
+      <button type="button" class="btn btn-primary btn-small" id="epSrtTransSubmitBtn">✅ ثبت ترجمه</button>
+      ${already ? `<button type="button" class="btn btn-ghost btn-small" id="epSrtTransClearBtn">🗑 حذف ترجمه‌ی فعلی</button>` : ''}
+    </div>
+    <div id="epSrtTransErr" class="ai-note" style="display:none;margin-top:8px;"></div>`;
+
+  /* On phones, the native share sheet (navigator.share) is a much smoother one-tap path than
+     "copy → switch apps → paste": most phones' share sheet either lists the ChatGPT app directly
+     (so the text lands straight in a new chat there) or has its own "Copy" action that works
+     everywhere navigator.clipboard.writeText doesn't (file:// pages, in-app browsers, etc., all
+     of which routinely block the Clipboard API). Falls back to the visible/select-on-tap textarea
+     (in the <details>) for desktop or any browser without the Share API. */
+  panel.querySelector('#epSrtTransShareBtn').onclick = async ()=>{
+    const { systemPrompt, userMessage } = buildSrtTranslationPrompt();
+    const fullText = systemPrompt + '\n\n' + userMessage;
+    const box = panel.querySelector('#epSrtTransPromptBox');
+    box.value = fullText;
+    const msg = panel.querySelector('#epSrtTransCopyMsg');
+    if(navigator.share){
+      try{
+        await navigator.share({ text: fullText });
+        return;
+      }catch(e){ /* cancelled or failed — fall through to the manual textarea below */ }
+    }
+    box.closest('details').open = true;
+    box.focus();
+    box.select();
+    if(msg){ msg.textContent = 'روی کادر بالا بزن (خودش انتخاب می‌شه)، Copy رو بزن، بعد تو ChatGPT پیستش کن.'; msg.style.display = 'block'; }
+  };
+  panel.querySelector('#epSrtTransSubmitBtn').onclick = ()=>{
+    const errEl = panel.querySelector('#epSrtTransErr');
+    errEl.style.display = 'none';
+    const raw = panel.querySelector('#epSrtTransPasteBox').value;
+    try{
+      if(!raw.trim()) throw new Error('چیزی پیست نشده');
+      const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+      const arr = JSON.parse(cleaned);
+      if(!Array.isArray(arr)) throw new Error('پاسخ باید یک آرایه‌ی JSON باشه');
+      if(arr.length !== epVideoCues.length) throw new Error(`تعداد خط‌ها جور در نمیاد (زیرنویس ${epVideoCues.length} خط داره، پاسخ ${arr.length} خط داشت)`);
+      epFaCues = epVideoCues.map((c,i)=>({ start:c.start, end:c.end, text:(arr[i]==null?'':String(arr[i])).trim() }));
+      epShowFaCaption = true;
+      saveVsyncLastState();
+      refreshVsyncFaToggleVisibility();
+      updateVsyncCaptionNow();
+      renderSrtTranslatePanel();
+    }catch(e){
+      errEl.textContent = `پاسخ قابل خواندن نبود: ${escapeHtml(e.message||'')} — مطمئن شو دقیقاً همون خروجی JSON رو (بدون توضیح اضافه‌ی خودت) کپی کردی.`;
+      errEl.style.display = 'block';
+    }
+  };
+  const clearBtn = panel.querySelector('#epSrtTransClearBtn');
+  if(clearBtn) clearBtn.onclick = ()=>{
+    epFaCues = [];
+    saveVsyncLastState();
+    refreshVsyncFaToggleVisibility();
+    updateVsyncCaptionNow();
+    renderSrtTranslatePanel();
+  };
+}
+
+/* Reveals/hides the "فا" toggle button based on whether a Persian translation is currently
+   loaded — called after render, after a successful import, and after restoring one from storage,
+   since none of those paths necessarily re-render the whole player. */
+function refreshVsyncFaToggleVisibility(){
+  if(!episodePageEl) return;
+  const btn = episodePageEl.querySelector('#epVsyncFaToggleBtn');
+  if(btn) btn.style.display = epFaCues.length ? '' : 'none';
+}
+
 function updateVsyncCaptionNow(){
   if(!episodePageEl) return;
   const videoEl = episodePageEl.querySelector('#epVsyncVideo');
   const captionText = episodePageEl.querySelector('#epVsyncCaptionText');
+  const captionFaText = episodePageEl.querySelector('#epVsyncCaptionFaText');
   if(!videoEl || !captionText) return;
   const idx = findActiveCueIndex(epVideoCues, videoEl.currentTime - epSubOffset);
   if(idx===-1){
@@ -1847,6 +2568,17 @@ function updateVsyncCaptionNow(){
   }else{
     captionText.style.display = 'inline-block';
     captionText.innerHTML = wordSpansHtml(epVideoCues[idx].text, buildLevelWordSet());
+  }
+  if(captionFaText){
+    // Same cue index as the English line above (epFaCues is index-aligned with epVideoCues), so
+    // no separate timing lookup needed — it's on/off/switches together with the English caption.
+    const faLine = (epShowFaCaption && idx!==-1 && epFaCues[idx]) ? epFaCues[idx].text : '';
+    if(faLine){
+      captionFaText.style.display = 'inline-block';
+      captionFaText.textContent = faLine;
+    }else{
+      captionFaText.style.display = 'none'; captionFaText.textContent = '';
+    }
   }
 }
 
@@ -2151,6 +2883,7 @@ function closeEpisodePage(){
   // playback position, subtitle analysis results, everything — to be exactly as they left it
   // when they come back, not to start over. So "closing" just hides it; the main page's own
   // buttons/subtitle section underneath become reachable again instead of it being torn down.
+  saveVsyncLastState();
   if(episodePageEl){ episodePageEl.style.display = 'none'; }
 }
 
@@ -2363,7 +3096,34 @@ function openEpisodePage(){
   episodeIdiomError = null;
   // Video/subtitle state (epVideoObjectUrl, epSyncSrtFileName, epVideoCues, epVsyncLastRenderedSrc)
   // is intentionally left alone here — it should survive leaving and returning to this page.
+  // The subtitle itself (small plain text, unlike the video) can be brought back right away.
+  restoreVsyncSrtFromStorage();
   renderEpisodePage();
+}
+
+/* Formats a seconds count as mm:ss or h:mm:ss for the "ادامه از همون‌جا" hint. */
+function formatVsyncClock(totalSeconds){
+  const s = Math.max(0, Math.round(totalSeconds || 0));
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  const pad = n => String(n).padStart(2,'0');
+  return h>0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+}
+
+/* Small note shown above the video-file input, when a video was previously watched (in this or an
+   earlier session) but hasn't been re-picked yet this time — tells the person which file/position
+   to look for so they can pick the same file again and resume from there. Hidden once a video is
+   actually loaded, since the player itself then shows the real progress. */
+function vsyncResumeHintHtml(){
+  if(epVideoObjectUrl) return ''; // a video is already loaded this session — no hint needed
+  const last = loadVsyncLastState();
+  if(!last || !last.videoName) return '';
+  const when = last.closedAt ? new Date(last.closedAt).toLocaleString('fa-IR') : '';
+  const howToContinue = SUPPORTS_FS_ACCESS
+    ? 'روی «▶ ادامه‌ی همون ویدیوی قبلی» بالا بزن.'
+    : 'همون فایل ویدیو را دوباره از بالا انتخاب کن تا خودش از همون‌جا ادامه بده.';
+  return `<div class="ai-note" style="margin-top:8px;">
+    ⏸ آخرین‌بار «${escapeHtml(last.videoName)}» را در دقیقه ${formatVsyncClock(last.lastTime)} بسته‌ای${when ? ` (${when})` : ''}. ${howToContinue}
+  </div>`;
 }
 
 function renderEpisodePage(){
@@ -2384,13 +3144,19 @@ function renderEpisodePage(){
         <div class="vsync-inputs">
           <div>
             <label>فایل ویدیو (اختیاری)</label>
-            <input type="file" id="epVideoFile" accept="video/*">
+            ${SUPPORTS_FS_ACCESS ? `
+              <div class="actions" style="margin-top:2px;">
+                <button type="button" class="btn btn-secondary btn-small" id="epVideoPickSmartBtn">📂 انتخاب فایل ویدیو</button>
+                <button type="button" class="btn btn-primary btn-small" id="epVideoResumeBtn" style="display:none;">▶ ادامه‌ی همون ویدیوی قبلی</button>
+              </div>
+            ` : `<input type="file" id="epVideoFile" accept="video/*">`}
           </div>
         </div>
+        <div id="epVsyncResumeHint">${vsyncResumeHintHtml()}</div>
         <div id="epVsyncPlayerHolder"></div>
         <div class="vsync-status-row">
           <button type="button" class="vsync-info-btn" id="epVsyncInfoBtn" title="نام فایل‌ها">ℹ️</button>
-          <div class="vsync-status" id="epVsyncStatus" style="display:none;"></div>
+          <div class="vsync-status" id="epVsyncStatus" style="${(epVideoFileName||epSyncSrtFileName) ? '' : 'display:none;'}"></div>
         </div>
       </div>
 
@@ -2398,6 +3164,11 @@ function renderEpisodePage(){
         <div class="vsync-head">📄 تحلیل زیرنویس و پیشنهاد کلمات</div>
         <label>فایل زیرنویس (.srt) همین قسمت</label>
         <input type="file" id="epSrtFile" accept=".srt">
+
+        <div class="actions" style="margin-top:10px;">
+          <button type="button" class="btn btn-secondary btn-small" id="epSrtTranslateBtn">🌐 ترجمه‌ی کامل زیرنویس با هوش مصنوعی</button>
+        </div>
+        <div id="epSrtTranslatePanel" style="display:none; margin-top:10px;"></div>
 
         <div class="ep-filter-row" style="margin-top:14px;">
           <div>
@@ -2443,11 +3214,35 @@ function renderEpisodePage(){
   if(idiomChk) idiomChk.onchange = ()=>{ episodeIncludeIdioms = idiomChk.checked; };
   const srtGoBtn = episodePageEl.querySelector('#epSrtGoBtn');
   if(srtGoBtn) srtGoBtn.onclick = runSrtAnalysis;
-  const epVideoFileInput = episodePageEl.querySelector('#epVideoFile');
-  if(epVideoFileInput) epVideoFileInput.onchange = ()=>{
-    const f = epVideoFileInput.files && epVideoFileInput.files[0];
-    if(f) handleEpVideoFile(f);
+  const refreshResumeHint = ()=>{
+    const hintEl = episodePageEl.querySelector('#epVsyncResumeHint');
+    if(hintEl) hintEl.innerHTML = vsyncResumeHintHtml();
   };
+  if(SUPPORTS_FS_ACCESS){
+    const pickSmartBtn = episodePageEl.querySelector('#epVideoPickSmartBtn');
+    if(pickSmartBtn) pickSmartBtn.onclick = async ()=>{ await pickVideoFileSmart(); refreshResumeHint(); };
+    const resumeBtn = episodePageEl.querySelector('#epVideoResumeBtn');
+    if(resumeBtn){
+      // Only show the resume button once we actually know a previously-picked handle exists —
+      // no point offering it otherwise.
+      loadVsyncFileHandle().then(h=>{ if(h) resumeBtn.style.display = ''; });
+      resumeBtn.onclick = async ()=>{
+        resumeBtn.disabled = true;
+        resumeBtn.textContent = 'در حال بازکردن...';
+        const ok = await resumeVsyncFromHandle();
+        resumeBtn.disabled = false;
+        resumeBtn.textContent = '▶ ادامه‌ی همون ویدیوی قبلی';
+        if(!ok) resumeBtn.style.display = 'none'; // permission denied/handle gone — fall back to picking again
+        refreshResumeHint();
+      };
+    }
+  }else{
+    const epVideoFileInput = episodePageEl.querySelector('#epVideoFile');
+    if(epVideoFileInput) epVideoFileInput.onchange = ()=>{
+      const f = epVideoFileInput.files && epVideoFileInput.files[0];
+      if(f){ handleEpVideoFile(f); refreshResumeHint(); }
+    };
+  }
   // The same .srt input feeds both the AI word-suggestion flow (via the button above) and the
   // video caption sync — as soon as it's picked, parse it for cues so the video (if any is
   // already loaded) starts showing synced captions right away.
@@ -2460,6 +3255,12 @@ function renderEpisodePage(){
   if(epVsyncInfoBtn) epVsyncInfoBtn.onclick = ()=>{
     const statusEl = episodePageEl.querySelector('#epVsyncStatus');
     if(statusEl) statusEl.style.display = statusEl.style.display==='none' ? 'block' : 'none';
+  };
+  const srtTranslateBtn = episodePageEl.querySelector('#epSrtTranslateBtn');
+  if(srtTranslateBtn) srtTranslateBtn.onclick = ()=>{
+    const panel = episodePageEl.querySelector('#epSrtTranslatePanel');
+    if(panel.style.display==='none') renderSrtTranslatePanel();
+    else panel.style.display = 'none';
   };
   renderVsyncPlayer();
   renderVsyncLevelStatus();
@@ -3684,10 +4485,55 @@ function openPromptComposer(word, opts){
   };
 }
 
+/* Opens a dictionary/tool link inside a full-screen in-app iframe instead of a new browser tab.
+   Note: some sites (Oxford, Collins, Longman, Google, ...) send X-Frame-Options / CSP headers
+   that block embedding — in that case the iframe will show blank or refuse to connect. There's
+   no reliable cross-origin way to detect this in JS, so we just always show a "باز در تب جدید"
+   fallback button in the header the user can tap if a site doesn't load.
+
+   بیاموز/فست‌دیکشنری (the two embeddable sites) were seen to sometimes fail to load on the very
+   first attempt in a session and then work fine right after — most likely a cold-start network
+   hiccup rather than an actual embedding block, since retrying fixes it. There's no reliable way
+   to detect a failed cross-origin iframe load from JS (the 'load' event fires either way), so as
+   a pragmatic fix we do one silent automatic reload if 'load' hasn't fired within a few seconds,
+   plus always offer a manual 🔄 reload button for anything this heuristic misses. */
+function openToolInFrame(url, label){
+  const overlay = document.createElement('div');
+  overlay.className = 'frame-overlay';
+  overlay.innerHTML = `
+    <div class="fo-head">
+      <button class="fo-btn fo-close">✕</button>
+      <div class="fo-title">${escapeHtml(label)}</div>
+      <button class="fo-btn fo-reload" title="بارگذاری مجدد">🔄</button>
+      <button class="fo-btn fo-open-tab">باز در تب جدید ↗</button>
+    </div>
+    <div class="fo-body">
+      <iframe src="${url}" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div class="fo-hint">اگه این سایت باز نشد، دکمه‌ی 🔄 بالا رو بزن یا از «باز در تب جدید» استفاده کن</div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const iframe = overlay.querySelector('iframe');
+  let loaded = false;
+  const reload = ()=>{
+    loaded = false;
+    iframe.src = url + (url.includes('?') ? '&' : '?') + '_r=' + Date.now();
+  };
+  iframe.addEventListener('load', ()=>{ loaded = true; });
+  setTimeout(()=>{ if(!loaded) reload(); }, 3500);
+
+  overlay.querySelector('.fo-close').onclick = ()=> overlay.remove();
+  overlay.querySelector('.fo-reload').onclick = reload;
+  overlay.querySelector('.fo-open-tab').onclick = ()=> window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 function openBrowseToolsPanel(w){
   const tools = getOrderedEnabledTools();
   const linksHtml = tools.length ? tools.map(t=>{
     if(t.kind==='link'){
+      if(t.embeddable){
+        return `<button class="link-btn" data-frame-url="${escapeHtml(t.href(w))}" data-frame-label="${escapeHtml(t.label)}"><span class="dot" style="background:${t.color}"></span>${t.label}</button>`;
+      }
       return `<a class="link-btn" target="_blank" rel="noopener noreferrer" href="${t.href(w)}"><span class="dot" style="background:${t.color}"></span>${t.label}</a>`;
     }
     return `<button class="link-btn" data-tool-id="${t.id}"><span class="dot" style="background:${t.color}"></span>${t.label}</button>`;
@@ -3711,6 +4557,9 @@ function openBrowseToolsPanel(w){
     const t = TOOL_DEFS.find(x=>x.id===btn.dataset.toolId);
     if(t && t.kind==='ai') btn.onclick = ()=> t.open(w);
   });
+  overlay.querySelectorAll('[data-frame-url]').forEach(btn=>{
+    btn.onclick = ()=> openToolInFrame(btn.dataset.frameUrl, btn.dataset.frameLabel);
+  });
 }
 
 /* ---------- Settings page (AI assistant + GitHub sync + backup/restore) ---------- */
@@ -3723,6 +4572,8 @@ function closeSettingsPage(){
 function openSettingsPage(){
   const s = loadAiSettings();
   const g = loadGithubSync();
+  const d = loadDriveSync();
+  const provider = loadSyncProvider();
   settingsPageEl = document.createElement('div');
   settingsPageEl.className = 'page-full';
   document.body.appendChild(settingsPageEl);
@@ -3769,23 +4620,73 @@ function openSettingsPage(){
       </div>
 
       <div class="settings-section">
-        <h3>☁ همگام‌سازی با گیت‌هاب <button type="button" class="help-toggle" data-help="help-github">؟</button></h3>
-        <div class="ai-note" id="help-github" style="display:none;">
-          با این کار، لغت‌هایت به‌جای فقط ماندن روی این مرورگر، توی یک فایل داخل مخزن گیت‌هاب خودت ذخیره می‌شوند — پس از هر دستگاه/مرورگری که این تنظیمات را وارد کنی، همان لغت‌ها را می‌بینی.<br><br>
-          <b>ساخت توکن:</b> برو به github.com → روی عکس پروفایلت → Settings → پایین صفحه Developer settings → Personal access tokens → Fine-grained tokens → Generate new token. دسترسی (Permissions) این مخزن را روی «Contents: Read and write» بگذار.
+        <h3>☁ همگام‌سازی روی چند دستگاه <button type="button" class="help-toggle" data-help="help-sync">؟</button></h3>
+        <div class="ai-note" id="help-sync" style="display:none;">
+          یکی از این دو راه رو انتخاب کن تا لغت‌هایت به‌جای فقط ماندن روی این مرورگر، توی یک فایل ابری ذخیره بشن — پس روی هر دستگاه/مرورگری که همین تنظیمات رو وارد کنی، همان لغت‌ها را می‌بینی. فقط یکی از این دو رو انتخاب کن، نه هر دو را همزمان.
         </div>
-        <label>نام کاربری/مخزن (مثال: username/leitner-vocab)</label>
-        <input type="text" class="en" id="g-repo" placeholder="username/leitner-vocab" value="${escapeHtml(g.repo||'')}">
-        <label>نام برنچ</label>
-        <input type="text" class="en" id="g-branch" placeholder="main" value="${escapeHtml(g.branch||'main')}">
-        <label>مسیر فایل داده (نیازی به تغییر نیست)</label>
-        <input type="text" class="en" id="g-path" value="${escapeHtml(g.path||'leitner-words-data.json')}">
-        <label>توکن دسترسی (Personal Access Token)</label>
-        <input type="text" class="en" id="g-token" placeholder="github_pat_..." value="${escapeHtml(g.token||'')}">
+        <label>ارائه‌دهنده</label>
+        <select id="sync-provider" class="en" style="width:100%;">
+          <option value="none" ${provider==='none'?'selected':''}>هیچ‌کدام (فقط همین مرورگر)</option>
+          <option value="github" ${provider==='github'?'selected':''}>گیت‌هاب</option>
+          <option value="drive" ${provider==='drive'?'selected':''}>گوگل‌درایو</option>
+        </select>
         <div id="syncStatusLine" style="font-size:12px;color:var(--ink-soft);margin-top:8px;"></div>
-        <div class="actions" style="margin-top:16px;">
-          <button class="btn btn-primary" id="g-save">ذخیره و همگام‌سازی</button>
-          <button class="btn btn-ghost" id="g-disconnect">قطع اتصال</button>
+
+        <div id="github-sync-fields" style="margin-top:16px;">
+          <div class="ai-note">
+            <b>ساخت توکن:</b> برو به github.com → روی عکس پروفایلت → Settings → پایین صفحه Developer settings → Personal access tokens → Fine-grained tokens → Generate new token. دسترسی (Permissions) این مخزن را روی «Contents: Read and write» بگذار.
+          </div>
+          <label>نام کاربری/مخزن (مثال: username/leitner-vocab)</label>
+          <input type="text" class="en" id="g-repo" placeholder="username/leitner-vocab" value="${escapeHtml(g.repo||'')}">
+          <label>نام برنچ</label>
+          <input type="text" class="en" id="g-branch" placeholder="main" value="${escapeHtml(g.branch||'main')}">
+          <label>مسیر فایل داده (نیازی به تغییر نیست)</label>
+          <input type="text" class="en" id="g-path" value="${escapeHtml(g.path||'leitner-words-data.json')}">
+          <label>توکن دسترسی (Personal Access Token)</label>
+          <input type="text" class="en" id="g-token" placeholder="github_pat_..." value="${escapeHtml(g.token||'')}">
+          <div class="actions" style="margin-top:16px;">
+            <button class="btn btn-primary" id="g-save">ذخیره و همگام‌سازی</button>
+            <button class="btn btn-ghost" id="g-disconnect">قطع اتصال</button>
+          </div>
+          <div class="ai-note" style="margin-top:14px;">
+            همگام‌سازی خودکاره، ولی اگه شک داری کدوم نسخه درسته، اینجا می‌تونی دستی بگی از کدوم سمت بخونه:
+          </div>
+          <div class="actions" style="margin-top:8px;">
+            <button class="btn btn-secondary btn-small" id="g-pull">⬇ فقط دریافت از گیت‌هاب (رونویسی روی این دستگاه)</button>
+            <button class="btn btn-secondary btn-small" id="g-push">⬆ فقط ارسال به گیت‌هاب (رونویسی روی گیت‌هاب)</button>
+          </div>
+        </div>
+
+        <div id="drive-sync-fields" style="margin-top:16px;">
+          <div class="ai-note" style="margin-bottom:10px;">
+            این یک‌بار راه‌اندازی می‌خواد: یک اسکریپت کوچیک روی حساب گوگل خودت دیپلوی می‌کنی که کار واسطه بین این برنامه و گوگل‌درایوت رو انجام می‌ده. بعدش دیگه هیچ پاپ‌آپ ورودی لازم نیست، درست مثل توکن گیت‌هاب.
+          </div>
+          <div class="ai-note" id="drive-setup-steps" style="line-height:1.9;">
+            <b>۱.</b> برو به <span class="en">script.google.com</span> و «New project» بزن.<br>
+            <b>۲.</b> کد زیر رو کپی کن و کامل به‌جای محتوای فایل <span class="en">Code.gs</span> بذار (دکمه‌ی کپی پایین همین باکس هست).<br>
+            <b>۳.</b> از آیکون ⚙ سمت چپ («Project Settings») → پایین صفحه «Script Properties» → «Add script property» → اسمش رو <span class="en">SECRET</span> بذار و مقدارش رو یه رمز دلخواه خودت بذار (هرچی، فقط یادت بمونه).<br>
+            <b>۴.</b> بالای صفحه «Deploy» → «New deployment» → روی چرخ‌دنده کنار «Select type» بزن و «Web app» رو انتخاب کن. «Execute as» را <span class="en">Me</span> و «Who has access» را <span class="en">Anyone</span> بگذار، بعد «Deploy».<br>
+            <b>۵.</b> آدرسی که به شکل <span class="en">https://script.google.com/macros/s/.../exec</span> بهت می‌ده رو کپی کن و پایین بچسبون، همون رمز مرحله‌ی ۳ رو هم وارد کن.
+          </div>
+          <div style="position:relative;margin:10px 0;">
+            <textarea id="drive-script-code" class="en" readonly rows="8" style="width:100%;font-family:monospace;font-size:11px;direction:ltr;text-align:left;" onclick="this.select()">${escapeHtml(DRIVE_APPS_SCRIPT_CODE)}</textarea>
+            <button class="btn btn-ghost btn-small" id="drive-copy-code" style="position:absolute;top:6px;left:6px;">کپی کد</button>
+          </div>
+          <label>آدرس Web App (تمام‌شده به exec/)</label>
+          <input type="text" class="en" id="d-url" placeholder="https://script.google.com/macros/s/AKfycb.../exec" value="${escapeHtml(d.url||'')}">
+          <label>رمز (همان مقدار SECRET)</label>
+          <input type="text" class="en" id="d-secret" placeholder="یک رمز دلخواه" value="${escapeHtml(d.secret||'')}">
+          <div class="actions" style="margin-top:16px;">
+            <button class="btn btn-primary" id="d-save">ذخیره و همگام‌سازی</button>
+            <button class="btn btn-ghost" id="d-disconnect">قطع اتصال</button>
+          </div>
+          <div class="ai-note" style="margin-top:14px;">
+            همگام‌سازی خودکاره، ولی اگه شک داری کدوم نسخه درسته، اینجا می‌تونی دستی بگی از کدوم سمت بخونه:
+          </div>
+          <div class="actions" style="margin-top:8px;">
+            <button class="btn btn-secondary btn-small" id="d-pull">⬇ فقط دریافت از گوگل‌درایو (رونویسی روی این دستگاه)</button>
+            <button class="btn btn-secondary btn-small" id="d-push">⬆ فقط ارسال به گوگل‌درایو (رونویسی روی گوگل‌درایو)</button>
+          </div>
         </div>
       </div>
 
@@ -3793,6 +4694,27 @@ function openSettingsPage(){
 
   const sp = sel => settingsPageEl.querySelector(sel);
   sp('#settingsCloseBtn').onclick = closeSettingsPage;
+
+  function refreshSyncFieldVisibility(){
+    const p = sp('#sync-provider').value;
+    sp('#github-sync-fields').style.display = p==='github' ? '' : 'none';
+    sp('#drive-sync-fields').style.display = p==='drive' ? '' : 'none';
+  }
+  refreshSyncFieldVisibility();
+  sp('#sync-provider').onchange = ()=>{
+    saveSyncProvider(sp('#sync-provider').value);
+    refreshSyncFieldVisibility();
+    updateSyncStatus('');
+  };
+  sp('#drive-copy-code').onclick = async ()=>{
+    try{
+      await navigator.clipboard.writeText(DRIVE_APPS_SCRIPT_CODE);
+      sp('#drive-copy-code').textContent = 'کپی شد ✓';
+      setTimeout(()=>{ const b = sp('#drive-copy-code'); if(b) b.textContent = 'کپی کد'; }, 1500);
+    }catch(e){
+      sp('#drive-script-code').select();
+    }
+  };
 
   settingsPageEl.querySelectorAll('.help-toggle').forEach(btn=>{
     btn.onclick = ()=>{
@@ -3854,21 +4776,26 @@ function openSettingsPage(){
     sp('#s-extra-keys').value = '';
   };
 
-  sp('#g-save').onclick = async ()=>{
-    const newSync = {
+  function githubFromForm(){
+    return {
       repo: sp('#g-repo').value.trim().replace(/^https?:\/\/github\.com\//,'').replace(/\/$/,''),
       branch: sp('#g-branch').value.trim() || 'main',
       path: sp('#g-path').value.trim() || 'leitner-words-data.json',
       token: sp('#g-token').value.trim()
     };
+  }
+
+  sp('#g-save').onclick = async ()=>{
+    const newSync = githubFromForm();
     if(!newSync.repo || !newSync.token){ alert('نام مخزن و توکن را وارد کن.'); return; }
     saveGithubSync(newSync);
+    saveSyncProvider('github');
     updateSyncStatus('در حال بررسی اتصال...');
     try{
       const remote = await githubFetchFile(newSync);
       if(remote){
         words = remote.words;
-        githubSha = remote.sha;
+        githubSha = remote.version;
         await saveWordsLocalOnly();
         renderDrawers();
         if(listPageRedraw) listPageRedraw();
@@ -3882,12 +4809,140 @@ function openSettingsPage(){
       updateSyncStatus('اتصال ناموفق بود: ' + e.message + ' — نام مخزن یا توکن را بررسی کن.');
     }
   };
+
+  sp('#g-pull').onclick = async ()=>{
+    const s = githubFromForm();
+    if(!s.repo || !s.token){ alert('نام مخزن و توکن را وارد کن.'); return; }
+    if(!confirm('لغت‌های موجود در این دستگاه با نسخه‌ی گیت‌هاب جایگزین می‌شود. هر تغییری که هنوز به گیت‌هاب نرسیده، از دست می‌رود. ادامه بدهم؟')) return;
+    saveGithubSync(s);
+    saveSyncProvider('github');
+    updateSyncStatus('در حال دریافت از گیت‌هاب...');
+    syncPushPending = false;
+    if(syncPushTimer){ clearTimeout(syncPushTimer); syncPushTimer = null; }
+    try{
+      const remote = await githubFetchFile(s);
+      if(remote){
+        words = remote.words;
+        githubSha = remote.version;
+        await saveWordsLocalOnly();
+        renderDrawers();
+        if(listPageRedraw) listPageRedraw();
+        updateSyncStatus('دریافت شد ✓ — ' + new Date().toLocaleTimeString('fa-IR'));
+      } else {
+        updateSyncStatus('هنوز فایلی در این مخزن ساخته نشده — چیزی برای دریافت نیست.');
+      }
+    }catch(e){
+      updateSyncStatus('دریافت ناموفق بود: ' + e.message);
+    }
+  };
+
+  sp('#g-push').onclick = async ()=>{
+    const s = githubFromForm();
+    if(!s.repo || !s.token){ alert('نام مخزن و توکن را وارد کن.'); return; }
+    if(!confirm('نسخه‌ی گیت‌هاب با لغت‌های این دستگاه جایگزین می‌شود. هر تغییری که فقط روی دستگاه‌های دیگر ثبت شده و هنوز از آنجا دریافت نکرده‌ای، از بین می‌رود. ادامه بدهم؟')) return;
+    saveGithubSync(s);
+    saveSyncProvider('github');
+    updateSyncStatus('در حال ارسال به گیت‌هاب...');
+    try{
+      // make sure we have the current sha so this doesn't bounce off a 409 unnecessarily
+      const remote = await githubFetchFile(s);
+      if(remote) githubSha = remote.version;
+      await pushToGithub(s);
+    }catch(e){
+      updateSyncStatus('ارسال ناموفق بود: ' + e.message);
+    }
+  };
+
   sp('#g-disconnect').onclick = ()=>{
     saveGithubSync({repo:'', path:'leitner-words-data.json', branch:'main', token:''});
     githubSha = null;
+    if(loadSyncProvider()==='github'){ saveSyncProvider('none'); sp('#sync-provider').value = 'none'; refreshSyncFieldVisibility(); }
     sp('#g-repo').value=''; sp('#g-token').value='';
     updateSyncStatus('اتصال قطع شد.');
   };
+
+  function driveFromForm(){
+    return {
+      url: sp('#d-url').value.trim(),
+      secret: sp('#d-secret').value.trim()
+    };
+  }
+
+  sp('#d-save').onclick = async ()=>{
+    const newSync = driveFromForm();
+    if(!newSync.url || !newSync.secret){ alert('آدرس Web App و رمز را وارد کن.'); return; }
+    saveDriveSync(newSync);
+    saveSyncProvider('drive');
+    updateSyncStatus('در حال بررسی اتصال...');
+    try{
+      const remote = await driveFetchFile(newSync);
+      if(remote){
+        words = remote.words;
+        driveVersion = remote.version;
+        await saveWordsLocalOnly();
+        renderDrawers();
+        if(listPageRedraw) listPageRedraw();
+        updateSyncStatus('متصل شد ✓ لغت‌های موجود در گوگل‌درایو بارگذاری شد.');
+      } else {
+        driveVersion = null;
+        await pushToDrive(newSync);
+        updateSyncStatus('متصل شد ✓ فایل جدید در گوگل‌درایو ساخته شد.');
+      }
+    }catch(e){
+      updateSyncStatus('اتصال ناموفق بود: ' + e.message + ' — آدرس اسکریپت و رمز را بررسی کن.');
+    }
+  };
+
+  sp('#d-pull').onclick = async ()=>{
+    const s = driveFromForm();
+    if(!s.url || !s.secret){ alert('آدرس Web App و رمز را وارد کن.'); return; }
+    if(!confirm('لغت‌های موجود در این دستگاه با نسخه‌ی گوگل‌درایو جایگزین می‌شود. هر تغییری که هنوز ارسال نشده، از دست می‌رود. ادامه بدهم؟')) return;
+    saveDriveSync(s);
+    saveSyncProvider('drive');
+    updateSyncStatus('در حال دریافت از گوگل‌درایو...');
+    syncPushPending = false;
+    if(syncPushTimer){ clearTimeout(syncPushTimer); syncPushTimer = null; }
+    try{
+      const remote = await driveFetchFile(s);
+      if(remote){
+        words = remote.words;
+        driveVersion = remote.version;
+        await saveWordsLocalOnly();
+        renderDrawers();
+        if(listPageRedraw) listPageRedraw();
+        updateSyncStatus('دریافت شد ✓ — ' + new Date().toLocaleTimeString('fa-IR'));
+      } else {
+        updateSyncStatus('هنوز چیزی روی گوگل‌درایو ذخیره نشده — چیزی برای دریافت نیست.');
+      }
+    }catch(e){
+      updateSyncStatus('دریافت ناموفق بود: ' + e.message);
+    }
+  };
+
+  sp('#d-push').onclick = async ()=>{
+    const s = driveFromForm();
+    if(!s.url || !s.secret){ alert('آدرس Web App و رمز را وارد کن.'); return; }
+    if(!confirm('نسخه‌ی گوگل‌درایو با لغت‌های این دستگاه جایگزین می‌شود. هر تغییری که فقط روی دستگاه‌های دیگر ثبت شده و هنوز از آنجا دریافت نکرده‌ای، از بین می‌رود. ادامه بدهم؟')) return;
+    saveDriveSync(s);
+    saveSyncProvider('drive');
+    updateSyncStatus('در حال ارسال به گوگل‌درایو...');
+    try{
+      const remote = await driveFetchFile(s);
+      driveVersion = remote ? remote.version : null;
+      await pushToDrive(s);
+    }catch(e){
+      updateSyncStatus('ارسال ناموفق بود: ' + e.message);
+    }
+  };
+
+  sp('#d-disconnect').onclick = ()=>{
+    saveDriveSync({url:'', secret:''});
+    driveVersion = null;
+    if(loadSyncProvider()==='drive'){ saveSyncProvider('none'); sp('#sync-provider').value = 'none'; refreshSyncFieldVisibility(); }
+    sp('#d-url').value=''; sp('#d-secret').value='';
+    updateSyncStatus('اتصال قطع شد.');
+  };
+
 
   sp('#backupBtn').onclick = downloadBackup;
   sp('#restoreBtn').onclick = ()=> sp('#restoreFile').click();
@@ -4038,28 +5093,6 @@ async function fetchQuickMeaningsLine(key, en){
   try{ return (JSON.parse(cleaned).meanings || '').trim(); }catch(e){ return cleaned; }
 }
 
-/* Explains the word's grammatical role inside a specific real sentence (or a natural fallback
-   sentence if none is available), plus a small dictionary-style breakdown: meanings specific to
-   that role, and separately, the word's more general meanings across other roles/uses. */
-async function fetchGrammarExplanation(key, en, sentence){
-  const markedSentence = sentence ? markTargetWordInSentence(sentence, en) : '';
-  const sentenceNote = markedSentence
-    ? `جمله‌ی واقعی که این کلمه در آن به‌کار رفته دقیقاً همین است: "${markedSentence}" (کلمه‌ی هدف بین ** ** مشخص شده است). معنی را دقیقاً بر اساس همین جمله بده، نه یک تعریف کلی از دیکشنری. اگر معنی کلمه در همین جمله با رایج‌ترین معنی‌اش فرق دارد (مثلاً little که معمولاً «کوچک» است ولی گاهی «کمی، تا حدی» معنی می‌دهد)، حتماً همان معنی خاص همین جمله را در inContextMeanings بگذار.`
-    : `جمله‌ی مشخصی برای این کلمه در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برای آن در نظر بگیر و بر پایه‌ی همان جمله معنی بده.`;
-  const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات دانشگاهی یا زبان‌شناسی. ${sentenceNote}
-فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown، بدون فنس \`\`\`json، بدون هیچ متن اضافه) با دقیقاً این ساختار برگردان:
-{"paragraph": "یک یا دو جمله‌ی ساده‌ی فارسی که می‌گوید کلمه \\"${en}\\" در همین جمله دقیقاً چه معنایی دارد و چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده — فقط اگر واقعاً نکته‌ی مفیدی هست بگو، وگرنه کوتاه رد شو", "inContextMeanings": ["۱ تا ۳ معادل فارسی کوتاه، مخصوص همین جمله"], "generalMeanings": ["۲ تا ۴ معادل فارسی کوتاه رایج این کلمه در حالت کلی"]}`;
-  const userMessage = `کلمه انگلیسی: "${en}"`;
-  const raw = await geminiOnce(key, systemPrompt, userMessage);
-  const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
-  const obj = JSON.parse(cleaned);
-  return {
-    paragraph: (obj.paragraph||'').trim(),
-    inContextMeanings: Array.isArray(obj.inContextMeanings) ? obj.inContextMeanings.filter(x=>typeof x==='string' && x.trim()) : [],
-    generalMeanings: Array.isArray(obj.generalMeanings) ? obj.generalMeanings.filter(x=>typeof x==='string' && x.trim()) : []
-  };
-}
-
 /* Marks the target word inside a sentence with **word** so the model gets an unambiguous pointer
    to which occurrence is meant (case-insensitive, whole-word match). If the word can't be found
    verbatim in the sentence, it's appended as a fallback note instead of silently failing. */
@@ -4070,13 +5103,88 @@ function markTargetWordInSentence(sentence, word){
   return re.test(sentence) ? sentence.replace(re, '**$1**') : (sentence + ' (کلمه‌ی هدف: **' + word + '**)');
 }
 
+/* Explains the word's grammatical role inside a specific real sentence (or a natural fallback
+   sentence if none is available), plus a small dictionary-style breakdown: meanings specific to
+   that role, and separately, the word's more general meanings across other roles/uses.
+   Exposed as a builder (systemPrompt/userMessage) so the exact same wording used for the Gemini
+   call can also be reused, unchanged, for the "پرسیدن در ChatGPT" button — `chatSystemPrompt`
+   below is only the JSON-output sentence removed (nothing reworded), since asking ChatGPT for a
+   raw JSON object just makes its answer confusing to read there. */
+/* Same content as buildContextGrammarPrompt + buildGrammarDictPrompt, merged into ONE prompt
+   that asks for a single JSON object — used only for the "دریافت کارت از هوش مصنوعی دیگر" import
+   flow, so the person can paste one ChatGPT (or any other model's) answer back in and get the
+   exact same دستور زبان card the in-app AI would have produced, instead of two separate calls. */
+function buildGrammarImportPrompt(wordObj, sentence, en){
+  const rawSentence = (sentence || (wordObj && wordObj.example) || '').trim();
+  const marked = rawSentence ? markTargetWordInSentence(rawSentence, en) : '';
+  const sentenceNote = marked
+    ? `جمله‌ی واقعی که این کلمه در آن به‌کار رفته دقیقاً همین است: "${marked}" (کلمه‌ی هدف بین ** ** مشخص شده). همه چیز را بر پایه‌ی همین جمله بگو، نه یک تعریف کلی از دیکشنری.`
+    : `جمله‌ی مشخصی برای این کلمه در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برایش در نظر بگیر و بر پایه‌ی همان جمله توضیح بده.`;
+  const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات دانشگاهی یا زبان‌شناسی. ${sentenceNote}
+فقط و فقط یک آبجکت JSON معتبر و خالص برگردان — بدون Markdown، بدون فنس \`\`\`json، بدون هیچ توضیح قبل یا بعدش، دقیقاً و فقط خودِ JSON، با این ساختار:
+{"contextParagraph": "۲ تا ۳ جمله‌ی فارسی پیوسته که می‌گوید این کلمه در همین جمله دقیقاً چه معنایی دارد و چرا همین کلمه انتخاب شده؛ فقط اگر واقعاً نکته‌ی مفیدی هست بگو", "paragraph": "یک یا دو جمله‌ی ساده‌ی فارسی درباره‌ی معنی همین کلمه در همین جمله", "inContextMeanings": ["۱ تا ۳ معادل فارسی کوتاه مخصوص همین جمله"], "generalMeanings": ["۲ تا ۴ معادل فارسی کوتاه رایج این کلمه به‌طور کلی"]}`;
+  const userMessage = `کلمه انگلیسی: "${en}"`;
+  return { systemPrompt, userMessage };
+}
+
+/* Combined version of buildGrammarImportPrompt + buildPracticalNotesPrompt + buildExampleBatchPrompt,
+   merged into ONE prompt/JSON shape — used by the "دریافت کارت از هوش مصنوعی دیگر" shortcut so a
+   single paste from ChatGPT (or any other model) fills in all three tabs (دستور زبان، نکات کاربردی،
+   نمونه‌ها) at once, instead of the person having to repeat the copy/paste round-trip three times. */
+function buildFullCardImportPrompt(wordObj, sentence, en, fa){
+  const rawSentence = (sentence || (wordObj && wordObj.example) || '').trim();
+  const marked = rawSentence ? markTargetWordInSentence(rawSentence, en) : '';
+  const sentenceNote = marked
+    ? `جمله‌ی واقعی که این کلمه در آن به‌کار رفته دقیقاً همین است: "${marked}" (کلمه‌ی هدف بین ** ** مشخص شده). همه چیز را بر پایه‌ی همین جمله بگو، نه یک تعریف کلی از دیکشنری.`
+    : `جمله‌ی مشخصی برای این کلمه در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برایش در نظر بگیر و بر پایه‌ی همان جمله توضیح بده.`;
+  const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات دانشگاهی یا زبان‌شناسی. ${sentenceNote}
+یک کارت آموزشی کامل برای این کلمه بساز که هر سه بخش زیر را همزمان پوشش بدهد: دستور زبان و معنی در جمله، نکات کاربردی، و چند نمونه جمله‌ی دیگر.
+فقط و فقط یک آبجکت JSON معتبر و خالص برگردان — بدون Markdown، بدون فنس \`\`\`json، بدون هیچ توضیح قبل یا بعدش، دقیقاً و فقط خودِ JSON، با این ساختار دقیق:
+{
+"contextParagraph": "۲ تا ۳ جمله‌ی فارسی پیوسته که می‌گوید این کلمه در همین جمله دقیقاً چه معنایی دارد و چرا همین کلمه انتخاب شده؛ فقط اگر واقعاً نکته‌ی مفیدی هست بگو",
+"paragraph": "یک یا دو جمله‌ی ساده‌ی فارسی درباره‌ی معنی همین کلمه در همین جمله",
+"inContextMeanings": ["۱ تا ۳ معادل فارسی کوتاه مخصوص همین جمله"],
+"generalMeanings": ["۲ تا ۴ معادل فارسی کوتاه رایج این کلمه به‌طور کلی"],
+"practicalNotes": "متن نکات کاربردی، به‌صورت متن ساده (نه JSON تو در تو)، با همین قالب: هر عنوان با ** ** پررنگ شود و هر مورد زیرش با خط تیره «- » شروع شود؛ فقط مواردی را بنویس که واقعاً نکته‌ی مفیدی دارند و بقیه را کلاً حذف کن: **ترکیب‌های رایج** (۲ تا ۳ ترکیب پرکاربرد با همین کلمه، هرکدام با معنی فارسی کوتاه)، **اصطلاح‌ها** (اگر این کلمه در یک اصطلاح یا فعل دوکلمه‌ای رایج به‌کار می‌رود، ۱ تا ۳ مورد با معنی فارسی)، **کلمات مشابه** (۲ تا ۳ کلمه‌ی نزدیک‌معنی که معمولاً با این کلمه قاطی می‌شوند، هرکدام با یک تفاوت کوتاه)، **نکته‌ی رایج فارسی‌زبانان** (یک اشتباه معمول که فارسی‌زبانان با این کلمه می‌کنند، اگر چنین چیزی وجود دارد)، **مترادف‌ها** (۲ تا ۴ مترادف نزدیک انگلیسی، جدا شده با «، »)",
+"examples": [{"en": "یک جمله نمونه انگلیسی طبیعی و کوتاه با همین کلمه", "fa": "ترجمه فارسی روان همان جمله"}]
+}
+در examples دقیقاً ۴ جمله‌ی متفاوت از هم بساز، هرکدام با موقعیت یا زمینه‌ای متفاوت از بقیه، و جمله‌ی واقعی بالا را عیناً تکرار نکن.`;
+  const userMessage = `کلمه انگلیسی: "${en}"${fa ? ` (معنی فارسی: ${fa})` : ''}`;
+  return { systemPrompt, userMessage };
+}
+
+function buildGrammarDictPrompt(en, sentence){
+  const markedSentence = sentence ? markTargetWordInSentence(sentence, en) : '';
+  const sentenceNote = markedSentence
+    ? `جمله‌ی واقعی که این کلمه در آن به‌کار رفته دقیقاً همین است: "${markedSentence}" (کلمه‌ی هدف بین ** ** مشخص شده است). معنی را دقیقاً بر اساس همین جمله بده، نه یک تعریف کلی از دیکشنری. اگر معنی کلمه در همین جمله با رایج‌ترین معنی‌اش فرق دارد (مثلاً little که معمولاً «کوچک» است ولی گاهی «کمی، تا حدی» معنی می‌دهد)، حتماً همان معنی خاص همین جمله را در inContextMeanings بگذار.`
+    : `جمله‌ی مشخصی برای این کلمه در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برای آن در نظر بگیر و بر پایه‌ی همان جمله معنی بده.`;
+  const chatSystemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات دانشگاهی یا زبان‌شناسی. ${sentenceNote}`;
+  const jsonInstruction = `
+فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown، بدون فنس \`\`\`json، بدون هیچ متن اضافه) با دقیقاً این ساختار برگردان:
+{"paragraph": "یک یا دو جمله‌ی ساده‌ی فارسی که می‌گوید کلمه \\"${en}\\" در همین جمله دقیقاً چه معنایی دارد و چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده — فقط اگر واقعاً نکته‌ی مفیدی هست بگو، وگرنه کوتاه رد شو", "inContextMeanings": ["۱ تا ۳ معادل فارسی کوتاه، مخصوص همین جمله"], "generalMeanings": ["۲ تا ۴ معادل فارسی کوتاه رایج این کلمه در حالت کلی"]}`;
+  const userMessage = `کلمه انگلیسی: "${en}"`;
+  return { systemPrompt: chatSystemPrompt + jsonInstruction, chatSystemPrompt, userMessage };
+}
+
+async function fetchGrammarExplanation(key, en, sentence){
+  const { systemPrompt, userMessage } = buildGrammarDictPrompt(en, sentence);
+  const raw = await geminiOnce(key, systemPrompt, userMessage);
+  const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+  const obj = JSON.parse(cleaned);
+  return {
+    paragraph: (obj.paragraph||'').trim(),
+    inContextMeanings: Array.isArray(obj.inContextMeanings) ? obj.inContextMeanings.filter(x=>typeof x==='string' && x.trim()) : [],
+    generalMeanings: Array.isArray(obj.generalMeanings) ? obj.generalMeanings.filter(x=>typeof x==='string' && x.trim()) : []
+  };
+}
+
 /* A short, free-flowing 3–4 sentence Persian paragraph (plain text, not JSON) covering: the
    word's grammatical role in this exact sentence, its precise contextual meaning, and why the
    speaker likely chose this word over a simpler synonym. Shown above the dictionary-style box
    in the "دستور زبان" tab. `sentence` should be the real subtitle/example line the word came
    from; falls back to wordObj.example if not given, and to a model-invented natural sentence if
-   neither is available. */
-async function fetchContextGrammarExplanation(key, wordObj, sentence){
+   neither is available. Doesn't ask for JSON, so its ChatGPT and API prompts are identical. */
+function buildContextGrammarPrompt(wordObj, sentence){
   const en = ((wordObj && wordObj.en) || '').trim();
   const rawSentence = (sentence || (wordObj && wordObj.example) || '').trim();
   const systemPrompt = 'تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. یک جمله و یک کلمه‌ی مشخص در آن جمله بهت داده می‌شود. با زبانی ساده و روزمره (نه اصطلاحات دستور زبان یا زبان‌شناسی) در حد ۲ تا ۳ جمله‌ی فارسی پیوسته بگو این کلمه دقیقاً در همین جمله چه معنایی می‌دهد. فقط اگر واقعاً نکته‌ی مفیدی برای یادگیری هست اضافه کن — مثلاً اگر معنی این کلمه در این جمله با معنی رایج‌ترش فرق دارد (مثلاً وقتی little یعنی «کمی، تا حدی» نه «کوچک»)، همین تفاوت را ساده بگو؛ یا اگر چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده نکته‌ی جالبی دارد، آن را هم بگو. اگر نکته‌ی خاصی نیست، فقط معنی را در همان بافت با یک جمله‌ی کوتاه توضیح بده. فقط و فقط متن پاراگراف فارسی را برگردان، بدون Markdown و بدون عنوان یا مقدمه.';
@@ -4087,8 +5195,29 @@ async function fetchContextGrammarExplanation(key, wordObj, sentence){
   }else{
     userMessage = `جمله‌ی مشخصی در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برای کلمه‌ی هدف در نظر بگیر و طوری فرض کن که همان کلمه در آن جمله بین ** ** مشخص شده، سپس بر پایه‌ی همان جمله توضیح بده. کلمه‌ی هدف: "${en}"`;
   }
+  return { systemPrompt, userMessage };
+}
+
+async function fetchContextGrammarExplanation(key, wordObj, sentence){
+  const { systemPrompt, userMessage } = buildContextGrammarPrompt(wordObj, sentence);
   const raw = await geminiOnce(key, systemPrompt, userMessage);
   return raw.trim();
+}
+
+/* Opens ChatGPT (in a new tab) pre-filled with a prompt — used by the "پرسیدن در ChatGPT" buttons
+   in the word-details tabs. `promptParts` is either a single {systemPrompt, userMessage} pair, or
+   an array of such pairs (for the "دستور زبان" tab, which makes two separate AI calls) — each
+   pair's `chatSystemPrompt` (falling back to `systemPrompt` when there's no JSON to strip) is the
+   exact same wording the in-app AI call uses, so the ChatGPT answer stays grounded in the same
+   word/sentence/instructions. This button is only an alternate place to see the same analysis —
+   it never replaces or removes the in-app output, and never rewords the app's own prompts. */
+function openChatGptWithPrompt(promptParts){
+  const parts = Array.isArray(promptParts) ? promptParts : [promptParts];
+  const text = parts.map(p=>{
+    const sys = p.chatSystemPrompt || p.systemPrompt;
+    return p.userMessage ? `${sys}\n\n${p.userMessage}` : sys;
+  }).join('\n\n---\n\n');
+  window.open('https://chatgpt.com/?q=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
 }
 
 /* Practical, production-focused usage notes — plain markdown-lite text (not JSON), rendered
@@ -4096,7 +5225,7 @@ async function fetchContextGrammarExplanation(key, wordObj, sentence){
    explanation doesn't: common collocations, idioms/phrasal verbs, near-synonyms Persian
    speakers mix this word up with, a typical L1-interference mistake, and a short synonym
    list. Fetched automatically the first time the "توضیح" tab opens (no button click needed). */
-async function fetchPracticalUsageNotes(key, en, fa, sentence){
+function buildPracticalNotesPrompt(en, fa, sentence){
   const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات تخصصی. درباره‌ی کلمه‌ی انگلیسی داده‌شده، هر کدام از این موارد را فقط اگر واقعاً نکته‌ی مفیدی برای گفتنش داری بنویس؛ هر مورد بی‌فایده را کلاً حذف کن (مجبور نیستی همه را پر کنی). هر عنوان را با ** ** پررنگ کن و زیرش با خط تیره «- » بنویس:
 **ترکیب‌های رایج**: ۲ تا ۳ ترکیب پرکاربرد با همین کلمه، هرکدام با معنی فارسی کوتاه.
 **اصطلاح‌ها**: اگر این کلمه در یک اصطلاح یا فعل دوکلمه‌ای رایج به‌کار می‌رود، ۱ تا ۳ مورد با معنی فارسی‌شان.
@@ -4105,6 +5234,11 @@ async function fetchPracticalUsageNotes(key, en, fa, sentence){
 **مترادف‌ها**: ۲ تا ۴ مترادف نزدیک انگلیسی، جدا شده با «، ».
 کوتاه و کاربردی بنویس، بدون مقدمه یا جمع‌بندی، و فقط همین متن را برگردان، بدون JSON و بدون فنس.`;
   const userMessage = `کلمه انگلیسی: "${en}"${fa ? ` (معنی: ${fa})` : ''}${sentence ? `\nجمله‌ای که این کلمه در آن به‌کار رفته: "${sentence}"` : ''}`;
+  return { systemPrompt, userMessage };
+}
+
+async function fetchPracticalUsageNotes(key, en, fa, sentence){
+  const { systemPrompt, userMessage } = buildPracticalNotesPrompt(en, fa, sentence);
   const raw = await geminiOnce(key, systemPrompt, userMessage);
   return raw.trim();
 }
@@ -4120,13 +5254,24 @@ async function fetchSentenceTranslation(key, sentence){
 
 /* A batch of `count` fresh example sentences (with translations) in a single request — used for
    the "نمونه‌های بیشتر" row in the examples tab. `avoid` lists sentences already shown (e.g. the
-   real context sentence) so the model doesn't just repeat it. */
-async function fetchExampleBatch(key, en, fa, avoid, count){
+   real context sentence) so the model doesn't just repeat it. The API-facing systemPrompt is
+   built by concatenating the exact original wording (prefix + jsonInstruction + suffix) — nothing
+   reworded — so `chatSystemPrompt` (prefix + suffix, no JSON sentence) is just that same text
+   with the JSON-format sentence dropped, for a cleaner ChatGPT answer. */
+function buildExampleBatchPrompt(en, fa, avoid, count){
   const avoidNote = (avoid && avoid.length)
     ? ` این جمله‌ها را عیناً تکرار نکن: ${avoid.map(s=>'"'+s+'"').join('، ')}.`
     : '';
-  const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با دقیقاً این ساختار برگردان: {"examples": [{"en": "یک جمله نمونه انگلیسی طبیعی و کوتاه با همین کلمه", "fa": "ترجمه فارسی روان همان جمله"}]}. دقیقاً ${count} جمله‌ی متفاوت از هم بساز، هرکدام با موقعیت یا زمینه‌ای متفاوت از بقیه.${avoidNote}`;
+  const prefix = 'تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی.';
+  const jsonInstruction = ' فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با دقیقاً این ساختار برگردان: {"examples": [{"en": "یک جمله نمونه انگلیسی طبیعی و کوتاه با همین کلمه", "fa": "ترجمه فارسی روان همان جمله"}]}.';
+  const suffix = ` دقیقاً ${count} جمله‌ی متفاوت از هم بساز، هرکدام با موقعیت یا زمینه‌ای متفاوت از بقیه.${avoidNote}`;
+  const chatSystemPrompt = prefix + suffix;
   const userMessage = `کلمه انگلیسی: "${en}"${fa ? ` (معنی فارسی: ${fa})` : ''}`;
+  return { systemPrompt: prefix + jsonInstruction + suffix, chatSystemPrompt, userMessage };
+}
+
+async function fetchExampleBatch(key, en, fa, avoid, count){
+  const { systemPrompt, userMessage } = buildExampleBatchPrompt(en, fa, avoid, count);
   const raw = await geminiOnce(key, systemPrompt, userMessage);
   const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
   const obj = JSON.parse(cleaned);
@@ -4224,9 +5369,12 @@ function openWordDetailPanel(word, contextInfo){
   })();
 
   const state = { quickMeaning: (word.fa||'').trim(), sentenceTranslation:'', grammar:null, contextGrammar:null, contextGrammarError:'', deepExplain:null, deepExplainError:'', moreExamples:null, activeTab:'grammar', idiom: findGroundedIdiomForWord(en, sentence),
-    /* Each tab only fires its AI requests the first time it's actually opened — not automatically
-       when the panel appears — since every "جزئیات کلمه" open shouldn't cost several API calls
-       before the person has even looked at a tab. Quota is the free Gemini tier's daily limit. */
+    /* Each tab only fires its in-app AI (Gemini) requests the first time it's actually opened —
+       not automatically when the panel appears — since every "جزئیات کلمه" open shouldn't cost
+       several API calls before the person has even looked at a tab. Quota is the free Gemini
+       tier's daily limit. The "دریافت کارت از هوش مصنوعی دیگر" (paste-from-another-AI) option is
+       available right on this placeholder too — see renderTabPlaceholder — so a person can get a
+       card without ever spending an in-app Gemini call at all. */
     tabLoaded: { grammar:false, explain:false, examples:false } };
 
   /* Builds the "part of an idiom" callout box for whichever idiom (local or AI-checked) was
@@ -4264,7 +5412,8 @@ function openWordDetailPanel(word, contextInfo){
       </div>
 
       <div class="wd-header">
-        <span class="wd-word">${escapeHtml(en)}</span>
+        <span class="wd-word" id="wdWordText">${escapeHtml(en)}</span>
+        <button type="button" class="wd-speak-btn" id="wdEditWordBtn" title="جستجوی کلمه‌ی دیگر">✏️</button>
         <button type="button" class="wd-speak-btn" id="wdSpeakBtn" title="پخش تلفظ">🔊</button>
         <button type="button" class="wd-speak-btn" id="wdToolsBtn" title="دیکشنری و ابزارها">🔗</button>
         <button type="button" class="wd-speak-btn" id="wdAiBtn" title="دستیار هوشمند">🤖</button>
@@ -4284,11 +5433,11 @@ function openWordDetailPanel(word, contextInfo){
 
       <div class="wd-status-row">
         <button type="button" class="btn btn-secondary btn-small" id="wdKnowBtn" ${alreadyKnown?'disabled':''}>${alreadyKnown?'✓ بلد بودی':'✓ بلدم'}</button>
-        <button type="button" class="btn btn-primary btn-small" id="wdLearnBtn" ${(alreadyAdded || (!state.quickMeaning && !ready))?'disabled':''}>${alreadyAdded?'📖 اضافه شده':'📖 یاد بگیر'}</button>
+        <button type="button" class="btn btn-primary btn-small" id="wdLearnBtn" ${alreadyAdded?'disabled':''}>${alreadyAdded?'📖 اضافه شده':'📖 یاد بگیر'}</button>
         <button type="button" class="btn btn-ghost btn-small" id="wdIgnoreBtn" ${alreadyIgnored?'disabled':''}>${alreadyIgnored?'🚫 نادیده گرفته شد':'🚫 نادیده بگیر'}</button>
       </div>
 
-      ${!ready ? `<div class="ai-note">هنوز کلید Google Gemini را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید رایگان خودتان را وارد کنید.</div>` : `
+      ${!ready ? `<div class="ai-note">هنوز کلید Google Gemini را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید رایگان خودتان را وارد کنید.</div><div id="wdFreeDictWrap"></div>` : `
       <div class="ep-type-filter-row" id="wdTabsRow">
         <div class="ep-type-filter-btn active" data-tab="grammar">دستور زبان</div>
         <div class="ep-type-filter-btn" data-tab="explain">نکات کاربردی</div>
@@ -4300,6 +5449,36 @@ function openWordDetailPanel(word, contextInfo){
   getOverlayMountEl().appendChild(overlay);
   overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
   overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+
+  /* "✏️" turns the word into an editable field in place — for when the person opens a word's
+     details but actually wants to look up a different one, without closing this panel and
+     hunting it down elsewhere. Confirming (Enter / losing focus) with a new, non-empty word
+     closes this panel and opens a fresh one for that word, as a plain manual lookup (no saved
+     fa/example — those get filled in the same way any newly-looked-up word's would). */
+  overlay.querySelector('#wdEditWordBtn').onclick = ()=>{
+    const wordEl = overlay.querySelector('#wdWordText');
+    if(!wordEl || wordEl.tagName==='INPUT') return;
+    wordEl.outerHTML = `<input type="text" id="wdWordText" class="en" value="${escapeHtml(en)}" style="width:auto; min-width:110px; max-width:220px; font-family:'Lora',serif; font-weight:700; font-size:22px; padding:4px 8px;">`;
+    const input = overlay.querySelector('#wdWordText');
+    input.focus();
+    input.select();
+    const revert = ()=>{ input.outerHTML = `<span class="wd-word" id="wdWordText">${escapeHtml(en)}</span>`; };
+    const commit = ()=>{
+      const val = input.value.trim();
+      if(val && val.toLowerCase()!==enLower){
+        overlay.remove();
+        openWordDetailPanel({ en: val, fa:'', example:'' }, {});
+      }else{
+        revert();
+      }
+    };
+    input.onkeydown = (e)=>{
+      if(e.key==='Enter'){ e.preventDefault(); commit(); }
+      else if(e.key==='Escape'){ e.preventDefault(); revert(); }
+    };
+    input.onblur = commit;
+  };
+
   overlay.querySelector('#wdSpeakBtn').onclick = (e)=> speakText(en, e.currentTarget);
   overlay.querySelector('#wdToolsBtn').onclick = ()=> openBrowseToolsPanel({ en, fa: state.quickMeaning||word.fa||'', example: sentence });
   overlay.querySelector('#wdAiBtn').onclick = ()=> openAiPanel({ en, fa: state.quickMeaning||word.fa||'', example: sentence });
@@ -4337,11 +5516,10 @@ function openWordDetailPanel(word, contextInfo){
     ignoreBtn.textContent = '🚫 نادیده گرفته شد';
   };
   learnBtn.onclick = async ()=>{
-    if(!state.quickMeaning) return;
     learnBtn.disabled = true;
     learnBtn.textContent = 'در حال افزودن...';
-    await addWordToList(en, state.quickMeaning, sentence, '');
-    learnBtn.textContent = '✓ اضافه شد';
+    await addWordToList(en, state.quickMeaning || '', sentence, '');
+    learnBtn.textContent = state.quickMeaning ? '✓ اضافه شد' : '✓ اضافه شد (بدون معنی، بعداً کامل کن)';
   };
 
   if(!ready){
@@ -4349,21 +5527,120 @@ function openWordDetailPanel(word, contextInfo){
       const qmEl = overlay.querySelector('#wdQuickMeaning');
       if(qmEl) qmEl.textContent = word.fa;
     }
+    mountFreeDictionaryFallback(overlay.querySelector('#wdFreeDictWrap'), en);
     return; // no AI key — quick meaning falls back to whatever fa was already given, no tabs
   }
 
-  /* Quick meaning line, fetched once and reused as the fallback fa for "📖 یاد بگیر". */
-  (async ()=>{
-    if(!state.quickMeaning){
-      try{
-        const line = await fetchQuickMeaningsLine(settings.key, en);
-        state.quickMeaning = line || '';
-      }catch(e){ /* leave empty — learn button stays disabled */ }
-    }
+  /* Quick meaning line, shown at the top of the panel. By default this now auto-loads a short
+     line straight from the free dictionary (no AI call, no key needed) — the AI (Gemini) quick
+     meaning is only ever fetched if the person explicitly asks for it via the 🤖 button, never
+     automatically. If they do ask and it fails (network/quota/filtering issues), they can retry
+     the same AI call, or type the meaning in by hand (e.g. copied from ChatGPT or a dictionary)
+     to unlock the "یاد بگیر" button themselves. */
+  function renderQuickMeaningFailure(){
     const qmEl = overlay.querySelector('#wdQuickMeaning');
-    if(qmEl) qmEl.innerHTML = state.quickMeaning ? escapeHtml(state.quickMeaning) : '<span style="opacity:.6;">معنی‌ای دریافت نشد.</span>';
-    if(!alreadyAdded) learnBtn.disabled = !state.quickMeaning;
-  })();
+    if(!qmEl) return;
+    qmEl.innerHTML = `
+      <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="wdQmManualInput" placeholder="معنی فارسی رو خودت وارد کن..." style="flex:1 1 140px; min-width:120px; width:auto;">        <button type="button" class="btn btn-secondary btn-small" id="wdQmRetryBtn">🔄 تلاش دوباره</button>
+      </div>
+      <div class="wd-freedict-loadbtn-row"><button type="button" class="btn btn-ghost btn-small" id="wdQmFreeDictBtn">📕 نمایش تعریف از دیکشنری آزاد</button></div>
+      <div id="wdQmFreeDictWrap"></div>`;
+    const input = qmEl.querySelector('#wdQmManualInput');
+    input.oninput = ()=>{
+      state.quickMeaning = input.value.trim();
+    };
+    qmEl.querySelector('#wdQmRetryBtn').onclick = async ()=>{
+      qmEl.innerHTML = '<span class="spinner"></span>';
+      try{ state.quickMeaning = (await fetchQuickMeaningsLine(settings.key, en)) || ''; }catch(e){ state.quickMeaning = ''; }
+      if(state.quickMeaning){
+        qmEl.innerHTML = escapeHtml(state.quickMeaning);
+        if(!alreadyAdded) learnBtn.disabled = false;
+      }else{
+        renderQuickMeaningFailure();
+      }
+    };
+    const fdBtn = qmEl.querySelector('#wdQmFreeDictBtn');
+    fdBtn.onclick = ()=>{
+      fdBtn.disabled = true;
+      mountFreeDictionaryFallback(qmEl.querySelector('#wdQmFreeDictWrap'), en);
+    };
+  }
+
+  /* Fetches the AI (Gemini) quick meaning — only ever called on demand, from the 🤖 button below,
+     never automatically. On success it replaces the quick-meaning line and unlocks "یاد بگیر";
+     on failure it hands off to the manual/retry/free-dictionary fallback above. */
+  async function loadAiQuickMeaning(){
+    const qmEl = overlay.querySelector('#wdQuickMeaning');
+    if(qmEl) qmEl.innerHTML = '<span class="spinner"></span>';
+    try{ state.quickMeaning = (await fetchQuickMeaningsLine(settings.key, en)) || ''; }catch(e){ state.quickMeaning = ''; }
+    if(state.quickMeaning){
+      if(qmEl) qmEl.innerHTML = escapeHtml(state.quickMeaning);
+      if(!alreadyAdded) learnBtn.disabled = false;
+    }else{
+      renderQuickMeaningFailure();
+    }
+  }
+
+  /* A short one-line summary pulled from the free-dictionary entry (e.g. "a place for learning ·
+     to instruct or guide") — up to 2 senses. This is the English source text; it gets translated
+     to Persian below (via TranslateAPI.ai, if configured) before being shown/used as the actual
+     quick meaning. */
+  function quickFreeDictLine(entry){
+    if(!entry || !entry.groups.length) return '';
+    return entry.groups.slice(0,2).map(g=> g.definitions[0] ? g.definitions[0].definition : '').filter(Boolean).join(' · ');
+  }
+
+  /* Default state when there's no saved/given meaning yet: auto-loads a line from the free
+     dictionary (no key, no quota) and, if a TranslateAPI.ai key is configured, translates it to
+     Persian right away — that translated text becomes the real quick meaning (state.quickMeaning),
+     unlocking "یاد بگیر" automatically, with no Gemini call involved. If no translation key is
+     configured (or the translation fails), the English line is shown on its own instead — still
+     useful context, just not a Persian meaning. Either way, a 🤖 button stays available for
+     whoever wants the AI's own Persian meaning instead — that call only happens if it's pressed. */
+  function renderQuickMeaningFreeDictDefault(){
+    const qmEl = overlay.querySelector('#wdQuickMeaning');
+    if(!qmEl) return;
+    qmEl.innerHTML = `
+      <div class="wd-qm-freedict-row">
+        <span id="wdQmFreeDictLine" class="wd-qm-freedict-line"><span class="spinner"></span></span>
+        <button type="button" class="btn btn-ghost btn-small" id="wdQmAiBtn">🤖 معنی با هوش مصنوعی</button>
+      </div>`;
+    qmEl.querySelector('#wdQmAiBtn').onclick = ()=> loadAiQuickMeaning();
+    fetchFreeDictionaryLookup(en).then(async entry=>{
+      const lineEl = qmEl.querySelector('#wdQmFreeDictLine');
+      if(!lineEl) return;
+      const line = quickFreeDictLine(entry);
+      if(!line){
+        lineEl.textContent = 'در دیکشنری آزاد پیدا نشد';
+        lineEl.dir = 'rtl';
+        return;
+      }
+      let fa = null;
+      try{ fa = await translateToFa(line); }catch(e){ fa = null; }
+      if(!lineEl.isConnected) return;
+      if(fa){
+        state.quickMeaning = fa;
+        lineEl.textContent = fa;
+        lineEl.dir = 'rtl';
+        if(!alreadyAdded) learnBtn.disabled = false;
+      }else{
+        lineEl.textContent = line;
+        lineEl.dir = 'ltr';
+      }
+    }).catch(()=>{
+      const lineEl = qmEl.querySelector('#wdQmFreeDictLine');
+      if(lineEl) lineEl.textContent = 'دریافت از دیکشنری آزاد ناموفق بود';
+    });
+  }
+
+  if(state.quickMeaning){
+    const qmEl = overlay.querySelector('#wdQuickMeaning');
+    if(qmEl) qmEl.innerHTML = escapeHtml(state.quickMeaning);
+    if(!alreadyAdded) learnBtn.disabled = false;
+  }else{
+    renderQuickMeaningFreeDictDefault();
+  }
 
   /* ---------- Tabs ---------- */
   const tabsRow = overlay.querySelector('#wdTabsRow');
@@ -4371,15 +5648,36 @@ function openWordDetailPanel(word, contextInfo){
 
   const TAB_LABELS = { grammar:'دستور زبان', explain:'نکات کاربردی', examples:'نمونه‌ها' };
 
+  /* Same {systemPrompt, userMessage} each tab would eventually build for its own in-app AI
+     call — extracted here so the placeholder (shown before the person has loaded the tab and
+     spent an in-app AI request) can offer the exact same "پرسیدن در ChatGPT" shortcut, not just
+     the loaded tab content. */
+  function getPromptPartsForTab(tab){
+    if(tab==='grammar') return [buildContextGrammarPrompt(word, sentence), buildGrammarDictPrompt(en, sentence)];
+    if(tab==='explain') return buildPracticalNotesPrompt(en, state.quickMeaning, sentence);
+    return buildExampleBatchPrompt(en, state.quickMeaning, sentence ? [sentence] : [], 4);
+  }
+
   function renderTabPlaceholder(){
+    const tab = state.activeTab;
+    const importCfg = getImportConfigForTab(tab);
     tabContent.innerHTML = `
       <div class="wd-tab-placeholder">
-        <button type="button" class="btn btn-secondary btn-small" id="wdLoadTabBtn">📥 نمایش ${TAB_LABELS[state.activeTab]}</button>
+        <button type="button" class="btn btn-secondary btn-small" id="wdLoadTabBtn">📥 نمایش ${TAB_LABELS[tab]}</button>
+        ${chatGptButtonHtml('wdPlaceholderChatGptBtn')}
+        ${importCardRowHtml('wdPlaceholderImport')}
       </div>`;
     tabContent.querySelector('#wdLoadTabBtn').onclick = ()=>{
       state.tabLoaded[state.activeTab] = true;
       renderTab();
     };
+    wireChatGptButton('wdPlaceholderChatGptBtn', ()=> getPromptPartsForTab(tab));
+    // Same paste-from-another-AI shortcut the loaded tab offers, but available right here —
+    // no need to spend an in-app Gemini call first just to reach it.
+    wireImportCardRow('wdPlaceholderImport', importCfg.promptParts, importCfg.parseAnswer, ()=>{
+      state.tabLoaded[tab] = true;
+      importCfg.renderFn();
+    });
   }
 
   function renderTab(){
@@ -4387,6 +5685,120 @@ function openWordDetailPanel(word, contextInfo){
     if(state.activeTab==='grammar') renderGrammarTab();
     else if(state.activeTab==='explain') renderExplainTab();
     else renderExamplesTab();
+  }
+
+  /* One "پرسیدن در ChatGPT" button, reused on all three tabs — opens ChatGPT with the exact same
+     {systemPrompt, userMessage} the in-app AI call for that tab uses (via `getPromptParts`), so
+     the ChatGPT answer is the same analysis, just viewed on chatgpt.com. Never touches or hides
+     the in-app result; it's purely an alternate way to see the same thing. */
+  function chatGptButtonHtml(id){
+    return `<div class="wd-chatgpt-row" style="margin-top:12px;"><button type="button" class="btn btn-secondary btn-small" id="${id}" style="border-color:#10a37f;color:#10a37f;">💬 پرسیدن در ChatGPT</button></div>`;
+  }
+  function wireChatGptButton(id, getPromptParts){
+    const btn = tabContent.querySelector('#'+id);
+    if(btn) btn.onclick = ()=> openChatGptWithPrompt(getPromptParts());
+  }
+
+  /* "دریافت کارت از هوش مصنوعی دیگر" — for when the in-app AI (Gemini) is unavailable, rate-
+     limited, or blocked (e.g. no VPN access from Iran): opens ChatGPT pre-filled with a prompt
+     that asks for the exact JSON/text shape this tab needs, then lets the person paste ChatGPT's
+     answer back in and renders it as the exact same card the in-app AI would have produced.
+     `parseAnswer(rawText)` must apply the parsed/validated result to `state` itself (it runs
+     inside a try/catch — throwing shows a friendly error instead of a blank card) and return
+     nothing; `rerender` is called after a successful import to redraw the tab. */
+  function importCardRowHtml(id){
+    return `
+      <div class="wd-chatgpt-row" style="margin-top:8px;">
+        <button type="button" class="btn btn-secondary btn-small" id="${id}-open" style="border-color:#c15f3c;color:#c15f3c;">🗂 دریافت کارت کامل از هوش مصنوعی دیگر</button>
+      </div>
+      <div id="${id}-panel" style="display:none;margin-top:10px;">
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px;">جواب هوش مصنوعی (ChatGPT یا هر مدل دیگه) رو کامل و بدون تغییر کپی کن و اینجا پیست کن — با یک پیست، هر سه تب (دستور زبان، نکات کاربردی، نمونه‌ها) پر می‌شه</div>
+        <textarea id="${id}-text" placeholder="پاسخ رو اینجا پیست کن..." style="min-height:90px;"></textarea>
+        <div class="actions" style="margin-top:8px;">
+          <button type="button" class="btn btn-primary btn-small" id="${id}-submit">✅ ثبت و ساخت کارت</button>
+        </div>
+        <div id="${id}-err" class="ai-note" style="display:none;margin-top:6px;"></div>
+      </div>`;
+  }
+  function wireImportCardRow(id, promptParts, parseAnswer, rerender){
+    const openBtn = tabContent.querySelector('#'+id+'-open');
+    if(!openBtn) return;
+    const panel = tabContent.querySelector('#'+id+'-panel');
+    const textEl = tabContent.querySelector('#'+id+'-text');
+    const errEl = tabContent.querySelector('#'+id+'-err');
+    openBtn.onclick = ()=>{
+      openChatGptWithPrompt({ chatSystemPrompt: promptParts.systemPrompt, userMessage: promptParts.userMessage });
+      panel.style.display = 'block';
+      textEl.focus();
+    };
+    tabContent.querySelector('#'+id+'-submit').onclick = ()=>{
+      errEl.style.display = 'none';
+      try{
+        if(!textEl.value.trim()) throw new Error('چیزی پیست نشده');
+        parseAnswer(textEl.value);
+        rerender();
+      }catch(e){
+        errEl.textContent = `متن پیست‌شده قابل خواندن نبود — مطمئن شو دقیقاً همون پاسخ هوش مصنوعی رو (بدون توضیح اضافه‌ی خودت) کپی کردی. (${escapeHtml(e.message||'')})`;
+        errEl.style.display = 'block';
+      }
+    };
+  }
+
+  /* Named parse functions for "دریافت کارت از هوش مصنوعی دیگر" — pulled out of each render*Tab
+     so the exact same parsing can also be wired up on the placeholder (see renderTabPlaceholder),
+     letting a person get a card straight from a pasted ChatGPT answer without ever spending an
+     in-app Gemini call. */
+  function parseGrammarImport(raw){
+    const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+    const obj = JSON.parse(cleaned);
+    state.contextGrammar = (obj.contextParagraph||'').trim() || 'توضیحی دریافت نشد.';
+    state.contextGrammarError = '';
+    state.grammar = {
+      paragraph: (obj.paragraph||'').trim(),
+      inContextMeanings: Array.isArray(obj.inContextMeanings) ? obj.inContextMeanings.filter(x=>typeof x==='string' && x.trim()) : [],
+      generalMeanings: Array.isArray(obj.generalMeanings) ? obj.generalMeanings.filter(x=>typeof x==='string' && x.trim()) : []
+    };
+  }
+  function parseExplainImport(raw){
+    state.deepExplain = raw.trim();
+    state.deepExplainError = '';
+  }
+  function parseExamplesImport(raw){
+    const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+    const obj = JSON.parse(cleaned);
+    const list = Array.isArray(obj.examples) ? obj.examples.map(e=>({en:(e.en||'').trim(), fa:(e.fa||'').trim()})).filter(e=>e.en) : [];
+    if(!list.length) throw new Error('نمونه‌ای در پاسخ پیدا نشد');
+    state.moreExamples = list;
+  }
+
+  /* Applies one pasted answer (from buildFullCardImportPrompt) to all three tabs' state at once —
+     دستور زبان، نکات کاربردی، and نمونه‌ها — so a single copy/paste round-trip with an external AI
+     fills in the whole card instead of needing to be repeated per tab. */
+  function parseFullCardImport(raw){
+    const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+    const obj = JSON.parse(cleaned);
+    state.contextGrammar = (obj.contextParagraph||'').trim() || 'توضیحی دریافت نشد.';
+    state.contextGrammarError = '';
+    state.grammar = {
+      paragraph: (obj.paragraph||'').trim(),
+      inContextMeanings: Array.isArray(obj.inContextMeanings) ? obj.inContextMeanings.filter(x=>typeof x==='string' && x.trim()) : [],
+      generalMeanings: Array.isArray(obj.generalMeanings) ? obj.generalMeanings.filter(x=>typeof x==='string' && x.trim()) : []
+    };
+    state.deepExplain = (obj.practicalNotes||'').trim() || 'نکته‌ای دریافت نشد.';
+    state.deepExplainError = '';
+    const list = Array.isArray(obj.examples) ? obj.examples.map(e=>({en:(e.en||'').trim(), fa:(e.fa||'').trim()})).filter(e=>e.en) : [];
+    if(list.length) state.moreExamples = list;
+    if(!state.grammar.paragraph && !state.grammar.inContextMeanings.length && !state.grammar.generalMeanings.length && !list.length && !obj.practicalNotes) throw new Error('چیزی در پاسخ قابل تشخیص نبود');
+    state.tabLoaded.grammar = true;
+    state.tabLoaded.explain = true;
+    state.tabLoaded.examples = true;
+  }
+
+  /* Same import-prompt + parser + render-fn triple each render*Tab uses for its own "دریافت کارت
+     از هوش مصنوعی دیگر" row — exposed per-tab here so the placeholder (before the in-app AI has
+     ever been asked) can offer the exact same shortcut. */
+  function getImportConfigForTab(tab){
+    return { promptParts: buildFullCardImportPrompt(word, sentence, en, state.quickMeaning), parseAnswer: parseFullCardImport, renderFn: renderTab };
   }
 
   function dictBoxHtml(g){
@@ -4409,7 +5821,11 @@ function openWordDetailPanel(word, contextInfo){
   function renderGrammarTab(){
     tabContent.innerHTML = `
       <div id="wdContextGrammarWrap">${contextGrammarHtml()}</div>
-      <div id="wdDictWrap">${state.grammar ? dictBoxHtml(state.grammar) : `<div class="ai-msg"><span class="spinner"></span> در حال آماده‌سازی توضیح دستوری...</div>`}</div>`;
+      <div id="wdDictWrap">${state.grammar ? dictBoxHtml(state.grammar) : `<div class="ai-msg"><span class="spinner"></span> در حال آماده‌سازی توضیح دستوری...</div>`}</div>
+      ${chatGptButtonHtml('wdGrammarChatGptBtn')}
+      ${importCardRowHtml('wdGrammarImport')}`;
+    wireChatGptButton('wdGrammarChatGptBtn', ()=> getPromptPartsForTab('grammar'));
+    wireImportCardRow('wdGrammarImport', getImportConfigForTab('grammar').promptParts, parseFullCardImport, renderTab);
 
     if(!state.contextGrammar && !state.contextGrammarError){
       fetchContextGrammarExplanation(settings.key, word, sentence).then(text=>{
@@ -4434,7 +5850,9 @@ function openWordDetailPanel(word, contextInfo){
       }).catch(e=>{
         if(state.activeTab!=='grammar') return;
         const wrap = tabContent.querySelector('#wdDictWrap');
-        if(wrap) wrap.innerHTML = `<div class="ai-note">درخواست ناموفق بود (${escapeHtml(e.message||'')}).</div>`;
+        if(!wrap) return;
+        wrap.innerHTML = `<div class="ai-note">درخواست ناموفق بود (${escapeHtml(e.message||'')}).</div><div id="wdGrammarFreeDictWrap"></div>`;
+        mountFreeDictionaryFallback(wrap.querySelector('#wdGrammarFreeDictWrap'), en);
       });
     }
   }
@@ -4446,7 +5864,12 @@ function openWordDetailPanel(word, contextInfo){
   }
 
   function renderExplainTab(){
-    tabContent.innerHTML = `<div id="wdExplainWrap">${practicalNotesHtml()}</div>`;
+    tabContent.innerHTML = `
+      <div id="wdExplainWrap">${practicalNotesHtml()}</div>
+      ${chatGptButtonHtml('wdExplainChatGptBtn')}
+      ${importCardRowHtml('wdExplainImport')}`;
+    wireChatGptButton('wdExplainChatGptBtn', ()=> getPromptPartsForTab('explain'));
+    wireImportCardRow('wdExplainImport', getImportConfigForTab('explain').promptParts, parseFullCardImport, renderTab);
     if(state.deepExplain || state.deepExplainError) return;
     fetchPracticalUsageNotes(settings.key, en, state.quickMeaning, sentence).then(text=>{
       state.deepExplain = text;
@@ -4457,7 +5880,9 @@ function openWordDetailPanel(word, contextInfo){
       state.deepExplainError = `درخواست ناموفق بود (${escapeHtml(e.message||'')}). محتمل‌ترین دلیل: نبود دسترسی به این سرویس از ایران بدون فیلترشکن، یا نامعتبر بودن کلید API.`;
       if(state.activeTab!=='explain') return;
       const wrap = tabContent.querySelector('#wdExplainWrap');
-      if(wrap) wrap.innerHTML = practicalNotesHtml();
+      if(!wrap) return;
+      wrap.innerHTML = practicalNotesHtml() + '<div id="wdExplainFreeDictWrap"></div>';
+      mountFreeDictionaryFallback(wrap.querySelector('#wdExplainFreeDictWrap'), en);
     });
   }
 
@@ -4480,8 +5905,12 @@ function openWordDetailPanel(word, contextInfo){
       </div>`;
     }
     html += `<div id="wdMoreExamplesWrap">${state.moreExamples ? moreExamplesHtml(state.moreExamples) : `<div class="ai-msg"><span class="spinner"></span> در حال دریافت نمونه‌های بیشتر...</div>`}</div>`;
+    html += chatGptButtonHtml('wdExamplesChatGptBtn');
+    html += importCardRowHtml('wdExamplesImport');
     tabContent.innerHTML = html;
     tabContent.querySelectorAll('[data-speak]').forEach(btn=>{ btn.onclick = (e)=> speakText(btn.dataset.speak, e.currentTarget); });
+    wireChatGptButton('wdExamplesChatGptBtn', ()=> getPromptPartsForTab('examples'));
+    wireImportCardRow('wdExamplesImport', getImportConfigForTab('examples').promptParts, parseFullCardImport, renderTab);
 
     if(sentence && !state.sentenceTranslation){
       fetchSentenceTranslation(settings.key, sentence).then(t=>{
@@ -4532,6 +5961,19 @@ $('#browseBtn').onclick = ()=> startBrowse();
 $('#episodeBtn').onclick = ()=> openEpisodePage();
 $('#textImportBtn').onclick = ()=> openTextImportPage();
 $('#settingsBtn').onclick = ()=> openSettingsPage();
+
+/* Saves the last-watched-video record on a real close/reload/backgrounding too — not just when
+   the episode page's own close button is pressed — so the "resume from where you left off"
+   info survives even if the app/tab is closed outright rather than navigated away from inside it. */
+window.addEventListener('pagehide', ()=>{ saveVsyncLastState(); flushSyncPush(); });
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='hidden'){
+    saveVsyncLastState();
+    flushSyncPush(); // don't let a pending debounced push die with the tab/app
+  } else if(document.visibilityState==='visible'){
+    pullIfStale(); // catch up on anything pushed from another device while we were away
+  }
+});
 
 /* ---------- Init ---------- */
 (async function init(){
