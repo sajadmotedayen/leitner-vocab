@@ -539,8 +539,31 @@
   }
   .page-top h2{ margin:0; font-size:17px; font-weight:800; }
   .page-body{ flex:1; overflow-y:auto; padding:18px 18px calc(18px + env(safe-area-inset-bottom)); }
-  .settings-section{ margin-bottom:30px; }
-  .settings-section h3{ margin:0 0 12px; font-size:14px; font-weight:800; color:var(--brass-dark); letter-spacing:.01em; }
+  .settings-page .page-body{ padding:14px 14px calc(14px + env(safe-area-inset-bottom)); }
+  .settings-section{
+    margin-bottom:10px; background:var(--panel); border:1px solid var(--line-soft);
+    border-radius:var(--radius); box-shadow:var(--shadow-sm); overflow:hidden;
+  }
+  .settings-section summary{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:13px 15px; cursor:pointer; list-style:none; -webkit-tap-highlight-color:transparent;
+  }
+  .settings-section summary::-webkit-details-marker{ display:none; }
+  .settings-section summary::marker{ content:''; }
+  .settings-section summary:active{ background:var(--parchment-dark); }
+  .ss-title{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .ss-icon{ font-size:16px; flex-shrink:0; }
+  .ss-title-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .ss-title-main{ font-size:13.5px; font-weight:800; color:var(--brass-dark); letter-spacing:.01em; }
+  .ss-caption{ font-size:10.5px; font-weight:600; color:var(--ink-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ss-chev{ font-size:11px; color:var(--ink-faint); flex-shrink:0; transition:transform .2s ease; }
+  .settings-section[open] .ss-chev{ transform:rotate(180deg); }
+  .settings-section[open] summary{ border-bottom:1px solid var(--line-soft); }
+  .ss-body{ padding:14px 15px 16px; }
+  .settings-section label{ margin:12px 0 5px; }
+  .settings-section label:first-child{ margin-top:0; }
+  .settings-section .ai-note{ margin-bottom:12px; padding:10px 12px; }
+  .settings-section .actions{ margin-bottom:0; justify-content:flex-start; }
   .selection-banner{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     background:var(--sage-tint); border:1px solid var(--sage); border-radius:var(--radius-sm);
@@ -621,14 +644,30 @@
 
   /* Offline video + subtitle sync player */
   .vsync-wrap{
-    border:1px solid var(--line); border-radius:var(--radius); padding:13px 15px; margin-bottom:18px;
-    background:var(--panel);
+    border:1px solid var(--line-soft); border-radius:var(--radius); margin-bottom:14px;
+    background:var(--panel); box-shadow:var(--shadow-sm); overflow:hidden;
   }
   .vsync-head{
-    font-weight:800; font-size:15px; color:var(--brass-dark); margin:-13px -15px 14px; letter-spacing:.01em;
-    padding:12px 15px; border-bottom:1px solid var(--line-soft); background:var(--brass-tint);
-    border-radius:var(--radius) var(--radius) 0 0;
+    display:flex; align-items:center; gap:8px;
+    font-weight:800; font-size:13.5px; color:var(--brass-dark); letter-spacing:.01em;
+    padding:13px 15px; margin:0; border-bottom:1px solid var(--line-soft);
   }
+  .vsync-body{ padding:14px 15px 15px; }
+  .vsync-body label{ margin:10px 0 5px; }
+  .vsync-body label:first-of-type{ margin-top:0; }
+  .vsync-body .actions{ margin-bottom:0; justify-content:flex-start; }
+  .vsync-body .ai-note{ margin-bottom:12px; padding:10px 12px; }
+  input[type=file]{
+    display:block; width:100%; font-size:12px; color:var(--ink-soft);
+    border:1px solid var(--line); border-radius:var(--radius-sm);
+    padding:4px; background:#fffef9; overflow:hidden;
+  }
+  input[type=file]::file-selector-button{
+    margin-inline-end:10px; border:1px solid var(--line); border-radius:8px;
+    padding:7px 12px; font-weight:700; font-size:12px; background:var(--parchment-dark);
+    color:var(--ink); cursor:pointer;
+  }
+  input[type=file]::file-selector-button:active{ background:var(--line-soft); }
   .vsync-inputs{ display:flex; flex-direction:column; gap:11px; margin-bottom:11px; }
   .vsync-inputs label{ display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-bottom:4px; }
   .vsync-player{
@@ -2372,7 +2411,15 @@ function renderVsyncPlayer(){
         const req = playerEl.requestFullscreen || playerEl.webkitRequestFullscreen || playerEl.msRequestFullscreen;
         if(req) return req.call(playerEl);
       };
-      fsBtn.onclick = ()=>{ requestPlayerFullscreen(); };
+      const exitPlayerFullscreen = ()=>{
+        const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+        if(exit) return exit.call(document);
+      };
+      fsBtn.onclick = ()=>{
+        const isFs = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+        if(isFs) exitPlayerFullscreen();
+        else requestPlayerFullscreen();
+      };
       // Rotate: prefer the real Screen Orientation API. When supported (Chrome/Firefox on
       // Android) this actually locks the device's screen to landscape while fullscreen — the
       // whole viewport becomes landscape, no physical rotation needed, and the existing
@@ -3141,6 +3188,7 @@ function renderEpisodePage(){
 
       <div class="vsync-wrap">
         <div class="vsync-head">🎥 پخش هم‌زمان فیلم با زیرنویس</div>
+        <div class="vsync-body">
         <div class="vsync-inputs">
           <div>
             <label>فایل ویدیو (اختیاری)</label>
@@ -3158,10 +3206,12 @@ function renderEpisodePage(){
           <button type="button" class="vsync-info-btn" id="epVsyncInfoBtn" title="نام فایل‌ها">ℹ️</button>
           <div class="vsync-status" id="epVsyncStatus" style="${(epVideoFileName||epSyncSrtFileName) ? '' : 'display:none;'}"></div>
         </div>
+        </div>
       </div>
 
       <div class="vsync-wrap">
         <div class="vsync-head">📄 تحلیل زیرنویس و پیشنهاد کلمات</div>
+        <div class="vsync-body">
         <label>فایل زیرنویس (.srt) همین قسمت</label>
         <input type="file" id="epSrtFile" accept=".srt">
 
@@ -3190,6 +3240,7 @@ function renderEpisodePage(){
         <div class="actions" style="margin-top:16px;">
           <button class="btn btn-primary" id="epSrtGoBtn" ${!ready?'disabled':''}>📄 تحلیل زیرنویس و پیشنهاد کلمات</button>
           ${!ready ? `<button class="btn btn-secondary" id="epSettingsBtn">رفتن به تنظیمات</button>` : ''}
+        </div>
         </div>
       </div>
 
@@ -4574,8 +4625,12 @@ function openSettingsPage(){
   const g = loadGithubSync();
   const d = loadDriveSync();
   const provider = loadSyncProvider();
+  const ts0 = loadToolsSettings();
+  const toolsActiveCount = ts0.order.length - ts0.disabled.length;
+  const aiCaption = s.key ? 'کلید فعال ✓' : 'کلید تنظیم نشده';
+  const syncCaption = provider==='github' ? 'گیت‌هاب فعال' : provider==='drive' ? 'گوگل‌درایو فعال' : 'غیرفعال';
   settingsPageEl = document.createElement('div');
-  settingsPageEl.className = 'page-full';
+  settingsPageEl.className = 'page-full settings-page';
   document.body.appendChild(settingsPageEl);
   settingsPageEl.innerHTML = `
     <div class="page-top">
@@ -4584,43 +4639,89 @@ function openSettingsPage(){
     </div>
     <div class="page-body">
 
-      <div class="settings-section">
-        <h3>💾 پشتیبان‌گیری</h3>
-        <div class="actions">
-          <button class="btn btn-secondary btn-small" id="backupBtn">⬇ دانلود پشتیبان کامل (JSON)</button>
-          <button class="btn btn-secondary btn-small" id="restoreBtn">⬆ بازیابی از فایل پشتیبان</button>
-          <input type="file" id="restoreFile" accept="application/json" style="display:none;">
+      <details class="settings-section">
+        <summary>
+          <span class="ss-title">
+            <span class="ss-icon">💾</span>
+            <span class="ss-title-text">
+              <span class="ss-title-main">پشتیبان‌گیری</span>
+              <span class="ss-caption">دانلود و بازیابی نسخه</span>
+            </span>
+          </span>
+          <span class="ss-chev">⌄</span>
+        </summary>
+        <div class="ss-body">
+          <div class="actions">
+            <button class="btn btn-secondary btn-small" id="backupBtn">⬇ دانلود پشتیبان کامل (JSON)</button>
+            <button class="btn btn-secondary btn-small" id="restoreBtn">⬆ بازیابی از فایل پشتیبان</button>
+            <input type="file" id="restoreFile" accept="application/json" style="display:none;">
+          </div>
         </div>
-      </div>
+      </details>
 
-      <div class="settings-section">
-        <h3>🔗 دیکشنری و ابزارها <button type="button" class="help-toggle" data-help="help-tools">؟</button></h3>
-        <div class="ai-note" id="help-tools" style="display:none;">
-          ترتیب‌شون رو با ▲▼ عوض کن؛ با ✕ موقتاً حذفشون کن.
+      <details class="settings-section">
+        <summary>
+          <span class="ss-title">
+            <span class="ss-icon">🔗</span>
+            <span class="ss-title-text">
+              <span class="ss-title-main">دیکشنری و ابزارها</span>
+              <span class="ss-caption">${toolsActiveCount} ابزار فعال</span>
+            </span>
+          </span>
+          <span class="ss-chev">⌄</span>
+        </summary>
+        <div class="ss-body">
+          <button type="button" class="help-toggle" data-help="help-tools">؟</button>
+          <div class="ai-note" id="help-tools" style="display:none;">
+            ترتیب‌شون رو با ▲▼ عوض کن؛ با ✕ موقتاً حذفشون کن.
+          </div>
+          <div id="toolsSettingsList"></div>
         </div>
-        <div id="toolsSettingsList"></div>
-      </div>
+      </details>
 
-      <div class="settings-section">
-        <h3>🤖 دستیار هوش مصنوعی <button type="button" class="help-toggle" data-help="help-ai">؟</button></h3>
-        <div class="ai-note" id="help-ai" style="display:none;">
-          دستیار از <b>Google Gemini</b> استفاده می‌کند (رایگان با سهمیه روزانه). یک کلید رایگان از aistudio.google.com بگیر و اینجا وارد کن.
+      <details class="settings-section">
+        <summary>
+          <span class="ss-title">
+            <span class="ss-icon">🤖</span>
+            <span class="ss-title-text">
+              <span class="ss-title-main">دستیار هوش مصنوعی</span>
+              <span class="ss-caption">${aiCaption}</span>
+            </span>
+          </span>
+          <span class="ss-chev">⌄</span>
+        </summary>
+        <div class="ss-body">
+          <button type="button" class="help-toggle" data-help="help-ai">؟</button>
+          <div class="ai-note" id="help-ai" style="display:none;">
+            دستیار از <b>Google Gemini</b> استفاده می‌کند (رایگان با سهمیه روزانه). یک کلید رایگان از aistudio.google.com بگیر و اینجا وارد کن.
+          </div>
+          <label>کلید API</label>
+          <input type="text" class="en" id="s-key" placeholder="AIza..." value="${escapeHtml(s.key||'')}">
+          <label style="margin-top:14px;">کلیدهای پشتیبان (اختیاری — هر خط یک کلید)</label>
+          <div class="ai-note" style="margin-bottom:8px;">
+            اگر چند حساب گوگل داری، از هرکدام یک کلید رایگان بساز و اینجا وارد کن. وقتی سهمیه‌ی کلید اصلی تمام بشه، اپ خودکار سراغ کلید بعدی می‌رود — دیگر نیازی به عوض‌کردن دستی نیست.
+          </div>
+          <textarea id="s-extra-keys" class="en" rows="3" placeholder="AIza...&#10;AIza...">${escapeHtml((s.extraKeys||[]).join('\n'))}</textarea>
+          <div class="actions" style="margin-top:16px;">
+            <button class="btn btn-primary" id="s-save">ذخیره</button>
+            <button class="btn btn-ghost" id="s-clear">حذف همه‌ی کلیدها</button>
+          </div>
         </div>
-        <label>کلید API</label>
-        <input type="text" class="en" id="s-key" placeholder="AIza..." value="${escapeHtml(s.key||'')}">
-        <label style="margin-top:14px;">کلیدهای پشتیبان (اختیاری — هر خط یک کلید)</label>
-        <div class="ai-note" style="margin-bottom:8px;">
-          اگر چند حساب گوگل داری، از هرکدام یک کلید رایگان بساز و اینجا وارد کن. وقتی سهمیه‌ی کلید اصلی تمام بشه، اپ خودکار سراغ کلید بعدی می‌رود — دیگر نیازی به عوض‌کردن دستی نیست.
-        </div>
-        <textarea id="s-extra-keys" class="en" rows="3" placeholder="AIza...&#10;AIza...">${escapeHtml((s.extraKeys||[]).join('\n'))}</textarea>
-        <div class="actions" style="margin-top:16px;">
-          <button class="btn btn-primary" id="s-save">ذخیره</button>
-          <button class="btn btn-ghost" id="s-clear">حذف همه‌ی کلیدها</button>
-        </div>
-      </div>
+      </details>
 
-      <div class="settings-section">
-        <h3>☁ همگام‌سازی روی چند دستگاه <button type="button" class="help-toggle" data-help="help-sync">؟</button></h3>
+      <details class="settings-section">
+        <summary>
+          <span class="ss-title">
+            <span class="ss-icon">☁</span>
+            <span class="ss-title-text">
+              <span class="ss-title-main">همگام‌سازی چند دستگاه</span>
+              <span class="ss-caption">${syncCaption}</span>
+            </span>
+          </span>
+          <span class="ss-chev">⌄</span>
+        </summary>
+        <div class="ss-body">
+        <button type="button" class="help-toggle" data-help="help-sync">؟</button>
         <div class="ai-note" id="help-sync" style="display:none;">
           یکی از این دو راه رو انتخاب کن تا لغت‌هایت به‌جای فقط ماندن روی این مرورگر، توی یک فایل ابری ذخیره بشن — پس روی هر دستگاه/مرورگری که همین تنظیمات رو وارد کنی، همان لغت‌ها را می‌بینی. فقط یکی از این دو رو انتخاب کن، نه هر دو را همزمان.
         </div>
@@ -4696,7 +4797,8 @@ function openSettingsPage(){
             <button class="btn btn-secondary btn-small" id="d-push">⬆ فقط ارسال به گوگل‌درایو (رونویسی روی گوگل‌درایو)</button>
           </div>
         </div>
-      </div>
+        </div>
+      </details>
 
     </div>`;
 
