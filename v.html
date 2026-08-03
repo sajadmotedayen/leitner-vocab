@@ -4633,7 +4633,10 @@ function openSettingsPage(){
         <div id="syncStatusLine" style="font-size:12px;color:var(--ink-soft);margin-top:8px;"></div>
 
         <div id="github-sync-fields" style="margin-top:16px;">
-          <div class="ai-note">
+          <div style="margin-bottom:8px;">
+            <button type="button" class="help-toggle" data-help="help-github-note">راهنمای ساخت توکن ؟</button>
+          </div>
+          <div class="ai-note" id="help-github-note" style="display:none;">
             <b>ساخت توکن:</b> برو به github.com → روی عکس پروفایلت → Settings → پایین صفحه Developer settings → Personal access tokens → Fine-grained tokens → Generate new token. دسترسی (Permissions) این مخزن را روی «Contents: Read and write» بگذار.
           </div>
           <label>نام کاربری/مخزن (مثال: username/leitner-vocab)</label>
@@ -4658,19 +4661,24 @@ function openSettingsPage(){
         </div>
 
         <div id="drive-sync-fields" style="margin-top:16px;">
-          <div class="ai-note" style="margin-bottom:10px;">
-            این یک‌بار راه‌اندازی می‌خواد: یک اسکریپت کوچیک روی حساب گوگل خودت دیپلوی می‌کنی که کار واسطه بین این برنامه و گوگل‌درایوت رو انجام می‌ده. بعدش دیگه هیچ پاپ‌آپ ورودی لازم نیست، درست مثل توکن گیت‌هاب.
+          <div style="margin-bottom:8px;">
+            <button type="button" class="help-toggle" data-help="help-drive-setup">راهنمای راه‌اندازی (یک‌بار) ؟</button>
           </div>
-          <div class="ai-note" id="drive-setup-steps" style="line-height:1.9;">
-            <b>۱.</b> برو به <span class="en">script.google.com</span> و «New project» بزن.<br>
-            <b>۲.</b> کد زیر رو کپی کن و کامل به‌جای محتوای فایل <span class="en">Code.gs</span> بذار (دکمه‌ی کپی پایین همین باکس هست).<br>
-            <b>۳.</b> از آیکون ⚙ سمت چپ («Project Settings») → پایین صفحه «Script Properties» → «Add script property» → اسمش رو <span class="en">SECRET</span> بذار و مقدارش رو یه رمز دلخواه خودت بذار (هرچی، فقط یادت بمونه).<br>
-            <b>۴.</b> بالای صفحه «Deploy» → «New deployment» → روی چرخ‌دنده کنار «Select type» بزن و «Web app» رو انتخاب کن. «Execute as» را <span class="en">Me</span> و «Who has access» را <span class="en">Anyone</span> بگذار، بعد «Deploy».<br>
-            <b>۵.</b> آدرسی که به شکل <span class="en">https://script.google.com/macros/s/.../exec</span> بهت می‌ده رو کپی کن و پایین بچسبون، همون رمز مرحله‌ی ۳ رو هم وارد کن.
-          </div>
-          <div style="position:relative;margin:10px 0;">
-            <textarea id="drive-script-code" class="en" readonly rows="8" style="width:100%;font-family:monospace;font-size:11px;direction:ltr;text-align:left;" onclick="this.select()">${escapeHtml(DRIVE_APPS_SCRIPT_CODE)}</textarea>
-            <button class="btn btn-ghost btn-small" id="drive-copy-code" style="position:absolute;top:6px;left:6px;">کپی کد</button>
+          <div id="help-drive-setup" style="display:none;">
+            <div class="ai-note" style="margin-bottom:10px;">
+              این یک‌بار راه‌اندازی می‌خواد: یک اسکریپت کوچیک روی حساب گوگل خودت دیپلوی می‌کنی که کار واسطه بین این برنامه و گوگل‌درایوت رو انجام می‌ده. بعدش دیگه هیچ پاپ‌آپ ورودی لازم نیست، درست مثل توکن گیت‌هاب.
+            </div>
+            <div class="ai-note" id="drive-setup-steps" style="line-height:1.9;">
+              <b>۱.</b> برو به <span class="en">script.google.com</span> و «New project» بزن.<br>
+              <b>۲.</b> کد زیر رو کپی کن و کامل به‌جای محتوای فایل <span class="en">Code.gs</span> بذار (دکمه‌ی کپی پایین همین باکس هست).<br>
+              <b>۳.</b> از آیکون ⚙ سمت چپ («Project Settings») → پایین صفحه «Script Properties» → «Add script property» → اسمش رو <span class="en">SECRET</span> بذار و مقدارش رو یه رمز دلخواه خودت بذار (هرچی، فقط یادت بمونه).<br>
+              <b>۴.</b> بالای صفحه «Deploy» → «New deployment» → روی چرخ‌دنده کنار «Select type» بزن و «Web app» رو انتخاب کن. «Execute as» را <span class="en">Me</span> و «Who has access» را <span class="en">Anyone</span> بگذار، بعد «Deploy».<br>
+              <b>۵.</b> آدرسی که به شکل <span class="en">https://script.google.com/macros/s/.../exec</span> بهت می‌ده رو کپی کن و پایین بچسبون، همون رمز مرحله‌ی ۳ رو هم وارد کن.
+            </div>
+            <div style="position:relative;margin:10px 0;">
+              <textarea id="drive-script-code" class="en" readonly rows="8" style="width:100%;font-family:monospace;font-size:11px;direction:ltr;text-align:left;" onclick="this.select()">${escapeHtml(DRIVE_APPS_SCRIPT_CODE)}</textarea>
+              <button class="btn btn-ghost btn-small" id="drive-copy-code" style="position:absolute;top:6px;left:6px;">کپی کد</button>
+            </div>
           </div>
           <label>آدرس Web App (تمام‌شده به exec/)</label>
           <input type="text" class="en" id="d-url" placeholder="https://script.google.com/macros/s/AKfycb.../exec" value="${escapeHtml(d.url||'')}">
