@@ -2490,9 +2490,9 @@ function wordSpansHtml(text, levelWords){
 }
 
 /* Re-draws whatever caption is currently showing over the video, right now, using the latest
-   level word list — used right after runSrtAnalysis()/loadMoreSrtWords() add level-picked words,
-   so a caption already on screen (e.g. while the video is paused) updates immediately instead of
-   waiting for the next timeupdate tick. */
+   level word list — used right after the paste-back handlers in renderSrtAnalyzePanel() add
+   AI-picked words, so a caption already on screen (e.g. while the video is paused) updates
+   immediately instead of waiting for the next timeupdate tick. */
 /* Builds one big prompt covering the WHOLE loaded .srt (epVideoCues), numbered line-by-line, so
    an external AI (ChatGPT or anything else — no in-app API key needed) can translate every line
    in one pass with the surrounding context of the whole episode, instead of one-line-at-a-time.
@@ -2813,115 +2813,213 @@ async function fetchSrtIdiomSelection(key, lines, knownWords, level){
   return out;
 }
 
-/* Runs the whole SRT pipeline: read file → strip to plain lines → extract real candidate
-   words locally → ask the AI to pick the level-appropriate ones and translate them →
-   re-attach each pick to its real example line from the file. If idioms are requested, also
-   asks the AI to find real idioms in the text and grounds each one against the actual lines. */
-async function runSrtAnalysis(){
-  const fileInput = episodePageEl.querySelector('#epSrtFile');
-  const file = fileInput.files && fileInput.files[0];
-  if(!file){ alert('اول یک فایل srt رو انتخاب کن.'); return; }
-  const settings = loadAiSettings();
-  episodeLoading = true;
-  episodeError = null;
-  episodeMoreError = null;
-  episodeIdiomError = null;
-  episodeSuggestions = [];
-  episodeSelected = new Set();
-  episodeTypeFilter = 'all';
-  srtCandidatesPool = [];
-  srtFullLines = [];
-  srtHighlightWord = null;
-  renderEpisodeResults();
-  try{
-    const text = await file.text();
-    const lines = parseSrtLines(text);
-    if(lines.length===0) throw new Error('متنی از این فایل استخراج نشد؛ مطمئن شو فایل srt معتبر است.');
-    srtFullLines = lines;
-    const knownWords = words.map(w=>w.en).filter(Boolean);
-    const knownLower = new Set(knownWords.map(w=>w.trim().toLowerCase()));
-    loadWordSet(KNOWN_WORDS_KEY).forEach(w=> knownLower.add(w));
-    loadWordSet(IGNORED_WORDS_KEY).forEach(w=> knownLower.add(w));
-    const allCandidates = extractSrtVocabulary(lines, knownLower);
-    srtCandidatesPool = allCandidates; // keep the full pool around for the "more words" button
-    const candidates = allCandidates.slice(0, 150);
+/* Builds one prompt (system + user message) an EXTERNAL AI (ChatGPT or any other model — no
+   in-app API key/quota used) can answer in one shot to power the "تحلیل زیرنویس و پیشنهاد کلمات"
+   feature. Same JSON shape/fields as the old internal fetchSrtWordSelection/fetchSrtIdiomSelection
+   calls, just combined into a single request so only one round-trip through the external AI is
+   needed. Idiom-finding is folded into the same prompt (with a capped/sampled slice of the real
+   lines, same sampling as the old fetchSrtIdiomSelection) only when includeIdioms is true. */
+function buildSrtWordPrompt(candidates, lines, knownWords, level, includeIdioms){
+  const knownSample = knownWords.slice(0, 200).join('، ');
+  const levelNote = level
+    ? `کاربر می‌خواهد فقط کلماتی هم‌سطح ${level} (طبق چارچوب CEFR) ببیند؛ فقط از میان کاندیدها همان‌هایی را انتخاب کن که تقریباً همین سطح‌اند.`
+    : (knownSample ? `کلماتی که کاربر از قبل بلد است (برای سنجش سطح او): ${knownSample}.` : 'کاربر هنوز کلمه‌ای ثبت نکرده؛ سطح او را مبتدی تا متوسط در نظر بگیر.');
+  const candidateList = candidates.map(c => `${c.en}(${c.count})`).join('، ');
 
-    let wordItems = [];
-    if(candidates.length > 0){
-      const picked = await fetchSrtWordSelection(settings.key, candidates, knownWords, episodeLevel);
-      const byWord = {};
-      candidates.forEach(c=>{ byWord[c.en] = c; });
-      wordItems = picked.map(p=>{
-        const c = byWord[p.en.trim().toLowerCase()];
-        return { en: p.en, fa: p.fa, definition: p.definition, example: c ? c.example : '', allExamples: c ? c.allExamples : [], type:'word', level: p.level || '' };
-      }).filter(w=>w.en && w.fa);
+  let systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. در ادامه فهرستی از کلمات واقعی استخراج‌شده از زیرنویس یک فیلم/سریال به‌همراه تعداد تکرار هرکدام می‌آید. با توجه به سطح فعلی کاربر، دقیقاً از میان همین فهرست (بدون تغییر املا و بدون افزودن کلمه‌ی تازه) بین ۱۰ تا ۱۵ کلمه انتخاب کن که یادگیری‌شان برای او مفید و هم‌سطح باشد؛ کلمات خیلی بدیهی یا خیلی کمیاب/غیرضروری و همچنین اسم خاص یا نام شخصیت‌ها را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس.';
+
+  let userMessage = `${levelNote}\nفهرست کلمات کاندید از زیرنویس، به‌صورت کلمه(تعداد تکرار): ${candidateList}`;
+  let schema = '{"words":[{"en":"...","fa":"...","definition":"...","level":"..."}]';
+
+  if(includeIdioms){
+    systemPrompt += ' علاوه بر این، در ادامه‌ی پیام کاربر خطوط واقعی زیرنویس هم آمده؛ از میان آن‌ها اصطلاحات و عبارات idiomatic انگلیسی (نه تک‌کلمه‌های ساده) را که عیناً و کلمه‌به‌کلمه در همان متن آمده‌اند پیدا کن، هم‌سطح همان سطح بالا. برای هر اصطلاح: دقیقاً همان خط از متن ورودی که اصطلاح در آن آمده را بدون کوچک‌ترین تغییری در فیلد "line" کپی کن (باید عیناً با یکی از خط‌های ورودی یکی باشد)، معنای فارسی کوتاه در "fa"، و توضیح ساده انگلیسی در "definition" بنویس. اگر اصطلاح واقعی پیدا نکردی، آرایه‌ی idioms را خالی برگردان — چیزی از خودت اختراع نکن.';
+    schema += ',"idioms":[{"en":"...","fa":"...","definition":"...","line":"..."}]';
+
+    const MAX_CHARS = 12000;
+    let sampleLines = lines;
+    if(lines.join('\n').length > MAX_CHARS){
+      const approxTargetLines = Math.max(50, Math.floor(MAX_CHARS/40));
+      const step = Math.max(1, Math.ceil(lines.length/approxTargetLines));
+      sampleLines = lines.filter((_,i)=> i % step === 0);
     }
-
-    let idiomItems = [];
-    if(episodeIncludeIdioms){
-      try{
-        const idiomPicks = await fetchSrtIdiomSelection(settings.key, lines, knownWords, episodeLevel);
-        idiomItems = idiomPicks.map(it=>({
-          en: it.en, fa: it.fa, definition: it.definition,
-          example: lines[it.lineIdx], allExamples: [buildContextBlock(lines, it.lineIdx)],
-          type: 'idiom'
-        }));
-      }catch(e){
-        episodeIdiomError = 'دریافت اصطلاحات از این زیرنویس ناموفق بود (' + (e && e.message ? e.message : e) + ')؛ کلمات همچنان نمایش داده می‌شوند.';
-      }
-    }
-
-    episodeSuggestions = wordItems.concat(idiomItems);
-    if(episodeSuggestions.length===0) episodeError = 'از تحلیل این زیرنویس پیشنهادی به‌دست نیامد.';
-  }catch(e){
-    episodeError = 'تحلیل زیرنویس ناموفق بود (' + (e && e.message ? e.message : e) + ').';
-  }finally{
-    episodeLoading = false;
-    renderEpisodeResults();
-    updateVsyncCaptionNow();
+    let fullText = sampleLines.join('\n');
+    if(fullText.length > MAX_CHARS) fullText = fullText.slice(0, MAX_CHARS);
+    userMessage += `\n\nخطوط واقعی زیرنویس (برای پیدا کردن اصطلاح):\n${fullText}`;
   }
+  schema += '}';
+  systemPrompt += ` فقط و فقط یک آبجکت JSON معتبر و خالص برگردان — بدون Markdown، بدون فنس \`\`\`json، بدون هیچ توضیح قبل یا بعدش — دقیقاً با این ساختار: ${schema}.`;
+
+  return { systemPrompt, userMessage };
 }
 
-/* Called by the "کلمات بیشتر" button after an .srt analysis: picks another round of
-   words from whatever candidates are left in the pool (i.e. excluding words already shown),
-   and appends them to the existing list instead of replacing it. Can be clicked repeatedly
-   until the candidate pool runs out. */
-async function loadMoreSrtWords(){
-  if(episodeMoreLoading || srtCandidatesPool.length===0) return;
-  const settings = loadAiSettings();
-  episodeMoreLoading = true;
-  episodeMoreError = null;
-  renderEpisodeResults();
-  try{
-    const shownLower = new Set(episodeSuggestions.map(w=>w.en.trim().toLowerCase()));
-    const remaining = srtCandidatesPool.filter(c=>!shownLower.has(c.en));
-    if(remaining.length===0){
-      episodeMoreError = 'کلمه‌ی جدید دیگری در این زیرنویس باقی نمانده.';
-      return;
+/* Parses whatever JSON the person pasted back from the external AI and grounds it against the
+   real local data — exactly the same grounding fetchSrtWordSelection/fetchSrtIdiomSelection used
+   to do after their own (internal) AI call: each word is matched back to its real candidate (for
+   its real example line), and each idiom is discarded unless its quoted "line" literally exists
+   in the real subtitle text, so nothing invented by the external AI slips through. */
+function parseSrtWordResponse(raw, candidates, lines){
+  const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+  const obj = JSON.parse(cleaned);
+
+  const byWord = {};
+  (candidates||[]).forEach(c=>{ byWord[c.en] = c; });
+  const wordItems = (Array.isArray(obj.words) ? obj.words : []).map(w=>{
+    const en = (w.en||'').trim(), fa = (w.fa||'').trim();
+    if(!en || !fa) return null;
+    const c = byWord[en.trim().toLowerCase()];
+    return { en, fa, definition:(w.definition||'').trim(), example: c?c.example:'', allExamples: c?c.allExamples:[], type:'word', level:(w.level||'').trim() };
+  }).filter(Boolean);
+
+  const lineIndexMap = new Map();
+  (lines||[]).forEach((l, idx)=>{ if(!lineIndexMap.has(l)) lineIndexMap.set(l, idx); });
+  const idiomItems = (Array.isArray(obj.idioms) ? obj.idioms : []).map(it=>{
+    const en = (it.en||'').trim(), fa = (it.fa||'').trim(), line = (it.line||'').trim();
+    if(!en || !fa || !line) return null;
+    if(!lineIndexMap.has(line)) return null; // not grounded in the real subtitle text — discard
+    const idx = lineIndexMap.get(line);
+    return { en, fa, definition:(it.definition||'').trim(), example: lines[idx], allExamples:[buildContextBlock(lines, idx)], type:'idiom' };
+  }).filter(Boolean);
+
+  if(wordItems.length===0 && idiomItems.length===0) throw new Error('هیچ کلمه یا اصطلاح معتبری در پاسخ پیدا نشد.');
+  return wordItems.concat(idiomItems);
+}
+
+/* The "📄 تحلیل زیرنویس و پیشنهاد کلمات" panel: copy-the-prompt / open an external AI (ChatGPT or
+   any other) / paste-the-answer-back — same fallback-to-external-AI pattern as
+   renderSrtTranslatePanel, used here so this feature never touches the in-app Gemini key/quota.
+   mode 'new' builds a fresh prompt from the currently-selected .srt file and REPLACES
+   episodeSuggestions; mode 'more' (from the "➕ کلمات بیشتر" button) builds a prompt for the
+   remaining, not-yet-shown candidates only (no idioms) and APPENDS to episodeSuggestions. */
+function renderSrtAnalyzePanel(mode, panelSelector){
+  mode = mode || 'new';
+  panelSelector = panelSelector || '#epSrtAnalyzePanel';
+  const panel = episodePageEl && episodePageEl.querySelector(panelSelector);
+  if(!panel) return;
+  const isMore = mode==='more';
+  panel.style.display = 'block';
+  panel.dataset.mode = mode;
+  const fileInput = episodePageEl.querySelector('#epSrtFile');
+  const hasFile = !!(fileInput && fileInput.files && fileInput.files[0]);
+  const hasResults = episodeSuggestions.length>0;
+
+  panel.innerHTML = `
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">
+      ${isMore
+        ? 'یک درخواست برای یک دسته‌ی تازه از کلمات (به‌جز کلماتی که همین الان توی فهرست پایین هستن) آماده می‌کنه.'
+        : 'یک درخواست از روی کلمات واقعی همین زیرنویس آماده می‌کنه تا یک هوش مصنوعی خارجی (ChatGPT یا هر مدل دیگه) کلمات مناسب سطحت رو انتخاب و معنی کنه — بدون استفاده از سهمیه‌ی هوش مصنوعی داخل اپ.'}
+      جواب رو که گرفتی همینجا پیست کن تا به فهرست کلمات پایین اضافه بشه.
+    </div>
+    ${(!isMore && !hasFile) ? `<div class="ai-note" style="margin-bottom:8px;">اول از بالا یه فایل زیرنویس (.srt) انتخاب کن.</div>` : ''}
+    <div class="actions">
+      <button type="button" class="btn btn-primary btn-small" id="epSrtAnalyzeShareBtn" ${(!isMore && !hasFile)?'disabled':''}>📤 اشتراک‌گذاری متن درخواست</button>
+    </div>
+    <div id="epSrtAnalyzeCopyMsg" style="display:none;font-size:11.5px;color:var(--ink-soft);margin-top:6px;"></div>
+    <details style="margin-top:8px;">
+      <summary style="font-size:11.5px;color:var(--ink-soft);cursor:pointer;">اشتراک‌گذاری کار نکرد؟ متن رو دستی کپی کن</summary>
+      <textarea id="epSrtAnalyzePromptBox" readonly style="min-height:90px;margin-top:8px;font-size:11.5px;direction:ltr;text-align:left;"></textarea>
+    </details>
+    <label style="margin-top:14px;">جواب هوش مصنوعی رو اینجا پیست کن</label>
+    <textarea id="epSrtAnalyzePasteBox" placeholder="آبجکت JSON پاسخ رو اینجا پیست کن..." style="min-height:110px;"></textarea>
+    <div class="actions" style="margin-top:8px;">
+      <button type="button" class="btn btn-primary btn-small" id="epSrtAnalyzeSubmitBtn">✅ ${isMore ? 'افزودن به فهرست' : 'ثبت کلمات'}</button>
+      ${(!isMore && hasResults) ? `<button type="button" class="btn btn-ghost btn-small" id="epSrtAnalyzeClearBtn">🗑 حذف پیشنهادهای فعلی</button>` : ''}
+    </div>
+    <div id="epSrtAnalyzeErr" class="ai-note" style="display:none;margin-top:8px;"></div>`;
+
+  panel.querySelector('#epSrtAnalyzeShareBtn').onclick = async ()=>{
+    const btn = panel.querySelector('#epSrtAnalyzeShareBtn');
+    const errEl = panel.querySelector('#epSrtAnalyzeErr');
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    const origText = btn.textContent;
+    btn.textContent = 'در حال آماده‌سازی...';
+    try{
+      let candidates, lines, knownWords, includeIdioms;
+      if(isMore){
+        if(srtCandidatesPool.length===0) throw new Error('اول یک‌بار «تحلیل زیرنویس» رو انجام بده.');
+        const shownLower = new Set(episodeSuggestions.map(w=>w.en.trim().toLowerCase()));
+        const remaining = srtCandidatesPool.filter(c=>!shownLower.has(c.en));
+        if(remaining.length===0) throw new Error('کلمه‌ی جدید دیگری در این زیرنویس باقی نمانده.');
+        candidates = remaining.slice(0, 150);
+        lines = srtFullLines;
+        knownWords = words.map(w=>w.en).filter(Boolean).concat([...shownLower]);
+        includeIdioms = false;
+      }else{
+        const file = fileInput.files && fileInput.files[0];
+        if(!file) throw new Error('اول یک فایل srt رو انتخاب کن.');
+        const text = await file.text();
+        lines = parseSrtLines(text);
+        if(lines.length===0) throw new Error('متنی از این فایل استخراج نشد؛ مطمئن شو فایل srt معتبر است.');
+        srtFullLines = lines;
+        srtHighlightWord = null;
+        knownWords = words.map(w=>w.en).filter(Boolean);
+        const knownLower = new Set(knownWords.map(w=>w.trim().toLowerCase()));
+        loadWordSet(KNOWN_WORDS_KEY).forEach(w=> knownLower.add(w));
+        loadWordSet(IGNORED_WORDS_KEY).forEach(w=> knownLower.add(w));
+        srtCandidatesPool = extractSrtVocabulary(lines, knownLower);
+        candidates = srtCandidatesPool.slice(0, 150);
+        includeIdioms = episodeIncludeIdioms;
+      }
+
+      const { systemPrompt, userMessage } = buildSrtWordPrompt(candidates, lines, knownWords, episodeLevel, includeIdioms);
+      const fullText = systemPrompt + '\n\n' + userMessage;
+      const box = panel.querySelector('#epSrtAnalyzePromptBox');
+      box.value = fullText;
+      const msg = panel.querySelector('#epSrtAnalyzeCopyMsg');
+      if(navigator.share){
+        try{ await navigator.share({ text: fullText }); return; }
+        catch(e){ /* cancelled or failed — fall through to the manual textarea below */ }
+      }
+      box.closest('details').open = true;
+      box.focus();
+      box.select();
+      if(msg){ msg.textContent = 'روی کادر بالا بزن (خودش انتخاب می‌شه)، Copy رو بزن، بعد تو ChatGPT پیستش کن.'; msg.style.display = 'block'; }
+    }catch(e){
+      errEl.textContent = e && e.message ? e.message : String(e);
+      errEl.style.display = 'block';
+    }finally{
+      btn.disabled = false;
+      btn.textContent = origText;
     }
-    const knownWords = words.map(w=>w.en).filter(Boolean).concat([...shownLower]);
-    const batch = remaining.slice(0, 150);
-    const picked = await fetchSrtWordSelection(settings.key, batch, knownWords, episodeLevel);
-    const byWord = {};
-    batch.forEach(c=>{ byWord[c.en] = c; });
-    const newOnes = picked
-      .map(p=>{
-        const c = byWord[p.en.trim().toLowerCase()];
-        return { en: p.en, fa: p.fa, definition: p.definition, example: c ? c.example : '', allExamples: c ? c.allExamples : [], type:'word', level: p.level || '' };
-      })
-      .filter(w=>w.en && w.fa && !shownLower.has(w.en.trim().toLowerCase()));
-    if(newOnes.length===0){
-      episodeMoreError = 'کلمه‌ی جدید مناسبی پیدا نشد؛ می‌توانی دوباره امتحان کنی.';
-    }else{
-      episodeSuggestions = episodeSuggestions.concat(newOnes);
+  };
+
+  panel.querySelector('#epSrtAnalyzeSubmitBtn').onclick = ()=>{
+    const errEl = panel.querySelector('#epSrtAnalyzeErr');
+    errEl.style.display = 'none';
+    const raw = panel.querySelector('#epSrtAnalyzePasteBox').value;
+    try{
+      if(!raw.trim()) throw new Error('چیزی پیست نشده');
+      const newItems = parseSrtWordResponse(raw, srtCandidatesPool, srtFullLines);
+      if(isMore){
+        const shownLower = new Set(episodeSuggestions.map(w=>w.en.trim().toLowerCase()));
+        const uniqueNew = newItems.filter(w=>!shownLower.has(w.en.trim().toLowerCase()));
+        if(uniqueNew.length===0) throw new Error('همه‌ی کلمات این پاسخ از قبل توی فهرست بودن.');
+        episodeSuggestions = episodeSuggestions.concat(uniqueNew);
+        episodeMoreError = null;
+      }else{
+        episodeSuggestions = newItems;
+        episodeSelected = new Set();
+        episodeTypeFilter = 'all';
+        episodeError = null;
+        episodeIdiomError = null;
+      }
+      panel.style.display = 'none';
+      renderEpisodeResults();
+      updateVsyncCaptionNow();
+    }catch(e){
+      errEl.textContent = `پاسخ قابل خواندن نبود: ${escapeHtml(e.message||'')} — مطمئن شو دقیقاً همون خروجی JSON رو (بدون توضیح اضافه‌ی خودت) کپی کردی.`;
+      errEl.style.display = 'block';
     }
-  }catch(e){
-    episodeMoreError = 'دریافت کلمات بیشتر ناموفق بود (' + (e && e.message ? e.message : e) + ').';
-  }finally{
-    episodeMoreLoading = false;
+  };
+
+  const clearBtn = panel.querySelector('#epSrtAnalyzeClearBtn');
+  if(clearBtn) clearBtn.onclick = ()=>{
+    episodeSuggestions = [];
+    episodeSelected = new Set();
+    srtHighlightWord = null;
     renderEpisodeResults();
-    updateVsyncCaptionNow();
-  }
+    renderSrtAnalyzePanel('new');
+  };
 }
 
 function closeEpisodePage(){
@@ -3184,7 +3282,7 @@ function renderEpisodePage(){
       <button class="close-x" id="epCloseBtn">✕</button>
     </div>
     <div class="page-body">
-      ${!ready ? `<div class="ai-note">برای دریافت کلمات از دکمه ⚙ تنظیمات، کلید رایگان Gemini را وارد کنید.</div>` : ''}
+      ${!ready ? `<div class="ai-note">«های‌لایت کلمات هم‌سطح در پلیر» و چند ابزار دیگه‌ی داخل اپ به کلید رایگان Gemini نیاز دارن (از ⚙ تنظیمات) — ولی «تحلیل زیرنویس و پیشنهاد کلمات» دیگه به این کلید نیازی نداره و با هوش مصنوعی خارجی (مثل ChatGPT) انجام می‌شه.</div>` : ''}
 
       <div class="vsync-wrap">
         <div class="vsync-head">🎥 پخش هم‌زمان فیلم با زیرنویس</div>
@@ -3223,7 +3321,7 @@ function renderEpisodePage(){
         <div class="ep-filter-row" style="margin-top:14px;">
           <div>
             <label>سطح زبان</label>
-            <select id="epLevelSelect" ${!ready?'disabled':''}>
+            <select id="epLevelSelect">
               ${CEFR_LEVELS.map(l=>`<option value="${l.value}" ${episodeLevel===l.value?'selected':''}>${escapeHtml(l.label)}</option>`).join('')}
             </select>
           </div>
@@ -3233,14 +3331,14 @@ function renderEpisodePage(){
         </div>
         <div class="ai-note" id="epVsyncLevelStatus" style="display:none; margin-top:10px;"></div>
         <label class="ep-checkbox-label">
-          <input type="checkbox" id="epIncludeIdioms" ${episodeIncludeIdioms?'checked':''} ${!ready?'disabled':''}>
+          <input type="checkbox" id="epIncludeIdioms" ${episodeIncludeIdioms?'checked':''}>
           اصطلاحات (idioms) را هم پیشنهاد بده
         </label>
 
         <div class="actions" style="margin-top:16px;">
-          <button class="btn btn-primary" id="epSrtGoBtn" ${!ready?'disabled':''}>📄 تحلیل زیرنویس و پیشنهاد کلمات</button>
-          ${!ready ? `<button class="btn btn-secondary" id="epSettingsBtn">رفتن به تنظیمات</button>` : ''}
+          <button class="btn btn-primary" id="epSrtAnalyzeToggleBtn">📄 تحلیل زیرنویس و پیشنهاد کلمات (با هوش مصنوعی خارجی)</button>
         </div>
+        <div id="epSrtAnalyzePanel" style="display:none; margin-top:10px;"></div>
         </div>
       </div>
 
@@ -3263,8 +3361,12 @@ function renderEpisodePage(){
   };
   const idiomChk = episodePageEl.querySelector('#epIncludeIdioms');
   if(idiomChk) idiomChk.onchange = ()=>{ episodeIncludeIdioms = idiomChk.checked; };
-  const srtGoBtn = episodePageEl.querySelector('#epSrtGoBtn');
-  if(srtGoBtn) srtGoBtn.onclick = runSrtAnalysis;
+  const srtAnalyzeToggleBtn = episodePageEl.querySelector('#epSrtAnalyzeToggleBtn');
+  if(srtAnalyzeToggleBtn) srtAnalyzeToggleBtn.onclick = ()=>{
+    const panel = episodePageEl.querySelector('#epSrtAnalyzePanel');
+    if(panel.style.display==='none') renderSrtAnalyzePanel('new');
+    else panel.style.display = 'none';
+  };
   const refreshResumeHint = ()=>{
     const hintEl = episodePageEl.querySelector('#epVsyncResumeHint');
     if(hintEl) hintEl.innerHTML = vsyncResumeHintHtml();
@@ -3459,10 +3561,9 @@ function renderEpisodeResults(){
     }).join('')}
     ${episodeMoreError ? `<div class="ai-note" style="margin-top:10px;">${escapeHtml(episodeMoreError)}</div>` : ''}
     <div class="actions" style="margin-top:14px;">
-      <button class="btn btn-secondary" id="epMoreBtn" ${episodeMoreLoading?'disabled':''}>
-        ${episodeMoreLoading ? '<span class="spinner"></span> در حال دریافت کلمات بیشتر...' : '➕ کلمات بیشتر'}
-      </button>
+      <button class="btn btn-secondary" id="epMoreBtn">➕ کلمات بیشتر (با هوش مصنوعی خارجی)</button>
     </div>
+    <div id="epSrtAnalyzeMorePanel" style="display:none; margin-top:10px;"></div>
   `;
 
   renderSrtFullPanel(false);
@@ -3530,7 +3631,11 @@ function renderEpisodeResults(){
   });
 
   const moreBtn = box.querySelector('#epMoreBtn');
-  if(moreBtn) moreBtn.onclick = loadMoreSrtWords;
+  if(moreBtn) moreBtn.onclick = ()=>{
+    const morePanel = box.querySelector('#epSrtAnalyzeMorePanel');
+    if(morePanel && morePanel.style.display==='none') renderSrtAnalyzePanel('more', '#epSrtAnalyzeMorePanel');
+    else if(morePanel) morePanel.style.display = 'none';
+  };
 
   const addBtn = box.querySelector('#epAddBtn');
   if(addBtn){
