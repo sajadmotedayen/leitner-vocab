@@ -1976,8 +1976,14 @@ const SRT_STOPWORDS = new Set(['a','an','the','and','or','but','if','then','than
 function decodeHtmlEntities(str){
   if(!str) return str;
   const ta = document.createElement('textarea');
-  ta.innerHTML = str;
-  return ta.value;
+  let prev = str;
+  for(let i=0; i<5; i++){
+    ta.innerHTML = prev;
+    const next = ta.value;
+    if(next === prev) break; // fully decoded, nothing left to unwrap
+    prev = next;
+  }
+  return prev;
 }
 
 /* Strips an .srt file down to just its spoken-line text: drops sequence numbers, timestamps,
