@@ -574,7 +574,7 @@
   .ep-filter-row{ display:flex; gap:10px; margin-top:10px; }
   .ep-filter-row > div{ flex:1; }
   .ep-checkbox-label{
-    display:flex; align-items:center; gap:8px; margin-top:10px;
+    display:flex; align-items:center; gap:8px; margin:10px 0 10px;
     font-size:13.5px; color:var(--ink); cursor:pointer;
   }
   .ep-checkbox-label input[type=checkbox]{ width:auto; margin:0; }
@@ -653,36 +653,29 @@
     padding:13px 15px; margin:0; border-bottom:1px solid var(--line-soft);
   }
   .vsync-body{ padding:14px 15px 15px; }
-  .vsync-body label{ margin:10px 0 5px; }
-  .vsync-body label:first-of-type{ margin-top:0; }
   .vsync-body .actions{ margin-bottom:0; justify-content:flex-start; }
   .vsync-body .ai-note{ margin-bottom:12px; padding:10px 12px; }
-  /* Sub-section divider inside a .vsync-wrap card — used on the "فیلم" page to separate the
-     three independent AI-assist tools (translate / player-highlight / word-suggestion) that all
-     live in one card, so each reads as its own step rather than one long undifferentiated form. */
-  .vsync-subhead{
-    display:flex; align-items:center; gap:7px;
-    font-size:12.5px; font-weight:800; color:var(--brass-dark); letter-spacing:.01em;
-    margin:20px 0 11px; padding-top:16px; border-top:1px dashed var(--line-soft);
+  /* Each of the three AI-assist tools is one plain row: icon+label on the right, action button on
+     the left. No card, no description text — matches the rest of the app's flat, minimal style. */
+  .ai-tool-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 0; border-top:1px solid var(--line-soft);
   }
-  .vsync-subhead:first-child{ margin-top:0; padding-top:0; border-top:none; }
-  .vsync-subhead .vsync-subhead-tag{
-    font-size:10.5px; font-weight:700; color:var(--ink-faint); letter-spacing:.02em;
-    background:var(--parchment); border-radius:999px; padding:2px 8px; margin-inline-start:auto;
+  .ai-tool-row:first-child{ border-top:none; padding-top:0; }
+  .ai-tool-label{ font-size:13px; font-weight:700; color:var(--ink); }
+  /* Native <input type=file> is visually hidden; its paired <label> (styled as an ordinary
+     btn-secondary pill, in Persian) is the only thing the person actually sees/taps — keeps every
+     file-picker on this page looking like the rest of the app's buttons instead of the browser's
+     own unstyled, English-only "Choose File" control. */
+  .file-input-hidden{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
   }
-  input[type=file]{
-    display:block; width:100%; font-size:12px; color:var(--ink-soft);
-    border:1px solid var(--line); border-radius:var(--radius-sm);
-    padding:4px; background:#fffef9; overflow:hidden;
-  }
-  input[type=file]::file-selector-button{
-    margin-inline-end:10px; border:1px solid var(--line); border-radius:8px;
-    padding:7px 12px; font-weight:700; font-size:12px; background:var(--parchment-dark);
-    color:var(--ink); cursor:pointer;
-  }
-  input[type=file]::file-selector-button:active{ background:var(--line-soft); }
-  .vsync-inputs{ display:flex; flex-direction:column; gap:11px; margin-bottom:11px; }
-  .vsync-inputs label{ display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-bottom:4px; }
+  .file-pick-btn{ cursor:pointer; }
+  .vsync-inputs{ display:flex; flex-direction:column; gap:10px; margin-bottom:4px; }
+  .file-pick-row{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  .file-pick-label{ font-size:12.5px; font-weight:700; color:var(--ink-soft); min-width:64px; }
+  .file-pick-name{ font-size:11.5px; color:var(--ink-faint); direction:ltr; text-align:left; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .vsync-player{
     position:relative; width:100%; background:#000; border-radius:var(--radius-sm); overflow:hidden; margin-top:4px;
   }
@@ -781,12 +774,7 @@
   .vsync-player.vsync-rotate video{
     width:100% !important; height:100% !important; max-height:none !important; object-fit:contain;
   }
-  .vsync-status-row{ display:flex; align-items:center; gap:8px; margin-top:9px; }
-  .vsync-info-btn{
-    background:none; border:1px solid var(--line); border-radius:999px; width:26px; height:26px;
-    font-size:13px; line-height:1; cursor:pointer; color:var(--ink-soft); flex-shrink:0;
-  }
-  .vsync-status{ font-size:12px; color:var(--ink-soft); }
+  .vsync-status{ font-size:12px; color:var(--ink-soft); margin-top:9px; }
   .vsync-hint{ font-size:11.5px; color:var(--ink-soft); margin-top:5px; }
 
 
@@ -2607,6 +2595,7 @@ function renderVsyncPlayer(){
     const offsetPart = epSubOffset ? ` (افست ${epSubOffset>0?'+':''}${epSubOffset.toFixed(1)}s)` : '';
     const srtPart = epSyncSrtFileName ? `زیرنویس: ${epSyncSrtFileName} (${epVideoCues.length} خط)${offsetPart}` : 'هنوز زیرنویسی برای هم‌زمانی انتخاب نشده.';
     status.textContent = `${videoPart} — ${srtPart}`;
+    status.style.display = (epVideoFileName||epSyncSrtFileName) ? '' : 'none';
   }
 }
 
@@ -3532,23 +3521,6 @@ function formatVsyncClock(totalSeconds){
   return h>0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
 }
 
-/* Small note shown above the video-file input, when a video was previously watched (in this or an
-   earlier session) but hasn't been re-picked yet this time — tells the person which file/position
-   to look for so they can pick the same file again and resume from there. Hidden once a video is
-   actually loaded, since the player itself then shows the real progress. */
-function vsyncResumeHintHtml(){
-  if(epVideoObjectUrl) return ''; // a video is already loaded this session — no hint needed
-  const last = loadVsyncLastState();
-  if(!last || !last.videoName) return '';
-  const when = last.closedAt ? new Date(last.closedAt).toLocaleString('fa-IR') : '';
-  const howToContinue = SUPPORTS_FS_ACCESS
-    ? 'روی «▶ ادامه‌ی همون ویدیوی قبلی» بالا بزن.'
-    : 'همون فایل ویدیو را دوباره از بالا انتخاب کن تا خودش از همون‌جا ادامه بده.';
-  return `<div class="ai-note" style="margin-top:8px;">
-    ⏸ آخرین‌بار «${escapeHtml(last.videoName)}» را در دقیقه ${formatVsyncClock(last.lastTime)} بسته‌ای${when ? ` (${when})` : ''}. ${howToContinue}
-  </div>`;
-}
-
 function renderEpisodePage(){
   if(!episodePageEl) return;
   const settings = loadAiSettings();
@@ -3566,55 +3538,56 @@ function renderEpisodePage(){
         <div class="vsync-head">🎥 پخش هم‌زمان فیلم با زیرنویس</div>
         <div class="vsync-body">
         <div class="vsync-inputs">
-          <div>
-            <label>فایل ویدیو (اختیاری)</label>
+          <div class="file-pick-row">
+            <span class="file-pick-label">🎞️ ویدیو</span>
             ${SUPPORTS_FS_ACCESS ? `
-              <div class="actions" style="margin-top:2px;">
-                <button type="button" class="btn btn-secondary btn-small" id="epVideoPickSmartBtn">📂 انتخاب فایل ویدیو</button>
-                <button type="button" class="btn btn-primary btn-small" id="epVideoResumeBtn" style="display:none;">▶ ادامه‌ی همون ویدیوی قبلی</button>
-              </div>
-            ` : `<input type="file" id="epVideoFile" accept="video/*">`}
+              <button type="button" class="btn btn-secondary btn-small" id="epVideoPickSmartBtn">انتخاب فایل</button>
+            ` : `
+              <label class="btn btn-secondary btn-small file-pick-btn" for="epVideoFile">انتخاب فایل</label>
+              <input type="file" id="epVideoFile" accept="video/*" class="file-input-hidden">
+            `}
+            <span class="file-pick-name">${epVideoFileName ? escapeHtml(epVideoFileName) : 'اختیاری'}</span>
           </div>
-          <div>
-            <label>فایل زیرنویس (.srt) همین قسمت</label>
-            <input type="file" id="epSrtFile" accept=".srt">
+          ${SUPPORTS_FS_ACCESS ? `
+          <div class="file-pick-row" id="epVideoResumeRow" style="display:none;">
+            <button type="button" class="btn btn-primary btn-small" id="epVideoResumeBtn" style="flex:1;">▶ ادامه‌ی ویدیوی قبلی</button>
+          </div>
+          ` : ''}
+          <div class="file-pick-row">
+            <span class="file-pick-label">📝 زیرنویس</span>
+            <label class="btn btn-secondary btn-small file-pick-btn" for="epSrtFile">انتخاب فایل .srt</label>
+            <input type="file" id="epSrtFile" accept=".srt" class="file-input-hidden">
+            <span class="file-pick-name">${epSyncSrtFileName ? escapeHtml(epSyncSrtFileName) : 'همین قسمت'}</span>
           </div>
         </div>
-        <div id="epVsyncResumeHint">${vsyncResumeHintHtml()}</div>
         <div id="epVsyncPlayerHolder"></div>
-        <div class="vsync-status-row">
-          <button type="button" class="vsync-info-btn" id="epVsyncInfoBtn" title="نام فایل‌ها">ℹ️</button>
-          <div class="vsync-status" id="epVsyncStatus" style="${(epVideoFileName||epSyncSrtFileName) ? '' : 'display:none;'}"></div>
-        </div>
+        <div class="vsync-status" id="epVsyncStatus" style="${(epVideoFileName||epSyncSrtFileName) ? '' : 'display:none;'}"></div>
         </div>
       </div>
 
       <div class="vsync-wrap">
-        <div class="vsync-head">✨ ابزارهای هوش مصنوعی خارجی (روی همون زیرنویس بالا)</div>
+        <div class="vsync-head">✨ ابزارهای هوش مصنوعی خارجی</div>
         <div class="vsync-body">
 
-        <div class="vsync-subhead">📄 پیشنهاد کلمات و اصطلاحات<span class="vsync-subhead-tag">هدف اصلی</span></div>
+        <div class="ai-tool-row">
+          <span class="ai-tool-label">📄 پیشنهاد کلمات و اصطلاحات</span>
+          <button class="btn btn-primary btn-small" id="epSrtAnalyzeToggleBtn">شروع تحلیل</button>
+        </div>
         <label class="ep-checkbox-label">
           <input type="checkbox" id="epIncludeIdioms" ${episodeIncludeIdioms?'checked':''}>
           اصطلاحات (idioms) را هم پیشنهاد بده
         </label>
-        <div class="actions" style="margin-top:12px;">
-          <button class="btn btn-primary" id="epSrtAnalyzeToggleBtn">تحلیل زیرنویس و پیشنهاد کلمات</button>
-        </div>
         <div id="epSrtAnalyzePanel" style="display:none; margin-top:10px;"></div>
 
-        <div class="vsync-subhead">🎯 های‌لایت کلمات هم‌سطح در پلیر</div>
-        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px;">
-          سطح زبان: ${escapeHtml((CEFR_LEVELS.find(l=>l.value===episodeLevel)||CEFR_LEVELS[0]).label)} — <a href="#" id="epLevelSettingsLink" style="color:var(--brand,inherit);text-decoration:underline;">تغییر از ⚙ تنظیمات</a>
-        </div>
-        <div class="actions">
+        <div class="ai-tool-row">
+          <span class="ai-tool-label">🎯 های‌لایت کلمات هم‌سطح</span>
           <button class="btn btn-secondary btn-small" id="epVsyncLevelBtn">شروع های‌لایت</button>
         </div>
         <div class="ai-note" id="epVsyncLevelStatus" style="display:none; margin-top:10px;"></div>
         <div id="epVsyncLevelPanel" style="display:none; margin-top:10px;"></div>
 
-        <div class="vsync-subhead">🌐 ترجمه‌ی کامل زیرنویس</div>
-        <div class="actions">
+        <div class="ai-tool-row">
+          <span class="ai-tool-label">🌐 ترجمه‌ی کامل زیرنویس</span>
           <button type="button" class="btn btn-secondary btn-small" id="epSrtTranslateBtn">شروع ترجمه</button>
         </div>
         <div id="epSrtTranslatePanel" style="display:none; margin-top:10px;"></div>
@@ -3644,33 +3617,29 @@ function renderEpisodePage(){
     if(panel.style.display==='none') renderSrtAnalyzePanel('new');
     else panel.style.display = 'none';
   };
-  const refreshResumeHint = ()=>{
-    const hintEl = episodePageEl.querySelector('#epVsyncResumeHint');
-    if(hintEl) hintEl.innerHTML = vsyncResumeHintHtml();
-  };
   if(SUPPORTS_FS_ACCESS){
     const pickSmartBtn = episodePageEl.querySelector('#epVideoPickSmartBtn');
-    if(pickSmartBtn) pickSmartBtn.onclick = async ()=>{ await pickVideoFileSmart(); refreshResumeHint(); };
+    if(pickSmartBtn) pickSmartBtn.onclick = async ()=>{ await pickVideoFileSmart(); };
     const resumeBtn = episodePageEl.querySelector('#epVideoResumeBtn');
-    if(resumeBtn){
-      // Only show the resume button once we actually know a previously-picked handle exists —
-      // no point offering it otherwise.
-      loadVsyncFileHandle().then(h=>{ if(h) resumeBtn.style.display = ''; });
+    const resumeRow = episodePageEl.querySelector('#epVideoResumeRow');
+    if(resumeBtn && resumeRow && !epVideoObjectUrl){
+      // Only show the resume row once we actually know a previously-picked handle exists —
+      // no point offering it otherwise. Hidden once a video is already loaded this session.
+      loadVsyncFileHandle().then(h=>{ if(h) resumeRow.style.display = ''; });
       resumeBtn.onclick = async ()=>{
         resumeBtn.disabled = true;
         resumeBtn.textContent = 'در حال بازکردن...';
         const ok = await resumeVsyncFromHandle();
         resumeBtn.disabled = false;
-        resumeBtn.textContent = '▶ ادامه‌ی همون ویدیوی قبلی';
-        if(!ok) resumeBtn.style.display = 'none'; // permission denied/handle gone — fall back to picking again
-        refreshResumeHint();
+        resumeBtn.textContent = '▶ ادامه‌ی ویدیوی قبلی';
+        resumeRow.style.display = 'none'; // either resumed, or permission denied/handle gone — either way, done with this prompt
       };
     }
   }else{
     const epVideoFileInput = episodePageEl.querySelector('#epVideoFile');
     if(epVideoFileInput) epVideoFileInput.onchange = ()=>{
       const f = epVideoFileInput.files && epVideoFileInput.files[0];
-      if(f){ handleEpVideoFile(f); refreshResumeHint(); }
+      if(f) handleEpVideoFile(f);
     };
   }
   // The same .srt input feeds both the AI word-suggestion flow (via the button above) and the
@@ -3680,11 +3649,6 @@ function renderEpisodePage(){
   if(epSrtFileInput) epSrtFileInput.onchange = ()=>{
     const f = epSrtFileInput.files && epSrtFileInput.files[0];
     if(f) handleEpSyncSrtFile(f);
-  };
-  const epVsyncInfoBtn = episodePageEl.querySelector('#epVsyncInfoBtn');
-  if(epVsyncInfoBtn) epVsyncInfoBtn.onclick = ()=>{
-    const statusEl = episodePageEl.querySelector('#epVsyncStatus');
-    if(statusEl) statusEl.style.display = statusEl.style.display==='none' ? 'block' : 'none';
   };
   const srtTranslateBtn = episodePageEl.querySelector('#epSrtTranslateBtn');
   if(srtTranslateBtn) srtTranslateBtn.onclick = ()=>{
