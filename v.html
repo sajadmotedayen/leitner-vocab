@@ -2451,7 +2451,8 @@ function renderVsyncPlayer(){
         if(!span) return;
         const cueIdx = findActiveCueIndex(epVideoCues, videoEl.currentTime - epSubOffset);
         const cueText = cueIdx!==-1 ? epVideoCues[cueIdx].text : '';
-        handleVsyncWordTap(videoEl, span.dataset.w, cueText);
+        const dialogueContext = cueIdx!==-1 ? buildVsyncDialogueContext(epVideoCues, cueIdx, 3, 3) : '';
+        handleVsyncWordTap(videoEl, span.dataset.w, cueText, dialogueContext);
       };
 
       const fsBtn = holder.querySelector('#epVsyncFsBtn');
@@ -2621,11 +2622,18 @@ function renderVsyncPlayer(){
    line in a clickable span, so any word can be tapped during playback. Text is escaped first so
    only the spans this function itself adds ever reach innerHTML. */
 function wordSpansHtml(text, levelWords){
-  const escaped = escapeHtml(text);
-  return escaped.replace(/([A-Za-z']+)/g, (m)=>{
-    const isLevelWord = !!levelWords && levelWords.has(m.toLowerCase());
-    const cls = isLevelWord ? 'vsync-word vsync-word-level' : 'vsync-word';
-    return `<span class="${cls}" data-w="${m.replace(/"/g,'')}">${m}</span>`;
+  const raw = text || '';
+  // Word-match on the RAW text first, then escape each piece individually — escaping the whole
+  // string up front (as this used to do) turns a literal " into the entity &quot;, and the word
+  // regex would then wrongly match the letters "quot" inside that entity as if it were a real
+  // word, tearing the entity apart into a stray clickable "quot" span on screen.
+  return raw.replace(/([A-Za-z']+)|([^A-Za-z']+)/g, (m, word, rest)=>{
+    if(word){
+      const isLevelWord = !!levelWords && levelWords.has(word.toLowerCase());
+      const cls = isLevelWord ? 'vsync-word vsync-word-level' : 'vsync-word';
+      return `<span class="${cls}" data-w="${escapeHtml(word)}">${escapeHtml(word)}</span>`;
+    }
+    return escapeHtml(rest);
   });
 }
 
@@ -2774,7 +2782,7 @@ function updateVsyncCaptionNow(){
    grammar/examples tabs are grounded in the actual sentence rather than a generic one. The
    panel mounts inside the fullscreen element itself via getOverlayMountEl(), so it stays
    visible without kicking the person out of fullscreen. */
-function handleVsyncWordTap(videoEl, word, cueText){
+function handleVsyncWordTap(videoEl, word, cueText, dialogueContext){
   if(!word) return;
   if(videoEl) videoEl.pause();
   // If this word was already picked/translated by the external-AI subtitle analysis (the
@@ -2789,7 +2797,27 @@ function handleVsyncWordTap(videoEl, word, cueText){
     if(fromSuggestions) known = fromSuggestions;
   }
   const wordObj = known ? { en: known.en || word, fa: known.fa || '', example: known.example || '' } : { en: word };
-  openWordDetailPanel(wordObj, { sentence: (known && known.example) || cueText || '' });
+  openWordDetailPanel(wordObj, { sentence: (known && known.example) || cueText || '', context: dialogueContext || '' });
+}
+
+/* Builds a small window of surrounding subtitle dialogue (a few cues before/after the tapped
+   one) as one plain-text block, with the tapped line marked — passed to the AI grammar/practical-
+   notes prompts alongside the exact sentence so the meaning can be worked out from the real
+   back-and-forth of the scene, not just one isolated line. Purely extra context: the exact
+   sentence used for marking/highlighting the target word is unaffected. */
+function buildVsyncDialogueContext(cues, cueIdx, before, after){
+  if(!cues || cueIdx==null || cueIdx<0 || !cues[cueIdx]) return '';
+  before = (before==null) ? 3 : before;
+  after = (after==null) ? 3 : after;
+  const start = Math.max(0, cueIdx - before);
+  const end = Math.min(cues.length - 1, cueIdx + after);
+  if(end<=start) return '';
+  const lines = [];
+  for(let i=start;i<=end;i++){
+    const marker = i===cueIdx ? '>> ' : '   ';
+    lines.push(marker + cues[i].text.replace(/\n/g,' '));
+  }
+  return lines.join('\n');
 }
 
 /* Finds the cue that should be showing at time t (seconds). Cues are sorted ascending, so the
@@ -5632,13 +5660,16 @@ function buildGrammarImportPrompt(wordObj, sentence, en){
    merged into ONE prompt/JSON shape — used by the "دریافت کارت از هوش مصنوعی دیگر" shortcut so a
    single paste from ChatGPT (or any other model) fills in all three tabs (دستور زبان، نکات کاربردی،
    نمونه‌ها) at once, instead of the person having to repeat the copy/paste round-trip three times. */
-function buildFullCardImportPrompt(wordObj, sentence, en, fa){
+function buildFullCardImportPrompt(wordObj, sentence, en, fa, dialogueContext){
   const rawSentence = (sentence || (wordObj && wordObj.example) || '').trim();
   const marked = rawSentence ? markTargetWordInSentence(rawSentence, en) : '';
   const sentenceNote = marked
     ? `جمله‌ی واقعی که این کلمه در آن به‌کار رفته دقیقاً همین است: "${marked}" (کلمه‌ی هدف بین ** ** مشخص شده). همه چیز را بر پایه‌ی همین جمله بگو، نه یک تعریف کلی از دیکشنری.`
     : `جمله‌ی مشخصی برای این کلمه در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برایش در نظر بگیر و بر پایه‌ی همان جمله توضیح بده.`;
-  const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات دانشگاهی یا زبان‌شناسی. ${sentenceNote}
+  const contextNote = dialogueContext
+    ? ` چند خط دیالوگ قبل و بعد از همین جمله هم در پیام کاربر داده می‌شود؛ فقط از آن‌ها برای فهم بهتر لحن/معنی واقعی همان جمله کمک بگیر — پاسخ نهایی همچنان باید فقط درباره‌ی همان جمله‌ی هدف باشد، نه کل دیالوگ.`
+    : '';
+  const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات دانشگاهی یا زبان‌شناسی. ${sentenceNote}${contextNote}
 یک کارت آموزشی کامل برای این کلمه بساز که هر سه بخش زیر را همزمان پوشش بدهد: دستور زبان و معنی در جمله، نکات کاربردی، و چند نمونه جمله‌ی دیگر.
 فقط و فقط یک آبجکت JSON معتبر و خالص برگردان — بدون Markdown، بدون فنس \`\`\`json، بدون هیچ توضیح قبل یا بعدش، دقیقاً و فقط خودِ JSON، با این ساختار دقیق:
 {
@@ -5650,25 +5681,30 @@ function buildFullCardImportPrompt(wordObj, sentence, en, fa){
 "examples": [{"en": "یک جمله نمونه انگلیسی طبیعی و کوتاه با همین کلمه", "fa": "ترجمه فارسی روان همان جمله"}]
 }
 در examples دقیقاً ۴ جمله‌ی متفاوت از هم بساز، هرکدام با موقعیت یا زمینه‌ای متفاوت از بقیه، و جمله‌ی واقعی بالا را عیناً تکرار نکن.`;
-  const userMessage = `کلمه انگلیسی: "${en}"${fa ? ` (معنی فارسی: ${fa})` : ''}`;
+  let userMessage = `کلمه انگلیسی: "${en}"${fa ? ` (معنی فارسی: ${fa})` : ''}`;
+  if(dialogueContext) userMessage += `\n\nچند خط دیالوگ قبل و بعد (خط علامت‌خورده با >> همان جمله‌ی هدف است):\n${dialogueContext}`;
   return { systemPrompt, userMessage };
 }
 
-function buildGrammarDictPrompt(en, sentence){
+function buildGrammarDictPrompt(en, sentence, dialogueContext){
   const markedSentence = sentence ? markTargetWordInSentence(sentence, en) : '';
   const sentenceNote = markedSentence
     ? `جمله‌ی واقعی که این کلمه در آن به‌کار رفته دقیقاً همین است: "${markedSentence}" (کلمه‌ی هدف بین ** ** مشخص شده است). معنی را دقیقاً بر اساس همین جمله بده، نه یک تعریف کلی از دیکشنری. اگر معنی کلمه در همین جمله با رایج‌ترین معنی‌اش فرق دارد (مثلاً little که معمولاً «کوچک» است ولی گاهی «کمی، تا حدی» معنی می‌دهد)، حتماً همان معنی خاص همین جمله را در inContextMeanings بگذار.`
     : `جمله‌ی مشخصی برای این کلمه در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برای آن در نظر بگیر و بر پایه‌ی همان جمله معنی بده.`;
-  const chatSystemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات دانشگاهی یا زبان‌شناسی. ${sentenceNote}`;
+  const contextNote = dialogueContext
+    ? ` علاوه بر این، چند خط دیالوگ قبل و بعد از این جمله هم در ادامه داده می‌شود؛ فقط از آن‌ها برای فهم بهتر لحن و معنی واقعی کمک بگیر، نه برای تغییر تمرکز پاسخ که باید فقط روی همان جمله‌ی هدف باشد.`
+    : '';
+  const chatSystemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات دانشگاهی یا زبان‌شناسی. ${sentenceNote}${contextNote}`;
   const jsonInstruction = `
 فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown، بدون فنس \`\`\`json، بدون هیچ متن اضافه) با دقیقاً این ساختار برگردان:
 {"paragraph": "یک یا دو جمله‌ی ساده‌ی فارسی که می‌گوید کلمه \\"${en}\\" در همین جمله دقیقاً چه معنایی دارد و چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده — فقط اگر واقعاً نکته‌ی مفیدی هست بگو، وگرنه کوتاه رد شو", "inContextMeanings": ["۱ تا ۳ معادل فارسی کوتاه، مخصوص همین جمله"], "generalMeanings": ["۲ تا ۴ معادل فارسی کوتاه رایج این کلمه در حالت کلی"]}`;
-  const userMessage = `کلمه انگلیسی: "${en}"`;
+  let userMessage = `کلمه انگلیسی: "${en}"`;
+  if(dialogueContext) userMessage += `\n\nچند خط دیالوگ قبل و بعد (خط علامت‌خورده با >> همان جمله‌ی هدف است):\n${dialogueContext}`;
   return { systemPrompt: chatSystemPrompt + jsonInstruction, chatSystemPrompt, userMessage };
 }
 
-async function fetchGrammarExplanation(key, en, sentence){
-  const { systemPrompt, userMessage } = buildGrammarDictPrompt(en, sentence);
+async function fetchGrammarExplanation(key, en, sentence, dialogueContext){
+  const { systemPrompt, userMessage } = buildGrammarDictPrompt(en, sentence, dialogueContext);
   const raw = await geminiOnce(key, systemPrompt, userMessage);
   const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
   const obj = JSON.parse(cleaned);
@@ -5685,10 +5721,10 @@ async function fetchGrammarExplanation(key, en, sentence){
    in the "دستور زبان" tab. `sentence` should be the real subtitle/example line the word came
    from; falls back to wordObj.example if not given, and to a model-invented natural sentence if
    neither is available. Doesn't ask for JSON, so its ChatGPT and API prompts are identical. */
-function buildContextGrammarPrompt(wordObj, sentence){
+function buildContextGrammarPrompt(wordObj, sentence, dialogueContext){
   const en = ((wordObj && wordObj.en) || '').trim();
   const rawSentence = (sentence || (wordObj && wordObj.example) || '').trim();
-  const systemPrompt = 'تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. یک جمله و یک کلمه‌ی مشخص در آن جمله بهت داده می‌شود. با زبانی ساده و روزمره (نه اصطلاحات دستور زبان یا زبان‌شناسی) در حد ۲ تا ۳ جمله‌ی فارسی پیوسته بگو این کلمه دقیقاً در همین جمله چه معنایی می‌دهد. فقط اگر واقعاً نکته‌ی مفیدی برای یادگیری هست اضافه کن — مثلاً اگر معنی این کلمه در این جمله با معنی رایج‌ترش فرق دارد (مثلاً وقتی little یعنی «کمی، تا حدی» نه «کوچک»)، همین تفاوت را ساده بگو؛ یا اگر چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده نکته‌ی جالبی دارد، آن را هم بگو. اگر نکته‌ی خاصی نیست، فقط معنی را در همان بافت با یک جمله‌ی کوتاه توضیح بده. فقط و فقط متن پاراگراف فارسی را برگردان، بدون Markdown و بدون عنوان یا مقدمه.';
+  const systemPrompt = 'تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. یک جمله و یک کلمه‌ی مشخص در آن جمله بهت داده می‌شود. با زبانی ساده و روزمره (نه اصطلاحات دستور زبان یا زبان‌شناسی) در حد ۲ تا ۳ جمله‌ی فارسی پیوسته بگو این کلمه دقیقاً در همین جمله چه معنایی می‌دهد. فقط اگر واقعاً نکته‌ی مفیدی برای یادگیری هست اضافه کن — مثلاً اگر معنی این کلمه در این جمله با معنی رایج‌ترش فرق دارد (مثلاً وقتی little یعنی «کمی، تا حدی» نه «کوچک»)، همین تفاوت را ساده بگو؛ یا اگر چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده نکته‌ی جالبی دارد، آن را هم بگو. اگر نکته‌ی خاصی نیست، فقط معنی را در همان بافت با یک جمله‌ی کوتاه توضیح بده. اگر چند خط دیالوگ قبل و بعد هم داده شده، فقط برای فهم بهتر لحن/معنی از آن‌ها کمک بگیر — توضیح نهایی باید فقط درباره‌ی همان جمله‌ی هدف باشد، نه کل دیالوگ. فقط و فقط متن پاراگراف فارسی را برگردان، بدون Markdown و بدون عنوان یا مقدمه.';
   let userMessage;
   if(rawSentence){
     const marked = markTargetWordInSentence(rawSentence, en);
@@ -5696,11 +5732,12 @@ function buildContextGrammarPrompt(wordObj, sentence){
   }else{
     userMessage = `جمله‌ی مشخصی در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برای کلمه‌ی هدف در نظر بگیر و طوری فرض کن که همان کلمه در آن جمله بین ** ** مشخص شده، سپس بر پایه‌ی همان جمله توضیح بده. کلمه‌ی هدف: "${en}"`;
   }
+  if(dialogueContext) userMessage += `\n\nچند خط دیالوگ قبل و بعد از همین جمله (فقط برای بافت/سیاق، خط علامت‌خورده با >> همان جمله‌ی هدف است):\n${dialogueContext}`;
   return { systemPrompt, userMessage };
 }
 
-async function fetchContextGrammarExplanation(key, wordObj, sentence){
-  const { systemPrompt, userMessage } = buildContextGrammarPrompt(wordObj, sentence);
+async function fetchContextGrammarExplanation(key, wordObj, sentence, dialogueContext){
+  const { systemPrompt, userMessage } = buildContextGrammarPrompt(wordObj, sentence, dialogueContext);
   const raw = await geminiOnce(key, systemPrompt, userMessage);
   return raw.trim();
 }
@@ -5726,20 +5763,24 @@ function openChatGptWithPrompt(promptParts){
    explanation doesn't: common collocations, idioms/phrasal verbs, near-synonyms Persian
    speakers mix this word up with, a typical L1-interference mistake, and a short synonym
    list. Fetched automatically the first time the "توضیح" tab opens (no button click needed). */
-function buildPracticalNotesPrompt(en, fa, sentence){
+function buildPracticalNotesPrompt(en, fa, sentence, dialogueContext){
+  const contextNote = dialogueContext
+    ? ' اگر چند خط دیالوگ قبل و بعد هم داده شده، فقط برای فهم بهتر لحن/سیاق واقعی کلمه در همان صحنه از آن کمک بگیر؛ نکاتت باید همچنان درباره‌ی خودِ کلمه باشد، نه خلاصه‌ی دیالوگ.'
+    : '';
   const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات تخصصی. درباره‌ی کلمه‌ی انگلیسی داده‌شده، هر کدام از این موارد را فقط اگر واقعاً نکته‌ی مفیدی برای گفتنش داری بنویس؛ هر مورد بی‌فایده را کلاً حذف کن (مجبور نیستی همه را پر کنی). هر عنوان را با ** ** پررنگ کن و زیرش با خط تیره «- » بنویس:
 **ترکیب‌های رایج**: ۲ تا ۳ ترکیب پرکاربرد با همین کلمه، هرکدام با معنی فارسی کوتاه.
 **اصطلاح‌ها**: اگر این کلمه در یک اصطلاح یا فعل دوکلمه‌ای رایج به‌کار می‌رود، ۱ تا ۳ مورد با معنی فارسی‌شان.
 **کلمات مشابه**: ۲ تا ۳ کلمه‌ی نزدیک‌معنی که معمولاً با این کلمه قاطی می‌شوند، هرکدام با یک تفاوت کوتاه.
 **نکته‌ی رایج فارسی‌زبانان**: یک اشتباه معمول که فارسی‌زبانان با این کلمه می‌کنند، اگر چنین چیزی وجود دارد.
 **مترادف‌ها**: ۲ تا ۴ مترادف نزدیک انگلیسی، جدا شده با «، ».
-کوتاه و کاربردی بنویس، بدون مقدمه یا جمع‌بندی، و فقط همین متن را برگردان، بدون JSON و بدون فنس.`;
-  const userMessage = `کلمه انگلیسی: "${en}"${fa ? ` (معنی: ${fa})` : ''}${sentence ? `\nجمله‌ای که این کلمه در آن به‌کار رفته: "${sentence}"` : ''}`;
+کوتاه و کاربردی بنویس، بدون مقدمه یا جمع‌بندی، و فقط همین متن را برگردان، بدون JSON و بدون فنس.${contextNote}`;
+  let userMessage = `کلمه انگلیسی: "${en}"${fa ? ` (معنی: ${fa})` : ''}${sentence ? `\nجمله‌ای که این کلمه در آن به‌کار رفته: "${sentence}"` : ''}`;
+  if(dialogueContext) userMessage += `\n\nچند خط دیالوگ قبل و بعد (خط علامت‌خورده با >> همان جمله‌ی هدف است):\n${dialogueContext}`;
   return { systemPrompt, userMessage };
 }
 
-async function fetchPracticalUsageNotes(key, en, fa, sentence){
-  const { systemPrompt, userMessage } = buildPracticalNotesPrompt(en, fa, sentence);
+async function fetchPracticalUsageNotes(key, en, fa, sentence, dialogueContext){
+  const { systemPrompt, userMessage } = buildPracticalNotesPrompt(en, fa, sentence, dialogueContext);
   const raw = await geminiOnce(key, systemPrompt, userMessage);
   return raw.trim();
 }
@@ -5831,6 +5872,12 @@ function openWordDetailPanel(word, contextInfo){
   if(!en) return;
   const enLower = en.toLowerCase();
   const sentence = (contextInfo.sentence || word.example || '').trim();
+  // A few lines of real dialogue before/after `sentence` (only ever available when opened from
+  // the video sync player's caption tap) — passed to the grammar/practical-notes prompts as
+  // extra context so the meaning can be worked out from the actual scene, not just one isolated
+  // line. Doesn't affect `sentence` itself (still the exact line used for marking the target
+  // word) or the "نمونه از همین متن" translation.
+  const dialogueContext = (contextInfo.context || '').trim();
 
   const settings = loadAiSettings();
   const ready = !!(settings.provider==='google' && settings.key);
@@ -6176,8 +6223,8 @@ function openWordDetailPanel(word, contextInfo){
      spent an in-app AI request) can offer the exact same "پرسیدن در ChatGPT" shortcut, not just
      the loaded tab content. */
   function getPromptPartsForTab(tab){
-    if(tab==='grammar') return [buildContextGrammarPrompt(word, sentence), buildGrammarDictPrompt(en, sentence)];
-    if(tab==='explain') return buildPracticalNotesPrompt(en, state.quickMeaning, sentence);
+    if(tab==='grammar') return [buildContextGrammarPrompt(word, sentence, dialogueContext), buildGrammarDictPrompt(en, sentence, dialogueContext)];
+    if(tab==='explain') return buildPracticalNotesPrompt(en, state.quickMeaning, sentence, dialogueContext);
     return buildExampleBatchPrompt(en, state.quickMeaning, sentence ? [sentence] : [], 4);
   }
 
@@ -6321,7 +6368,7 @@ function openWordDetailPanel(word, contextInfo){
      از هوش مصنوعی دیگر" row — exposed per-tab here so the placeholder (before the in-app AI has
      ever been asked) can offer the exact same shortcut. */
   function getImportConfigForTab(tab){
-    return { promptParts: buildFullCardImportPrompt(word, sentence, en, state.quickMeaning), parseAnswer: parseFullCardImport, renderFn: renderTab };
+    return { promptParts: buildFullCardImportPrompt(word, sentence, en, state.quickMeaning, dialogueContext), parseAnswer: parseFullCardImport, renderFn: renderTab };
   }
 
   function dictBoxHtml(g){
@@ -6351,7 +6398,7 @@ function openWordDetailPanel(word, contextInfo){
     wireImportCardRow('wdGrammarImport', getImportConfigForTab('grammar').promptParts, parseFullCardImport, renderTab);
 
     if(!state.contextGrammar && !state.contextGrammarError){
-      fetchContextGrammarExplanation(settings.key, word, sentence).then(text=>{
+      fetchContextGrammarExplanation(settings.key, word, sentence, dialogueContext).then(text=>{
         state.contextGrammar = text || 'توضیحی دریافت نشد.';
         if(state.activeTab!=='grammar') return;
         const wrap = tabContent.querySelector('#wdContextGrammarWrap');
@@ -6365,7 +6412,7 @@ function openWordDetailPanel(word, contextInfo){
     }
 
     if(!state.grammar){
-      fetchGrammarExplanation(settings.key, en, sentence).then(g=>{
+      fetchGrammarExplanation(settings.key, en, sentence, dialogueContext).then(g=>{
         state.grammar = g;
         if(state.activeTab!=='grammar') return;
         const wrap = tabContent.querySelector('#wdDictWrap');
@@ -6394,7 +6441,7 @@ function openWordDetailPanel(word, contextInfo){
     wireChatGptButton('wdExplainChatGptBtn', ()=> getPromptPartsForTab('explain'));
     wireImportCardRow('wdExplainImport', getImportConfigForTab('explain').promptParts, parseFullCardImport, renderTab);
     if(state.deepExplain || state.deepExplainError) return;
-    fetchPracticalUsageNotes(settings.key, en, state.quickMeaning, sentence).then(text=>{
+    fetchPracticalUsageNotes(settings.key, en, state.quickMeaning, sentence, dialogueContext).then(text=>{
       state.deepExplain = text;
       if(state.activeTab!=='explain') return;
       const wrap = tabContent.querySelector('#wdExplainWrap');
