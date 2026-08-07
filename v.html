@@ -1968,6 +1968,18 @@ const SRT_STOPWORDS = new Set(['a','an','the','and','or','but','if','then','than
   'gonna','wanna','gotta','yeah','okay','ok','oh','uh','um','uhh','umm','hey','hi','hello','bye','well','like','really','right','one','two','three','yes','sure','maybe','please','thanks','thank'
 ]);
 
+/* Some .srt files (especially ones scraped/exported from web pages) contain literal HTML
+   entities like &quot; &amp; &#39; instead of the real characters. Decoding them here means
+   they show up correctly everywhere the subtitle text is used (captions, word panels, AI
+   prompts) instead of leaking as raw "&quot;"-style text on screen. Safe to use innerHTML for
+   this since it's only ever handed back through .value, never re-inserted as markup. */
+function decodeHtmlEntities(str){
+  if(!str) return str;
+  const ta = document.createElement('textarea');
+  ta.innerHTML = str;
+  return ta.value;
+}
+
 /* Strips an .srt file down to just its spoken-line text: drops sequence numbers, timestamps,
    and any <i>/<b>/{...} styling tags, keeping one entry per subtitle line. */
 function parseSrtLines(text){
@@ -1979,7 +1991,7 @@ function parseSrtLines(text){
     if(!t) continue;
     if(/^\d+$/.test(t)) continue; // sequence number
     if(/^\d{2}:\d{2}:\d{2}[,.]\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}[,.]\d{3}/.test(t)) continue; // timestamp
-    const clean = t.replace(/<[^>]+>/g,'').replace(/\{[^}]*\}/g,'').replace(/^-\s*/,'').trim();
+    const clean = decodeHtmlEntities(t.replace(/<[^>]+>/g,'').replace(/\{[^}]*\}/g,'').replace(/^-\s*/,'').trim());
     if(clean) out.push(clean);
   }
   return out;
@@ -2004,9 +2016,9 @@ function parseSrtCues(text){
     if(!m) continue;
     const start = toSeconds(m[1],m[2],m[3],m[4]);
     const end = toSeconds(m[5],m[6],m[7],m[8]);
-    const cueText = blockLines.slice(idx+1)
+    const cueText = decodeHtmlEntities(blockLines.slice(idx+1)
       .map(l=>l.replace(/<[^>]+>/g,'').replace(/\{[^}]*\}/g,''))
-      .join('\n').trim();
+      .join('\n').trim());
     if(cueText && end>start) cues.push({ start, end, text: cueText });
   }
   cues.sort((a,b)=>a.start-b.start);
@@ -2959,15 +2971,16 @@ async function fetchSrtIdiomSelection(key, lines, knownWords, level){
    text directly (see parseSrtWordResponse), not against the old candidate list. Idiom-finding is
    still only requested when includeIdioms is true, reusing the same attached text. */
 function buildSrtWordPrompt(candidates, lines, knownWords, level, includeIdioms){
+  const levelLabel = level ? (CEFR_LEVELS.find(l=>l.value===level)||{}).label || level : '';
   const levelNote = level
-    ? `سطح زبان کاربر ${level} (طبق چارچوب CEFR) است؛ فقط کلماتی تقریباً هم‌سطح همین را انتخاب کن.`
+    ? `سطح زبان کاربر دقیقاً «${levelLabel}» (کد ${level} طبق چارچوب CEFR) است؛ فقط و فقط کلماتی تقریباً هم‌سطح همین سطح را انتخاب کن — نه پایین‌تر، نه بالاتر.`
     : 'سطح زبان کاربر مشخص نشده (در ⚙ تنظیمات «سطح زبان» را انتخاب کن)؛ تا آن موقع کلماتی مناسب یک زبان‌آموز مبتدی تا متوسط انتخاب کن.';
   const candidateList = (candidates||[]).map(c => `${c.en}(${c.count})`).join('، ');
   const knownSample = (knownWords||[]).slice(0, 200).join('، ');
 
-  let systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. در ادامه‌ی پیام کاربر، خطوط واقعی زیرنویس یک فیلم/سریال می‌آید. با خواندن دقیق خودِ همین متن (نه حدس زدن از روی یک کلمه‌ی تنها)، خودت مستقلاً از میان کلماتی که واقعاً و عیناً در همین متن آمده‌اند (بدون تغییر املا) هرچند کلمه که یادگیری‌شان برای کاربر مفید و هم‌سطح باشد انتخاب کن — به هیچ تعداد خاصی محدود نباش. کلمات خیلی پایه/بدیهی (مثل be, have, go, this, and)، کلمات خیلی نادر یا غیرضروری، و اسم خاص یا نام شخصیت‌ها را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa) را دقیقاً بر اساس همان کاربردی که در متن واقعی زیرنویس دارد بنویس (نه صرفاً معنی عمومی دیکشنری، اگر با کاربرد این متن فرق دارد)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس.';
+  let systemPrompt = `تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی، مخصوص یک زبان‌آموز در سطح ${level ? `«${levelLabel}» (${level})` : 'مبتدی تا متوسط (چون هنوز سطح مشخص نکرده)'}. در ادامه‌ی پیام کاربر، خطوط واقعی زیرنویس یک فیلم/سریال می‌آید. با خواندن دقیق خودِ همین متن (نه حدس زدن از روی یک کلمه‌ی تنها)، خودت مستقلاً از میان کلماتی که واقعاً و عیناً در همین متن آمده‌اند (بدون تغییر املا) هرچند کلمه که یادگیری‌شان برای همین کاربر مفید و دقیقاً هم‌سطح ${level ? levelLabel : 'او'} باشد انتخاب کن — به هیچ تعداد خاصی محدود نباش. کلمات خیلی پایه/بدیهی (مثل be, have, go, this, and)، کلمات خیلی نادر یا غیرضروری، و اسم خاص یا نام شخصیت‌ها را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa) را دقیقاً بر اساس همان کاربردی که در متن واقعی زیرنویس دارد بنویس (نه صرفاً معنی عمومی دیکشنری، اگر با کاربرد این متن فرق دارد)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس.`;
 
-  let userMessage = `${levelNote}`;
+  let userMessage = `🎯 سطح زبان: ${levelNote}`;
   let schema = '{"words":[{"en":"...","fa":"...","definition":"...","level":"..."}]';
 
   if(includeIdioms){
@@ -5899,6 +5912,7 @@ function openWordDetailPanel(word, contextInfo){
         <button type="button" class="wd-speak-btn" id="wdSpeakBtn" title="پخش تلفظ">🔊</button>
         <button type="button" class="wd-speak-btn" id="wdToolsBtn" title="دیکشنری و ابزارها">🔗</button>
         <button type="button" class="wd-speak-btn" id="wdAiBtn" title="دستیار هوشمند">🤖</button>
+        ${ready ? `<button type="button" class="wd-speak-btn" id="wdFreeDictHeaderBtn" title="دیکشنری آزاد (تعریف کامل، بدون نیاز به هوش مصنوعی)">📕</button>` : ''}
       </div>
       <div class="wd-quickmeaning" id="wdQuickMeaning">${state.quickMeaning ? escapeHtml(state.quickMeaning) : (ready ? '<span class="spinner"></span>' : '')}</div>
 
@@ -5918,6 +5932,8 @@ function openWordDetailPanel(word, contextInfo){
         <button type="button" class="btn btn-primary btn-small" id="wdLearnBtn" ${alreadyAdded?'disabled':''}>${alreadyAdded?'📖 اضافه شده':'📖 یاد بگیر'}</button>
         <button type="button" class="btn btn-ghost btn-small" id="wdIgnoreBtn" ${alreadyIgnored?'disabled':''}>${alreadyIgnored?'🚫 نادیده گرفته شد':'🚫 نادیده بگیر'}</button>
       </div>
+
+      ${ready ? `<div id="wdFreeDictHeaderWrap"></div>` : ''}
 
       ${!ready ? `<div class="ai-note">هنوز کلید Google Gemini را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید رایگان خودتان را وارد کنید.</div><div id="wdFreeDictWrap"></div>` : `
       <div class="ep-type-filter-row" id="wdTabsRow">
@@ -5964,6 +5980,25 @@ function openWordDetailPanel(word, contextInfo){
   overlay.querySelector('#wdSpeakBtn').onclick = (e)=> speakText(en, e.currentTarget);
   overlay.querySelector('#wdToolsBtn').onclick = ()=> openBrowseToolsPanel({ en, fa: state.quickMeaning||word.fa||'', example: sentence });
   overlay.querySelector('#wdAiBtn').onclick = ()=> openAiPanel({ en, fa: state.quickMeaning||word.fa||'', example: sentence });
+
+  /* "📕" in the header — lets the free dictionary's full entry (all definitions/examples/
+     synonyms) be pulled up directly, any time, with one tap. Previously this full box only ever
+     appeared as a fallback after the in-app AI (grammar/practical-notes) call failed; now it's
+     reachable on its own regardless of whether the AI call has been made or has succeeded. Toggles
+     open/closed so tapping again collapses it instead of re-fetching (the lookup itself is cached
+     anyway, see freeDictionaryEntryCache). */
+  const fdHeaderBtn = overlay.querySelector('#wdFreeDictHeaderBtn');
+  if(fdHeaderBtn){
+    fdHeaderBtn.onclick = ()=>{
+      const wrap = overlay.querySelector('#wdFreeDictHeaderWrap');
+      if(!wrap) return;
+      if(wrap.childElementCount){
+        wrap.innerHTML = '';
+      }else{
+        mountFreeDictionaryFallback(wrap, en);
+      }
+    };
+  }
 
   if(state.idiom){
     wireIdiomAddBtn(overlay, state.idiom);
