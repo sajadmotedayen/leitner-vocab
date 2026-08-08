@@ -5639,27 +5639,6 @@ function markTargetWordInSentence(sentence, word){
    call can also be reused, unchanged, for the "پرسیدن در ChatGPT" button — `chatSystemPrompt`
    below is only the JSON-output sentence removed (nothing reworded), since asking ChatGPT for a
    raw JSON object just makes its answer confusing to read there. */
-/* Same content as buildContextGrammarPrompt + buildGrammarDictPrompt, merged into ONE prompt
-   that asks for a single JSON object — used only for the "دریافت کارت از هوش مصنوعی دیگر" import
-   flow, so the person can paste one ChatGPT (or any other model's) answer back in and get the
-   exact same دستور زبان card the in-app AI would have produced, instead of two separate calls. */
-function buildGrammarImportPrompt(wordObj, sentence, en){
-  const rawSentence = (sentence || (wordObj && wordObj.example) || '').trim();
-  const marked = rawSentence ? markTargetWordInSentence(rawSentence, en) : '';
-  const sentenceNote = marked
-    ? `جمله‌ی واقعی که این کلمه در آن به‌کار رفته دقیقاً همین است: "${marked}" (کلمه‌ی هدف بین ** ** مشخص شده). همه چیز را بر پایه‌ی همین جمله بگو، نه یک تعریف کلی از دیکشنری.`
-    : `جمله‌ی مشخصی برای این کلمه در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برایش در نظر بگیر و بر پایه‌ی همان جمله توضیح بده.`;
-  const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات دانشگاهی یا زبان‌شناسی. ${sentenceNote}
-فقط و فقط یک آبجکت JSON معتبر و خالص برگردان — بدون Markdown، بدون فنس \`\`\`json، بدون هیچ توضیح قبل یا بعدش، دقیقاً و فقط خودِ JSON، با این ساختار:
-{"contextParagraph": "۲ تا ۳ جمله‌ی فارسی پیوسته که می‌گوید این کلمه در همین جمله دقیقاً چه معنایی دارد و چرا همین کلمه انتخاب شده؛ فقط اگر واقعاً نکته‌ی مفیدی هست بگو", "paragraph": "یک یا دو جمله‌ی ساده‌ی فارسی درباره‌ی معنی همین کلمه در همین جمله", "inContextMeanings": ["۱ تا ۳ معادل فارسی کوتاه مخصوص همین جمله"], "generalMeanings": ["۲ تا ۴ معادل فارسی کوتاه رایج این کلمه به‌طور کلی"]}`;
-  const userMessage = `کلمه انگلیسی: "${en}"`;
-  return { systemPrompt, userMessage };
-}
-
-/* Combined version of buildGrammarImportPrompt + buildPracticalNotesPrompt + buildExampleBatchPrompt,
-   merged into ONE prompt/JSON shape — used by the "دریافت کارت از هوش مصنوعی دیگر" shortcut so a
-   single paste from ChatGPT (or any other model) fills in all three tabs (دستور زبان، نکات کاربردی،
-   نمونه‌ها) at once, instead of the person having to repeat the copy/paste round-trip three times. */
 function buildFullCardImportPrompt(wordObj, sentence, en, fa, dialogueContext){
   const rawSentence = (sentence || (wordObj && wordObj.example) || '').trim();
   const marked = rawSentence ? markTargetWordInSentence(rawSentence, en) : '';
@@ -5673,8 +5652,7 @@ function buildFullCardImportPrompt(wordObj, sentence, en, fa, dialogueContext){
 یک کارت آموزشی کامل برای این کلمه بساز که هر سه بخش زیر را همزمان پوشش بدهد: دستور زبان و معنی در جمله، نکات کاربردی، و چند نمونه جمله‌ی دیگر.
 فقط و فقط یک آبجکت JSON معتبر و خالص برگردان — بدون Markdown، بدون فنس \`\`\`json، بدون هیچ توضیح قبل یا بعدش، دقیقاً و فقط خودِ JSON، با این ساختار دقیق:
 {
-"contextParagraph": "۲ تا ۳ جمله‌ی فارسی پیوسته که می‌گوید این کلمه در همین جمله دقیقاً چه معنایی دارد و چرا همین کلمه انتخاب شده؛ فقط اگر واقعاً نکته‌ی مفیدی هست بگو",
-"paragraph": "یک یا دو جمله‌ی ساده‌ی فارسی درباره‌ی معنی همین کلمه در همین جمله",
+"paragraph": "۲ تا ۳ جمله‌ی فارسی پیوسته، با زبان ساده و روزمره، که می‌گوید این کلمه دقیقاً در همین جمله چه معنایی دارد. فقط اگر واقعاً نکته‌ی مفیدی هست اضافه کن — مثلاً اگر معنی این کلمه در این جمله با معنی رایج‌ترش فرق دارد، یا چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده؛ وگرنه فقط معنی را در همان بافت کوتاه بگو",
 "inContextMeanings": ["۱ تا ۳ معادل فارسی کوتاه مخصوص همین جمله"],
 "generalMeanings": ["۲ تا ۴ معادل فارسی کوتاه رایج این کلمه به‌طور کلی"],
 "practicalNotes": "متن نکات کاربردی، به‌صورت متن ساده (نه JSON تو در تو)، با همین قالب: هر عنوان با ** ** پررنگ شود و هر مورد زیرش با خط تیره «- » شروع شود؛ فقط مواردی را بنویس که واقعاً نکته‌ی مفیدی دارند و بقیه را کلاً حذف کن: **ترکیب‌های رایج** (۲ تا ۳ ترکیب پرکاربرد با همین کلمه، هرکدام با معنی فارسی کوتاه)، **اصطلاح‌ها** (اگر این کلمه در یک اصطلاح یا فعل دوکلمه‌ای رایج به‌کار می‌رود، ۱ تا ۳ مورد با معنی فارسی)، **کلمات مشابه** (۲ تا ۳ کلمه‌ی نزدیک‌معنی که معمولاً با این کلمه قاطی می‌شوند، هرکدام با یک تفاوت کوتاه)، **نکته‌ی رایج فارسی‌زبانان** (یک اشتباه معمول که فارسی‌زبانان با این کلمه می‌کنند، اگر چنین چیزی وجود دارد)، **مترادف‌ها** (۲ تا ۴ مترادف نزدیک انگلیسی، جدا شده با «، »)",
@@ -5686,18 +5664,25 @@ function buildFullCardImportPrompt(wordObj, sentence, en, fa, dialogueContext){
   return { systemPrompt, userMessage };
 }
 
+/* Single merged prompt for the "دستور زبان" tab: one AI call that returns a short free-flowing
+   Persian paragraph (the word's precise meaning in this exact sentence, only noting why this
+   word was chosen or how its meaning here differs from the common one if that's genuinely
+   useful) together with the in-context/general meaning lists for the dictionary-style box below
+   it. Used to be two separate prompts + two separate AI calls (one plain-text, one JSON) asking
+   for almost the same thing — merged into one JSON call so both the in-app AI and the "پرسیدن در
+   ChatGPT" button only need a single round-trip. */
 function buildGrammarDictPrompt(en, sentence, dialogueContext){
   const markedSentence = sentence ? markTargetWordInSentence(sentence, en) : '';
   const sentenceNote = markedSentence
-    ? `جمله‌ی واقعی که این کلمه در آن به‌کار رفته دقیقاً همین است: "${markedSentence}" (کلمه‌ی هدف بین ** ** مشخص شده است). معنی را دقیقاً بر اساس همین جمله بده، نه یک تعریف کلی از دیکشنری. اگر معنی کلمه در همین جمله با رایج‌ترین معنی‌اش فرق دارد (مثلاً little که معمولاً «کوچک» است ولی گاهی «کمی، تا حدی» معنی می‌دهد)، حتماً همان معنی خاص همین جمله را در inContextMeanings بگذار.`
+    ? `جمله‌ی واقعی که این کلمه در آن به‌کار رفته دقیقاً همین است: "${markedSentence}" (کلمه‌ی هدف بین ** ** مشخص شده است). همه چیز را دقیقاً بر اساس همین جمله بگو، نه یک تعریف کلی از دیکشنری. اگر معنی کلمه در همین جمله با رایج‌ترین معنی‌اش فرق دارد (مثلاً little که معمولاً «کوچک» است ولی گاهی «کمی، تا حدی» معنی می‌دهد)، حتماً همان معنی خاص همین جمله را در inContextMeanings بگذار.`
     : `جمله‌ی مشخصی برای این کلمه در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برای آن در نظر بگیر و بر پایه‌ی همان جمله معنی بده.`;
   const contextNote = dialogueContext
     ? ` علاوه بر این، چند خط دیالوگ قبل و بعد از این جمله هم در ادامه داده می‌شود؛ فقط از آن‌ها برای فهم بهتر لحن و معنی واقعی کمک بگیر، نه برای تغییر تمرکز پاسخ که باید فقط روی همان جمله‌ی هدف باشد.`
     : '';
-  const chatSystemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات دانشگاهی یا زبان‌شناسی. ${sentenceNote}${contextNote}`;
+  const chatSystemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و روزمره باشد، نه اصطلاحات دستور زبان یا زبان‌شناسی. ${sentenceNote}${contextNote}`;
   const jsonInstruction = `
 فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown، بدون فنس \`\`\`json، بدون هیچ متن اضافه) با دقیقاً این ساختار برگردان:
-{"paragraph": "یک یا دو جمله‌ی ساده‌ی فارسی که می‌گوید کلمه \\"${en}\\" در همین جمله دقیقاً چه معنایی دارد و چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده — فقط اگر واقعاً نکته‌ی مفیدی هست بگو، وگرنه کوتاه رد شو", "inContextMeanings": ["۱ تا ۳ معادل فارسی کوتاه، مخصوص همین جمله"], "generalMeanings": ["۲ تا ۴ معادل فارسی کوتاه رایج این کلمه در حالت کلی"]}`;
+{"paragraph": "۲ تا ۳ جمله‌ی فارسی پیوسته که می‌گوید کلمه \\"${en}\\" دقیقاً در همین جمله چه معنایی دارد. فقط اگر واقعاً نکته‌ی مفیدی برای یادگیری هست اضافه کن — مثلاً اگر معنی‌اش با معنی رایج‌ترش فرق دارد، یا چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده؛ وگرنه فقط معنی را در همان بافت با یک جمله‌ی کوتاه بگو", "inContextMeanings": ["۱ تا ۳ معادل فارسی کوتاه، مخصوص همین جمله"], "generalMeanings": ["۲ تا ۴ معادل فارسی کوتاه رایج این کلمه در حالت کلی"]}`;
   let userMessage = `کلمه انگلیسی: "${en}"`;
   if(dialogueContext) userMessage += `\n\nچند خط دیالوگ قبل و بعد (خط علامت‌خورده با >> همان جمله‌ی هدف است):\n${dialogueContext}`;
   return { systemPrompt: chatSystemPrompt + jsonInstruction, chatSystemPrompt, userMessage };
@@ -5713,33 +5698,6 @@ async function fetchGrammarExplanation(key, en, sentence, dialogueContext){
     inContextMeanings: Array.isArray(obj.inContextMeanings) ? obj.inContextMeanings.filter(x=>typeof x==='string' && x.trim()) : [],
     generalMeanings: Array.isArray(obj.generalMeanings) ? obj.generalMeanings.filter(x=>typeof x==='string' && x.trim()) : []
   };
-}
-
-/* A short, free-flowing 3–4 sentence Persian paragraph (plain text, not JSON) covering: the
-   word's grammatical role in this exact sentence, its precise contextual meaning, and why the
-   speaker likely chose this word over a simpler synonym. Shown above the dictionary-style box
-   in the "دستور زبان" tab. `sentence` should be the real subtitle/example line the word came
-   from; falls back to wordObj.example if not given, and to a model-invented natural sentence if
-   neither is available. Doesn't ask for JSON, so its ChatGPT and API prompts are identical. */
-function buildContextGrammarPrompt(wordObj, sentence, dialogueContext){
-  const en = ((wordObj && wordObj.en) || '').trim();
-  const rawSentence = (sentence || (wordObj && wordObj.example) || '').trim();
-  const systemPrompt = 'تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. یک جمله و یک کلمه‌ی مشخص در آن جمله بهت داده می‌شود. با زبانی ساده و روزمره (نه اصطلاحات دستور زبان یا زبان‌شناسی) در حد ۲ تا ۳ جمله‌ی فارسی پیوسته بگو این کلمه دقیقاً در همین جمله چه معنایی می‌دهد. فقط اگر واقعاً نکته‌ی مفیدی برای یادگیری هست اضافه کن — مثلاً اگر معنی این کلمه در این جمله با معنی رایج‌ترش فرق دارد (مثلاً وقتی little یعنی «کمی، تا حدی» نه «کوچک»)، همین تفاوت را ساده بگو؛ یا اگر چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده نکته‌ی جالبی دارد، آن را هم بگو. اگر نکته‌ی خاصی نیست، فقط معنی را در همان بافت با یک جمله‌ی کوتاه توضیح بده. اگر چند خط دیالوگ قبل و بعد هم داده شده، فقط برای فهم بهتر لحن/معنی از آن‌ها کمک بگیر — توضیح نهایی باید فقط درباره‌ی همان جمله‌ی هدف باشد، نه کل دیالوگ. فقط و فقط متن پاراگراف فارسی را برگردان، بدون Markdown و بدون عنوان یا مقدمه.';
-  let userMessage;
-  if(rawSentence){
-    const marked = markTargetWordInSentence(rawSentence, en);
-    userMessage = `جمله: "${marked}"\nکلمه‌ی هدف که در جمله‌ی بالا بین ** ** مشخص شده: "${en}"`;
-  }else{
-    userMessage = `جمله‌ی مشخصی در دسترس نیست؛ یک جمله‌ی رایج و طبیعی برای کلمه‌ی هدف در نظر بگیر و طوری فرض کن که همان کلمه در آن جمله بین ** ** مشخص شده، سپس بر پایه‌ی همان جمله توضیح بده. کلمه‌ی هدف: "${en}"`;
-  }
-  if(dialogueContext) userMessage += `\n\nچند خط دیالوگ قبل و بعد از همین جمله (فقط برای بافت/سیاق، خط علامت‌خورده با >> همان جمله‌ی هدف است):\n${dialogueContext}`;
-  return { systemPrompt, userMessage };
-}
-
-async function fetchContextGrammarExplanation(key, wordObj, sentence, dialogueContext){
-  const { systemPrompt, userMessage } = buildContextGrammarPrompt(wordObj, sentence, dialogueContext);
-  const raw = await geminiOnce(key, systemPrompt, userMessage);
-  return raw.trim();
 }
 
 /* Opens ChatGPT (in a new tab) pre-filled with a prompt — used by the "پرسیدن در ChatGPT" buttons
@@ -5916,7 +5874,7 @@ function openWordDetailPanel(word, contextInfo){
     </div>`;
   })();
 
-  const state = { quickMeaning: (word.fa||'').trim(), sentenceTranslation:'', grammar:null, contextGrammar:null, contextGrammarError:'', deepExplain:null, deepExplainError:'', moreExamples:null, activeTab:'grammar', idiom: findGroundedIdiomForWord(en, sentence),
+  const state = { quickMeaning: (word.fa||'').trim(), sentenceTranslation:'', grammar:null, grammarError:'', deepExplain:null, deepExplainError:'', moreExamples:null, activeTab:'grammar', idiom: findGroundedIdiomForWord(en, sentence),
     /* Each tab only fires its in-app AI (Gemini) requests the first time it's actually opened —
        not automatically when the panel appears — since every "جزئیات کلمه" open shouldn't cost
        several API calls before the person has even looked at a tab. Quota is the free Gemini
@@ -6223,7 +6181,7 @@ function openWordDetailPanel(word, contextInfo){
      spent an in-app AI request) can offer the exact same "پرسیدن در ChatGPT" shortcut, not just
      the loaded tab content. */
   function getPromptPartsForTab(tab){
-    if(tab==='grammar') return [buildContextGrammarPrompt(word, sentence, dialogueContext), buildGrammarDictPrompt(en, sentence, dialogueContext)];
+    if(tab==='grammar') return buildGrammarDictPrompt(en, sentence, dialogueContext);
     if(tab==='explain') return buildPracticalNotesPrompt(en, state.quickMeaning, sentence, dialogueContext);
     return buildExampleBatchPrompt(en, state.quickMeaning, sentence ? [sentence] : [], 4);
   }
@@ -6314,21 +6272,6 @@ function openWordDetailPanel(word, contextInfo){
     };
   }
 
-  /* Named parse functions for "دریافت کارت از هوش مصنوعی دیگر" — pulled out of each render*Tab
-     so the exact same parsing can also be wired up on the placeholder (see renderTabPlaceholder),
-     letting a person get a card straight from a pasted ChatGPT answer without ever spending an
-     in-app Gemini call. */
-  function parseGrammarImport(raw){
-    const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
-    const obj = JSON.parse(cleaned);
-    state.contextGrammar = (obj.contextParagraph||'').trim() || 'توضیحی دریافت نشد.';
-    state.contextGrammarError = '';
-    state.grammar = {
-      paragraph: (obj.paragraph||'').trim(),
-      inContextMeanings: Array.isArray(obj.inContextMeanings) ? obj.inContextMeanings.filter(x=>typeof x==='string' && x.trim()) : [],
-      generalMeanings: Array.isArray(obj.generalMeanings) ? obj.generalMeanings.filter(x=>typeof x==='string' && x.trim()) : []
-    };
-  }
   function parseExplainImport(raw){
     state.deepExplain = raw.trim();
     state.deepExplainError = '';
@@ -6347,8 +6290,7 @@ function openWordDetailPanel(word, contextInfo){
   function parseFullCardImport(raw){
     const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
     const obj = JSON.parse(cleaned);
-    state.contextGrammar = (obj.contextParagraph||'').trim() || 'توضیحی دریافت نشد.';
-    state.contextGrammarError = '';
+    state.grammarError = '';
     state.grammar = {
       paragraph: (obj.paragraph||'').trim(),
       inContextMeanings: Array.isArray(obj.inContextMeanings) ? obj.inContextMeanings.filter(x=>typeof x==='string' && x.trim()) : [],
@@ -6382,49 +6324,42 @@ function openWordDetailPanel(word, contextInfo){
     return dictRows.length ? `<div class="wd-dict-box">${dictRows.join('')}</div>` : '';
   }
 
-  function contextGrammarHtml(){
-    if(state.contextGrammar) return `<div class="ai-msg">${escapeHtml(state.contextGrammar)}</div>`;
-    if(state.contextGrammarError) return `<div class="ai-note">${state.contextGrammarError}</div>`;
+  function grammarTabHtml(){
+    if(state.grammar){
+      const paraHtml = state.grammar.paragraph ? `<div class="ai-msg">${escapeHtml(state.grammar.paragraph)}</div>` : '';
+      return paraHtml + dictBoxHtml(state.grammar);
+    }
+    if(state.grammarError) return `<div class="ai-note">${state.grammarError}<div id="wdGrammarFreeDictWrap"></div></div>`;
     return `<div class="ai-msg"><span class="spinner"></span> در حال تحلیل جمله...</div>`;
   }
 
   function renderGrammarTab(){
     tabContent.innerHTML = `
-      <div id="wdContextGrammarWrap">${contextGrammarHtml()}</div>
-      <div id="wdDictWrap">${state.grammar ? dictBoxHtml(state.grammar) : `<div class="ai-msg"><span class="spinner"></span> در حال آماده‌سازی توضیح دستوری...</div>`}</div>
+      <div id="wdGrammarWrap">${grammarTabHtml()}</div>
       ${chatGptButtonHtml('wdGrammarChatGptBtn')}
       ${importCardRowHtml('wdGrammarImport')}`;
     wireChatGptButton('wdGrammarChatGptBtn', ()=> getPromptPartsForTab('grammar'));
     wireImportCardRow('wdGrammarImport', getImportConfigForTab('grammar').promptParts, parseFullCardImport, renderTab);
-
-    if(!state.contextGrammar && !state.contextGrammarError){
-      fetchContextGrammarExplanation(settings.key, word, sentence, dialogueContext).then(text=>{
-        state.contextGrammar = text || 'توضیحی دریافت نشد.';
-        if(state.activeTab!=='grammar') return;
-        const wrap = tabContent.querySelector('#wdContextGrammarWrap');
-        if(wrap) wrap.innerHTML = contextGrammarHtml();
-      }).catch(e=>{
-        state.contextGrammarError = `درخواست ناموفق بود (${escapeHtml(e.message||'')}). محتمل‌ترین دلیل: نبود دسترسی به این سرویس از ایران بدون فیلترشکن، یا نامعتبر بودن کلید API.`;
-        if(state.activeTab!=='grammar') return;
-        const wrap = tabContent.querySelector('#wdContextGrammarWrap');
-        if(wrap) wrap.innerHTML = contextGrammarHtml();
-      });
+    if(state.grammarError){
+      const wrap = tabContent.querySelector('#wdGrammarWrap');
+      if(wrap) mountFreeDictionaryFallback(wrap.querySelector('#wdGrammarFreeDictWrap'), en);
+      return;
     }
+    if(state.grammar) return;
 
-    if(!state.grammar){
-      fetchGrammarExplanation(settings.key, en, sentence, dialogueContext).then(g=>{
-        state.grammar = g;
-        if(state.activeTab!=='grammar') return;
-        const wrap = tabContent.querySelector('#wdDictWrap');
-        if(wrap) wrap.innerHTML = dictBoxHtml(g);
-      }).catch(e=>{
-        if(state.activeTab!=='grammar') return;
-        const wrap = tabContent.querySelector('#wdDictWrap');
-        if(!wrap) return;
-        wrap.innerHTML = `<div class="ai-note">درخواست ناموفق بود (${escapeHtml(e.message||'')}).</div><div id="wdGrammarFreeDictWrap"></div>`;
-        mountFreeDictionaryFallback(wrap.querySelector('#wdGrammarFreeDictWrap'), en);
-      });
-    }
+    fetchGrammarExplanation(settings.key, en, sentence, dialogueContext).then(g=>{
+      state.grammar = g;
+      if(state.activeTab!=='grammar') return;
+      const wrap = tabContent.querySelector('#wdGrammarWrap');
+      if(wrap) wrap.innerHTML = grammarTabHtml();
+    }).catch(e=>{
+      state.grammarError = `درخواست ناموفق بود (${escapeHtml(e.message||'')}). محتمل‌ترین دلیل: نبود دسترسی به این سرویس از ایران بدون فیلترشکن، یا نامعتبر بودن کلید API.`;
+      if(state.activeTab!=='grammar') return;
+      const wrap = tabContent.querySelector('#wdGrammarWrap');
+      if(!wrap) return;
+      wrap.innerHTML = grammarTabHtml();
+      mountFreeDictionaryFallback(wrap.querySelector('#wdGrammarFreeDictWrap'), en);
+    });
   }
 
   function practicalNotesHtml(){
