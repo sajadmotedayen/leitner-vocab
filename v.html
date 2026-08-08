@@ -1398,29 +1398,46 @@ async function fetchRandomExample(key, en, fa, avoid){
   const avoidNote = (avoid && avoid.length)
     ? ` این جمله‌ها قبلاً برای همین کلمه ساخته شده‌اند، جمله جدید باید کاملاً متفاوت باشد و هیچ‌کدام از آن‌ها را تکرار نکند: ${avoid.map(s=>'"'+s+'"').join('، ')}.`
     : '';
-  const systemPrompt = 'تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown، بدون توضیح اضافه) با دقیقاً این دو کلید برگردان: {"example": "یک جمله نمونه انگلیسی ساده، طبیعی و کوتاه که دقیقاً از همان کلمه انگلیسی داده‌شده استفاده می‌کند", "translation": "ترجمه فارسی روان و طبیعی همان جمله"}. هر بار باید جمله‌ای تازه با موقعیت یا زمینه‌ای متفاوت از قبل بسازی.';
+  // Only the example sentence is requested — no translation, since the word's Persian meaning
+  // is already known (saved on the word / shown from the "دستور زبان" tab) and re-translating
+  // the example here would just repeat that same information in review mode.
+  const systemPrompt = 'تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown، بدون توضیح اضافه) با دقیقاً این کلید برگردان: {"example": "یک جمله نمونه انگلیسی ساده، طبیعی و کوتاه که دقیقاً از همان کلمه انگلیسی داده‌شده استفاده می‌کند"}. هر بار باید جمله‌ای تازه با موقعیت یا زمینه‌ای متفاوت از قبل بسازی.';
   const userMessage = `کلمه انگلیسی: "${en}"${fa ? ` (معنی فارسی: ${fa})` : ''}.${avoidNote}`;
   const raw = await geminiOnce(key, systemPrompt, userMessage);
   let cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
   try{
     const obj = JSON.parse(cleaned);
-    return { example: (obj.example||'').trim(), translation: (obj.translation||'').trim() };
+    return { example: (obj.example||'').trim() };
   }catch(e){
-    return { example: cleaned, translation: '' };
+    return { example: cleaned };
   }
 }
 
-/* Kicks off (or re-kicks off) generation of a random AI example for the currently shown review card. */
+/* Kicks off (or re-kicks off) generation of an example for the currently shown review card.
+   Prefers reusing an example the word already has (its saved sentence, or anything "نمونه‌ها"
+   produced earlier) — instant, no AI call, no repeats within the same card. Only falls back to
+   asking the AI for a brand-new one once every saved example has already been shown. */
 async function generateDeckExample(){
   const w = currentDeckWord();
   if(!w || !deckEl) return;
-  const settings = loadAiSettings();
-  if(!(settings.provider==='google' && settings.key)){
-    deckExampleError = 'برای ساخت مثال با هوش مصنوعی، ابتدا از تنظیمات کلید رایگان Gemini را وارد کن.';
+  deckInteracted = true;
+
+  const unseen = deckExamplePool(w).filter(s => s!==deckExampleText && !deckExampleHistory.includes(s));
+  if(unseen.length){
+    if(deckExampleText) deckExampleHistory.push(deckExampleText);
+    deckExampleText = unseen[Math.floor(Math.random()*unseen.length)];
+    deckExampleSource = 'saved';
+    deckExampleError = null;
     renderDeckCard();
     return;
   }
-  deckInteracted = true;
+
+  const settings = loadAiSettings();
+  if(!(settings.provider==='google' && settings.key)){
+    deckExampleError = 'مثال ذخیره‌شده‌ی دیگری برای این کلمه نیست. برای ساخت مثال تازه با هوش مصنوعی، از تنظیمات کلید رایگان Gemini را وارد کن.';
+    renderDeckCard();
+    return;
+  }
   deckExampleLoading = true;
   deckExampleError = null;
   renderDeckCard();
@@ -1429,7 +1446,7 @@ async function generateDeckExample(){
     if(currentDeckWord() !== w) return; // user moved to another card meanwhile
     if(deckExampleText) deckExampleHistory.push(deckExampleText);
     deckExampleText = res.example || '';
-    deckExampleTranslation = res.translation || '';
+    deckExampleSource = 'ai';
   }catch(e){
     if(currentDeckWord() !== w) return;
     deckExampleError = 'ساخت مثال ناموفق بود: ' + (e && e.message ? e.message : e);
@@ -4311,7 +4328,7 @@ function renderListPage(filterBox){
       box.querySelectorAll('[data-edit]').forEach(btn=>{
         btn.onclick = (e)=>{
           e.stopPropagation();
-          openAddForm(words.find(w=>w.id===btn.dataset.edit));
+          openWordDetailPanel(words.find(w=>w.id===btn.dataset.edit), {editMode:true});
         };
       });
       box.querySelectorAll('[data-pron]').forEach(btn=>{
@@ -4539,11 +4556,11 @@ let deck = [];
 let deckIndex = 0;
 let deckRevealed = false;
 let deckInteracted = false; // true once the user has revealed the meaning or used a tool/AI helper on this card — controls when "نمی‌دانم" appears
-let deckExampleText = null;       // AI-generated example sentence for the current card (null = not generated yet)
-let deckExampleTranslation = '';  // Persian translation of the generated example
+let deckExampleText = null;       // shown example sentence for the current card (null = not shown yet)
+let deckExampleSource = null;     // 'saved' (pulled from the word's own example/moreExamples) or 'ai'
 let deckExampleLoading = false;
 let deckExampleError = null;
-let deckExampleHistory = [];      // previously generated examples for this card, so the AI is asked not to repeat them
+let deckExampleHistory = [];      // sentences already shown for this card, so nothing repeats
 let deckMode = 'browse'; // 'review' | 'browse'
 let deckEl = null;
 let deckTotalStart = 0; // size of the review queue when the session started (for the progress bar)
@@ -4600,21 +4617,11 @@ function closeDeck(){
   }
 }
 
-/* Auto-fires once per card right after the meaning is revealed, so the AI example appears
-   without an extra tap — but only if an AI key is configured (silently does nothing otherwise,
-   so people without a key don't see an unprompted error) and only if nothing was generated yet. */
-function maybeAutoGenerateDeckExample(){
-  if(!deckRevealed || deckExampleText || deckExampleLoading) return;
-  const settings = loadAiSettings();
-  if(!(settings.provider==='google' && settings.key)) return;
-  generateDeckExample();
-}
-
 function deckKeyHandler(e){
   if(e.key==='Escape') closeDeck();
   else if(e.key==='ArrowRight') deckGo(-1); // RTL: right arrow = previous
   else if(e.key==='ArrowLeft') deckGo(1);
-  else if(e.key===' '){ e.preventDefault(); deckRevealed = !deckRevealed; if(deckRevealed){ deckInteracted = true; } renderDeckCard(); maybeAutoGenerateDeckExample(); }
+  else if(e.key===' '){ e.preventDefault(); deckRevealed = !deckRevealed; if(deckRevealed){ deckInteracted = true; autoloadDeckExample(currentDeckWord()); } renderDeckCard(); }
 }
 
 function deckTouchStart(e){
@@ -4647,10 +4654,34 @@ function currentDeckWord(){ return deck[deckIndex]; }
 
 function resetDeckExampleState(){
   deckExampleText = null;
-  deckExampleTranslation = '';
+  deckExampleSource = null;
   deckExampleLoading = false;
   deckExampleError = null;
   deckExampleHistory = [];
+}
+
+/* Examples already available for this word without an AI call — pulled from "نمونه‌ها" (saved on
+   the word once that tab has been opened once, see persistExamplesToWord). Deliberately excludes
+   the word's own primary `example`, since that's already shown just above this box. Checked
+   first, so pressing the button reuses real content before ever spending an AI request. */
+function deckExamplePool(w){
+  const pool = [];
+  if(Array.isArray(w.moreExamples)) w.moreExamples.forEach(e=>{ if(e && e.en && e.en.trim()) pool.push(e.en.trim()); });
+  return pool;
+}
+
+/* Called right when the meaning gets revealed. If the word already has saved examples
+   (moreExamples), show one immediately — no reason to make the user press a button for
+   content that's already sitting there. The button stays only for "یکی دیگه" or for
+   an AI call when nothing saved exists. */
+function autoloadDeckExample(w){
+  if(!w || deckExampleText) return;
+  const pool = deckExamplePool(w);
+  if(pool.length){
+    deckExampleText = pool[Math.floor(Math.random()*pool.length)];
+    deckExampleSource = 'saved';
+    deckExampleError = null;
+  }
 }
 
 async function deckGrade(passed){
@@ -4711,23 +4742,24 @@ function renderDeckFinished(){
 
 /* Renders just the inside of the #deckAiExampleBox — a small "make me another example" widget
    that only appears once the meaning has been revealed. Not shown before the reveal. */
+/* Renders just the inside of the #deckAiExampleBox. Minimal by design: no header until there's
+   actually something to label, and the label only says "هوش مصنوعی" when the sentence really
+   was AI-generated — reused/saved examples are just shown as a plain example. */
 function renderDeckAiExampleContent(){
   if(deckExampleLoading){
-    return `<div class="ai-example-head">🤖 مثال هوش مصنوعی</div><span class="spinner"></span> در حال ساختن مثال...`;
+    return `<span class="spinner"></span> در حال ساختن مثال...`;
   }
   if(deckExampleText){
     return `
-      <div class="ai-example-head">🤖 مثال هوش مصنوعی</div>
+      ${deckExampleSource==='ai' ? `<div class="ai-example-head">🤖 هوش مصنوعی</div>` : ''}
       <span class="ai-example-en">${escapeHtml(deckExampleText)}</span>
-      ${deckExampleTranslation ? `<span class="ai-example-fa">${escapeHtml(deckExampleTranslation)}</span>` : ''}
       ${deckExampleError ? `<div class="ai-example-error">${escapeHtml(deckExampleError)}</div>` : ''}
-      <button class="btn btn-secondary btn-small" id="deckExampleBtn">🔄 یکی دیگه بساز</button>
+      <button class="btn btn-secondary btn-small" id="deckExampleBtn">یکی دیگه</button>
     `;
   }
   return `
-    <div class="ai-example-head">🤖 مثال هوش مصنوعی</div>
     ${deckExampleError ? `<div class="ai-example-error">${escapeHtml(deckExampleError)}</div>` : ''}
-    <button class="btn btn-secondary btn-small" id="deckExampleBtn">✨ ساخت یک مثال</button>
+    <button class="btn btn-secondary btn-small" id="deckExampleBtn">نمایش یک مثال</button>
   `;
 }
 
@@ -4778,9 +4810,7 @@ function renderDeckCard(){
     </div>
     <div class="browse-bottom">
       <div class="browse-tools-row">
-        <button class="btn btn-secondary btn-icon" id="deckToolsBtn" title="دیکشنری و ابزارها">🔗</button>
-        <button class="btn btn-secondary btn-icon" id="deckAskAiBtn" title="دستیار هوشمند">🤖</button>
-        <button class="btn btn-secondary btn-icon" id="deckExplainBtn" title="توضیح کامل کلمه">📖</button>
+        <button class="btn btn-secondary" id="deckExplainBtn" style="flex:1;justify-content:center;">📖 توضیح کامل، دیکشنری و هوش مصنوعی</button>
       </div>
       <div class="browse-nav">
         ${deckInteracted ? `<button class="btn" style="background:linear-gradient(180deg,var(--rust),var(--rust-dark));color:#fff8ef;flex:1;justify-content:center;" id="deckFailBtn" title="نمی‌دانم">✗</button>` : ''}
@@ -4796,7 +4826,7 @@ function renderDeckCard(){
   deckEl.querySelector('#deckCloseBtn').onclick = closeDeck;
   deckEl.querySelector('#deckPronBtn').onclick = (e)=> playPronunciation(w.en, e.currentTarget);
   const revealBtn = deckEl.querySelector('#deckRevealBtn');
-  if(revealBtn) revealBtn.onclick = ()=>{ deckRevealed=true; deckInteracted=true; renderDeckCard(); maybeAutoGenerateDeckExample(); };
+  if(revealBtn) revealBtn.onclick = ()=>{ deckRevealed=true; deckInteracted=true; autoloadDeckExample(w); renderDeckCard(); };
 
   const noteToggle = deckEl.querySelector('#deckNoteToggle');
   if(noteToggle){
@@ -4814,9 +4844,7 @@ function renderDeckCard(){
   }
   const exampleBtn = deckEl.querySelector('#deckExampleBtn');
   if(exampleBtn) exampleBtn.onclick = generateDeckExample;
-  deckEl.querySelector('#deckAskAiBtn').onclick = ()=>{ deckInteracted=true; renderDeckCard(); openAiPanel(w); };
   deckEl.querySelector('#deckExplainBtn').onclick = ()=>{ deckInteracted=true; renderDeckCard(); openWordDetailPanel(w); };
-  deckEl.querySelector('#deckToolsBtn').onclick = ()=>{ deckInteracted=true; renderDeckCard(); openBrowseToolsPanel(w); };
   deckEl.querySelector('#deckPrevBtn').onclick = ()=> deckGo(-1);
   deckEl.querySelector('#deckNextBtn').onclick = ()=> deckGo(1);
   const passBtn = deckEl.querySelector('#deckPassBtn');
@@ -5960,11 +5988,23 @@ function openWordDetailPanel(word, contextInfo){
 
       ${historyBlockHtml}
 
+      ${!alreadyAdded ? `
       <div class="wd-status-row">
         <button type="button" class="btn btn-secondary btn-small" id="wdKnowBtn" ${alreadyKnown?'disabled':''}>${alreadyKnown?'✓ بلد بودی':'✓ بلدم'}</button>
         <button type="button" class="btn btn-primary btn-small" id="wdLearnBtn" ${alreadyAdded?'disabled':''}>${alreadyAdded?'📖 اضافه شده':'📖 یاد بگیر'}</button>
         <button type="button" class="btn btn-ghost btn-small" id="wdIgnoreBtn" ${alreadyIgnored?'disabled':''}>${alreadyIgnored?'🚫 نادیده گرفته شد':'🚫 نادیده بگیر'}</button>
+      </div>` : `
+      <div id="wdSavedExampleWrap">${wordEntry && wordEntry.example ? `
+      <div class="wd-example-block">
+        <div class="wd-example-src">جمله ذخیره‌شده</div>
+        <div class="wd-example-en"><span class="en">${escapeHtml(wordEntry.example)}</span></div>
+      </div>` : ''}</div>
+      <div class="wd-status-row">
+        <button type="button" class="btn btn-secondary btn-small" id="wdEditManualBtn">✏️ ویرایش دستی</button>
+        <button type="button" class="btn btn-ghost btn-small" id="wdDeleteBtn">🗑 حذف لغت</button>
       </div>
+      <div id="wdManualEditWrap" style="display:none;"></div>
+      `}
 
       ${ready ? `<div id="wdFreeDictHeaderWrap"></div>` : ''}
 
@@ -6055,17 +6095,17 @@ function openWordDetailPanel(word, contextInfo){
   const learnBtn = overlay.querySelector('#wdLearnBtn');
   const ignoreBtn = overlay.querySelector('#wdIgnoreBtn');
 
-  knowBtn.onclick = ()=>{
+  if(knowBtn) knowBtn.onclick = ()=>{
     markWordKnown(en);
     knowBtn.disabled = true;
     knowBtn.textContent = '✓ بلد بودی';
   };
-  ignoreBtn.onclick = ()=>{
+  if(ignoreBtn) ignoreBtn.onclick = ()=>{
     markWordIgnored(en);
     ignoreBtn.disabled = true;
     ignoreBtn.textContent = '🚫 نادیده گرفته شد';
   };
-  learnBtn.onclick = async ()=>{
+  if(learnBtn) learnBtn.onclick = async ()=>{
     learnBtn.disabled = true;
     learnBtn.textContent = 'در حال افزودن...';
     await addWordToList(en, state.quickMeaning || '', sentence, '', {
@@ -6075,6 +6115,134 @@ function openWordDetailPanel(word, contextInfo){
     });
     learnBtn.textContent = state.quickMeaning ? '✓ اضافه شد' : '✓ اضافه شد (بدون معنی، بعداً کامل کن)';
   };
+
+  /* --- Manual edit / delete, for words already saved in the list — merges what used to be a
+     separate "ویرایش لغت" form into this same panel, so editing an already-added word and
+     looking up a brand-new one from the subtitle player feel like the same place, not two
+     different screens. --- */
+  if(alreadyAdded && wordEntry){
+    const editManualBtn = overlay.querySelector('#wdEditManualBtn');
+    const deleteBtn = overlay.querySelector('#wdDeleteBtn');
+    const manualWrap = overlay.querySelector('#wdManualEditWrap');
+
+    let manualCachedSuggestion = null;
+
+    async function getManualSuggestion(){
+      if(manualCachedSuggestion) return manualCachedSuggestion;
+      if(!(settings.provider==='google' && settings.key)) throw new Error('NO_KEY');
+      manualCachedSuggestion = await fetchWordSuggestion(settings.key, en);
+      return manualCachedSuggestion;
+    }
+    function renderManualSuggestBox(boxEl, text, onAccept){
+      if(!text){ boxEl.innerHTML = `<div class="suggest-box">پیشنهادی دریافت نشد. دوباره تلاش کن.</div>`; return; }
+      boxEl.innerHTML = `
+        <div class="suggest-box">
+          <div class="suggest-text"><span class="en">${escapeHtml(text)}</span></div>
+          <div class="suggest-actions">
+            <button type="button" class="btn btn-primary btn-small" id="${boxEl.id}-accept">✓ استفاده از این پیشنهاد</button>
+            <button type="button" class="btn btn-ghost btn-small" id="${boxEl.id}-dismiss">✕ رد کردن</button>
+          </div>
+        </div>`;
+      boxEl.querySelector(`#${boxEl.id}-accept`).onclick = ()=>{ onAccept(text); boxEl.innerHTML=''; };
+      boxEl.querySelector(`#${boxEl.id}-dismiss`).onclick = ()=>{ boxEl.innerHTML=''; };
+    }
+    async function handleManualSuggestClick(kind, triggerBtn, boxEl, targetInput){
+      const original = triggerBtn.textContent;
+      triggerBtn.disabled = true;
+      triggerBtn.innerHTML = `<span class="spinner"></span> در حال دریافت...`;
+      boxEl.innerHTML = '';
+      try{
+        const suggestion = await getManualSuggestion();
+        const text = kind==='fa' ? suggestion.meaning : suggestion.example;
+        renderManualSuggestBox(boxEl, text, (accepted)=>{ targetInput.value = accepted; });
+      }catch(e){
+        if(e.message==='NO_KEY'){
+          boxEl.innerHTML = `<div class="suggest-box">هنوز کلید Google Gemini را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید رایگان خودتان را وارد کنید.</div>`;
+        }else{
+          boxEl.innerHTML = `<div class="suggest-box">درخواست ناموفق بود (${escapeHtml(e.message||'')}).</div>`;
+        }
+      }finally{
+        triggerBtn.disabled = false;
+        triggerBtn.textContent = original;
+      }
+    }
+
+    function renderManualEditForm(){
+      manualWrap.innerHTML = `
+        <div class="field-label-row" style="margin-top:10px;">
+          <label>معنی فارسی</label>
+          <button type="button" class="suggest-trigger" id="wdMeFaSuggest">✨ پیشنهاد بده</button>
+        </div>
+        <input type="text" id="wdMeFa" value="${escapeHtml(wordEntry.fa||'')}">
+        <div id="wdMeFaSuggestBox"></div>
+
+        <div class="field-label-row">
+          <label>جمله نمونه (اختیاری)</label>
+          <button type="button" class="suggest-trigger" id="wdMeExSuggest">✨ پیشنهاد بده</button>
+        </div>
+        <textarea class="en" id="wdMeEx">${escapeHtml(wordEntry.example||'')}</textarea>
+        <div id="wdMeExSuggestBox"></div>
+
+        <label>یادداشت شخصی (اختیاری)</label>
+        <textarea id="wdMeNote">${escapeHtml(wordEntry.note||'')}</textarea>
+
+        <div class="actions" style="margin-top:14px;">
+          <button class="btn btn-primary" id="wdMeSaveBtn">ذخیره تغییرات</button>
+          <button class="btn btn-ghost" id="wdMeCancelBtn">انصراف</button>
+        </div>
+      `;
+      const faInput = manualWrap.querySelector('#wdMeFa');
+      const exInput = manualWrap.querySelector('#wdMeEx');
+      const noteInput = manualWrap.querySelector('#wdMeNote');
+      manualWrap.querySelector('#wdMeFaSuggest').onclick = ()=> handleManualSuggestClick('fa', manualWrap.querySelector('#wdMeFaSuggest'), manualWrap.querySelector('#wdMeFaSuggestBox'), faInput);
+      manualWrap.querySelector('#wdMeExSuggest').onclick = ()=> handleManualSuggestClick('example', manualWrap.querySelector('#wdMeExSuggest'), manualWrap.querySelector('#wdMeExSuggestBox'), exInput);
+      manualWrap.querySelector('#wdMeCancelBtn').onclick = ()=>{ manualWrap.style.display='none'; manualWrap.innerHTML=''; };
+      manualWrap.querySelector('#wdMeSaveBtn').onclick = async ()=>{
+        const fa = faInput.value.trim();
+        if(!fa){ alert('لطفاً معنی فارسی را وارد کنید.'); return; }
+        wordEntry.fa = fa;
+        wordEntry.example = exInput.value.trim();
+        wordEntry.note = noteInput.value.trim();
+        await saveWords();
+        renderDrawers();
+        if(listPageRedraw) listPageRedraw();
+        state.quickMeaning = fa;
+        const qmEl = overlay.querySelector('#wdQuickMeaning');
+        if(qmEl) qmEl.innerHTML = escapeHtml(fa);
+        const exWrap = overlay.querySelector('#wdSavedExampleWrap');
+        if(exWrap){
+          exWrap.innerHTML = wordEntry.example ? `
+          <div class="wd-example-block">
+            <div class="wd-example-src">جمله ذخیره‌شده</div>
+            <div class="wd-example-en"><span class="en">${escapeHtml(wordEntry.example)}</span></div>
+          </div>` : '';
+        }
+        manualWrap.style.display='none';
+        manualWrap.innerHTML='';
+      };
+    }
+
+    editManualBtn.onclick = ()=>{
+      if(manualWrap.style.display==='none'){
+        manualWrap.style.display='block';
+        renderManualEditForm();
+      }else{
+        manualWrap.style.display='none';
+        manualWrap.innerHTML='';
+      }
+    };
+    if(contextInfo.editMode){ manualWrap.style.display='block'; renderManualEditForm(); }
+
+    deleteBtn.onclick = async ()=>{
+      if(confirm('این لغت حذف شود؟')){
+        words = words.filter(w=>w.id!==wordEntry.id);
+        await saveWords();
+        overlay.remove();
+        renderDrawers();
+        if(listPageRedraw) listPageRedraw();
+      }
+    };
+  }
 
   if(!ready){
     if(word.fa){
@@ -6308,6 +6476,18 @@ function openWordDetailPanel(word, contextInfo){
     const list = Array.isArray(obj.examples) ? obj.examples.map(e=>({en:(e.en||'').trim(), fa:(e.fa||'').trim()})).filter(e=>e.en) : [];
     if(!list.length) throw new Error('نمونه‌ای در پاسخ پیدا نشد');
     state.moreExamples = list;
+    persistExamplesToWord(list);
+  }
+
+  /* Saves freshly-fetched "نمونه‌ها" examples onto the word record itself if it doesn't have any
+     yet — so words added before this tab was ever opened still end up with reusable saved
+     examples (used by the review deck's example builder instead of always calling the AI). Never
+     overwrites examples the word already has. */
+  function persistExamplesToWord(list){
+    if(wordEntry && (!wordEntry.moreExamples || !wordEntry.moreExamples.length) && list && list.length){
+      wordEntry.moreExamples = list;
+      saveWords();
+    }
   }
 
   /* Applies one pasted answer (from buildFullCardImportPrompt) to all three tabs' state at once —
@@ -6327,6 +6507,8 @@ function openWordDetailPanel(word, contextInfo){
     const list = Array.isArray(obj.examples) ? obj.examples.map(e=>({en:(e.en||'').trim(), fa:(e.fa||'').trim()})).filter(e=>e.en) : [];
     if(list.length) state.moreExamples = list;
     if(!state.grammar.paragraph && !state.grammar.inContextMeanings.length && !state.grammar.generalMeanings.length && !list.length && !obj.practicalNotes) throw new Error('چیزی در پاسخ قابل تشخیص نبود');
+    backfillMeaningFromGrammar(state.grammar);
+    if(list.length) persistExamplesToWord(list);
     state.tabLoaded.grammar = true;
     state.tabLoaded.explain = true;
     state.tabLoaded.examples = true;
@@ -6337,6 +6519,35 @@ function openWordDetailPanel(word, contextInfo){
      ever been asked) can offer the exact same shortcut. */
   function getImportConfigForTab(tab){
     return { promptParts: buildFullCardImportPrompt(word, sentence, en, state.quickMeaning, dialogueContext), parseAnswer: parseFullCardImport, renderFn: renderTab };
+  }
+
+  /* If the word was added before a Persian meaning was ever set (the "بدون معنی، بعداً کامل کن"
+     path), and the grammar tab's answer arrives with meanings, back-fill that meaning onto the
+     word itself — both the quick-meaning line up top and the saved record — so it's no longer
+     empty in "دستور زبان"/manual-edit, and shows up in review too. Never overwrites a meaning
+     the person already has (own text or a previous AI answer). */
+  function backfillMeaningFromGrammar(g){
+    if(state.quickMeaning) return;
+    // Same comma-separated style as the 🤖 quick-meaning button (fetchQuickMeaningsLine), so the
+    // top meaning line reads consistently no matter which AI path ends up filling it in. Prefers
+    // generalMeanings (the word's meaning overall) over inContextMeanings (specific to one
+    // sentence), since this line is the word's permanent saved meaning, shown in review too —
+    // not just a note about the one example sentence it happened to be learned from.
+    const general = Array.isArray(g.generalMeanings) ? g.generalMeanings.filter(Boolean) : [];
+    const inCtx = Array.isArray(g.inContextMeanings) ? g.inContextMeanings.filter(Boolean) : [];
+    const meaning = (general.length ? general : inCtx).join('، ');
+    if(!meaning) return;
+    state.quickMeaning = meaning;
+    const qmEl = overlay.querySelector('#wdQuickMeaning');
+    if(qmEl) qmEl.innerHTML = escapeHtml(meaning);
+    if(learnBtn && !alreadyAdded) learnBtn.disabled = false;
+    if(wordEntry && !wordEntry.fa){
+      wordEntry.fa = meaning;
+      saveWords();
+      renderDrawers();
+      if(listPageRedraw) listPageRedraw();
+      if(deckEl && currentDeckWord()===wordEntry) renderDeckCard();
+    }
   }
 
   function dictBoxHtml(g){
@@ -6375,6 +6586,7 @@ function openWordDetailPanel(word, contextInfo){
 
     fetchGrammarExplanation(settings.key, en, sentence, dialogueContext).then(g=>{
       state.grammar = g;
+      backfillMeaningFromGrammar(g);
       if(state.activeTab!=='grammar') return;
       const wrap = tabContent.querySelector('#wdGrammarWrap');
       if(wrap) wrap.innerHTML = grammarTabHtml();
@@ -6460,6 +6672,7 @@ function openWordDetailPanel(word, contextInfo){
       const avoid = sentence ? [sentence] : [];
       fetchExampleBatch(settings.key, en, state.quickMeaning, avoid, 4).then(list=>{
         state.moreExamples = list;
+        persistExamplesToWord(list);
         if(state.activeTab!=='examples') return;
         const wrap = tabContent.querySelector('#wdMoreExamplesWrap');
         if(wrap){
