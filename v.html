@@ -4013,14 +4013,24 @@ function renderHome(){
 /* ---------- Add / Edit word ---------- */
 /* Shared "save a brand-new word" logic — used by the add-word form's save button,
    and also by the "➕ افزودن به فهرست لغات" button inside the full explanation panel. */
-async function addWordToList(en, fa, example, note){
-  words.push({
+async function addWordToList(en, fa, example, note, extra){
+  const w = {
     id: 'w_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
     en, fa, example: example||'', note: note||'',
     box: 1,
     nextReview: todayISO(),
     createdAt: todayISO()
-  });
+  };
+  // Whatever AI (in-app Gemini or a pasted external-AI answer, doesn't matter which) has already
+  // produced for this word gets saved right onto the word record — so opening its details again
+  // later shows the same grammar/practical-notes/examples instantly, instead of showing a "بدون
+  // معنی، بعداً کامل کن" placeholder and burning another AI call to look the same thing up again.
+  if(extra){
+    if(extra.grammar) w.grammar = extra.grammar;
+    if(extra.practicalNotes) w.practicalNotes = extra.practicalNotes;
+    if(extra.moreExamples && extra.moreExamples.length) w.moreExamples = extra.moreExamples;
+  }
+  words.push(w);
   await saveWords();
   renderDrawers();
   if(listPageRedraw) listPageRedraw();
@@ -5874,14 +5884,26 @@ function openWordDetailPanel(word, contextInfo){
     </div>`;
   })();
 
-  const state = { quickMeaning: (word.fa||'').trim(), sentenceTranslation:'', grammar:null, grammarError:'', deepExplain:null, deepExplainError:'', moreExamples:null, activeTab:'grammar', idiom: findGroundedIdiomForWord(en, sentence),
+  const state = { quickMeaning: (word.fa||'').trim(), sentenceTranslation:'',
+    grammar: (wordEntry && wordEntry.grammar) || null, grammarError:'',
+    deepExplain: (wordEntry && wordEntry.practicalNotes) || null, deepExplainError:'',
+    moreExamples: (wordEntry && wordEntry.moreExamples && wordEntry.moreExamples.length) ? wordEntry.moreExamples : null,
+    activeTab:'grammar', idiom: findGroundedIdiomForWord(en, sentence),
     /* Each tab only fires its in-app AI (Gemini) requests the first time it's actually opened —
        not automatically when the panel appears — since every "جزئیات کلمه" open shouldn't cost
        several API calls before the person has even looked at a tab. Quota is the free Gemini
        tier's daily limit. The "دریافت کارت از هوش مصنوعی دیگر" (paste-from-another-AI) option is
        available right on this placeholder too — see renderTabPlaceholder — so a person can get a
-       card without ever spending an in-app Gemini call at all. */
-    tabLoaded: { grammar:false, explain:false, examples:false } };
+       card without ever spending an in-app Gemini call at all.
+       If this word was already saved with grammar/practicalNotes/moreExamples from a previous
+       session (see addWordToList), the matching tab is marked loaded up front so reopening the
+       panel shows the cached answer immediately instead of firing a new AI call for something
+       already known. */
+    tabLoaded: {
+      grammar: !!(wordEntry && wordEntry.grammar),
+      explain: !!(wordEntry && wordEntry.practicalNotes),
+      examples: !!(wordEntry && wordEntry.moreExamples && wordEntry.moreExamples.length)
+    } };
 
   /* Builds the "part of an idiom" callout box for whichever idiom (local or AI-checked) was
      found for this word/sentence — kept as a closure so it can reach `words`/`sentence` for the
@@ -6046,7 +6068,11 @@ function openWordDetailPanel(word, contextInfo){
   learnBtn.onclick = async ()=>{
     learnBtn.disabled = true;
     learnBtn.textContent = 'در حال افزودن...';
-    await addWordToList(en, state.quickMeaning || '', sentence, '');
+    await addWordToList(en, state.quickMeaning || '', sentence, '', {
+      grammar: state.grammar || null,
+      practicalNotes: state.deepExplain || '',
+      moreExamples: state.moreExamples || null
+    });
     learnBtn.textContent = state.quickMeaning ? '✓ اضافه شد' : '✓ اضافه شد (بدون معنی، بعداً کامل کن)';
   };
 
