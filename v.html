@@ -229,6 +229,12 @@
   .btn-primary{ background: linear-gradient(180deg, var(--sage), var(--sage-dark)); color:#fdfaf0; box-shadow:0 6px 16px rgba(79,107,73,.32); padding:15px 18px; font-size:14.5px; }
   .btn-secondary{ background:var(--panel); color:var(--ink); border:1px solid var(--line); }
   .btn-ghost{ background:transparent; color:var(--ink-soft); box-shadow:none; border:1px dashed var(--line); }
+  /* Destructive actions (delete word, etc.) — same weight as btn-ghost so it doesn't compete
+     with primary actions, but colored with the palette's warning tone (--rust) so it actually
+     reads as "careful, this removes something" instead of blending in with neutral/cancel
+     buttons that use the same dashed-ghost look. */
+  .btn-danger{ background:transparent; color:var(--rust-dark); box-shadow:none; border:1px solid var(--rust); }
+  .btn-danger:active{ background:var(--rust); color:#fff8ef; }
   .btn-small{ padding:8px 12px; font-size:12px; border-radius:9px; }
   .btn:disabled{ opacity:.42; cursor:not-allowed; transform:none; box-shadow:none; }
   /* Compact icon-only buttons — used wherever a long button label can be replaced by a single
@@ -452,7 +458,10 @@
   .suggest-actions .btn{ padding:7px 12px; font-size:12px; border-radius:9px; }
 
   /* ===== Word detail panel (📖 توضیح کامل کلمه / tap on a subtitle word) ===== */
-  .wd-header{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px; }
+  .wd-header{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px; flex-wrap:wrap; row-gap:8px; }
+  .wd-word-group, .wd-tools-group{ display:flex; align-items:center; gap:10px; }
+  .wd-tools-group{ position:relative; padding-inline-start:12px; }
+  .wd-tools-group::before{ content:''; position:absolute; inset-inline-start:0; top:50%; transform:translateY(-50%); width:1px; height:22px; background:var(--line); }
   .wd-word{ font-family:'Lora',serif; font-weight:700; font-size:27px; direction:ltr; color:var(--ink); }
   .wd-speak-btn{
     background:var(--parchment-dark); border:1px solid var(--line); border-radius:50%;
@@ -507,7 +516,7 @@
   /* ---------- Free dictionary (dictionaryapi.dev) fallback box — shown when the in-app AI
      (Gemini) has no key configured, or when an AI call fails, so the person still gets real
      definitions/examples/synonyms with no key and no quota. ---------- */
-  .wd-freedict-box{ background:var(--parchment-dark); border-radius:var(--radius); padding:14px 15px; margin-top:12px; }
+  .wd-freedict-box{ background:var(--parchment-dark); border-radius:var(--radius); padding:14px 15px; margin-top:12px; margin-bottom:16px; }
   .wd-freedict-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:10px; padding-bottom:8px; border-bottom:1px dashed var(--line); }
   .wd-freedict-title{ font-size:11px; font-weight:700; color:var(--brass-dark); letter-spacing:.2px; }
   .wd-freedict-phonetic{ font-family:'Lora',serif; direction:ltr; font-size:13px; color:var(--ink-soft); }
@@ -4040,7 +4049,7 @@ function renderHome(){
 }
 
 /* ---------- Add / Edit word ---------- */
-/* Shared "save a brand-new word" logic — used by the add-word form's save button,
+/* Shared "save a brand-new word" logic — used by openWordDetailPanel's "یاد بگیر" button,
    and also by the "➕ افزودن به فهرست لغات" button inside the full explanation panel. */
 async function addWordToList(en, fa, example, note, extra){
   const w = {
@@ -4065,211 +4074,42 @@ async function addWordToList(en, fa, example, note, extra){
   if(listPageRedraw) listPageRedraw();
 }
 
-function openAddForm(existing, prefillEn){
-  const isEdit = !!existing;
+/* "افزودن" (the home screen's + quick-action) used to open a whole separate add-word form —
+   its own fa/definition/example/note fields, its own "✨ پیشنهاد بده" AI-suggest buttons, its
+   own save/delete — duplicating almost everything "جزئیات کلمه" (openWordDetailPanel) already
+   does, and better: live quick-meaning lookup, دستور زبان/نکات کاربردی/نمونه‌ها tabs, the free
+   dictionary, know/learn/ignore. Two separate places to add or edit a word made the two drift
+   out of sync with each other. Now this is just the one-field "what's the word?" step, and
+   جزئیات کلمه handles everything after that — for both brand-new and already-saved words. */
+function openQuickWordEntry(){
   const overlay = document.createElement('div');
-  overlay.className='overlay';
+  overlay.className = 'overlay';
   overlay.innerHTML = `
     <div class="panel">
       <div class="panel-head">
-        <h2>${isEdit? 'ویرایش لغت' : 'افزودن لغت جدید'}</h2>
+        <h2>افزودن لغت جدید</h2>
         <button class="close-x">✕</button>
       </div>
       <label>کلمه انگلیسی</label>
-      <input type="text" class="en" id="f-en" placeholder="e.g. resilient" value="${isEdit?existing.en:(prefillEn||'')}">
-      <div class="linkrow" id="f-tools-row" style="margin-top:10px;margin-bottom:4px;">
-        <button type="button" class="btn btn-secondary btn-icon btn-small" id="f-toolsBtn" disabled title="دیکشنری و ابزارها">🔗</button>
-        <button type="button" class="btn btn-secondary btn-icon btn-small" id="f-aiBtn" disabled title="دستیار هوشمند">🤖</button>
-        <button type="button" class="btn btn-secondary btn-icon btn-small" id="f-explainBtn" disabled title="توضیح کامل کلمه">📖</button>
-      </div>
-
-      <div class="field-label-row">
-        <label>معنی فارسی</label>
-        <button type="button" class="suggest-trigger" id="f-fa-suggest" disabled>✨ پیشنهاد بده</button>
-      </div>
-      <input type="text" id="f-fa" placeholder="مثلاً: تاب‌آور، مقاوم" value="${isEdit?existing.fa:''}">
-      <div id="f-fa-suggestBox"></div>
-
-      <div class="field-label-row">
-        <label>توضیح آموزشی (اختیاری)</label>
-        <button type="button" class="suggest-trigger" id="f-def-suggest" disabled>✨ پیشنهاد بده</button>
-      </div>
-      <div class="ep-def" id="f-def-preview" style="display:none;"></div>
-      <div id="f-def-suggestBox"></div>
-
-      <div class="field-label-row">
-        <label>جمله نمونه (اختیاری)</label>
-        <button type="button" class="suggest-trigger" id="f-ex-suggest" disabled>✨ پیشنهاد بده</button>
-      </div>
-      <textarea class="en" id="f-ex" placeholder="Example sentence...">${isEdit?(existing.example||''):''}</textarea>
-      <div id="f-ex-suggestBox"></div>
-
-      <label>یادداشت شخصی (اختیاری)</label>
-      <textarea id="f-note" placeholder="نکته یا ترفند یادآوری خودتان...">${isEdit?(existing.note||''):''}</textarea>
+      <input type="text" class="en" id="qwe-en" placeholder="e.g. resilient">
       <div class="actions" style="margin-top:18px;">
-        <button class="btn btn-primary" id="f-save">${isEdit?'ذخیره تغییرات':'افزودن به جعبه ۱'}</button>
-        ${isEdit?'<button class="btn btn-ghost" id="f-delete">حذف لغت</button>':''}
+        <button class="btn btn-primary" id="qwe-go">بعدی ←</button>
       </div>
     </div>`;
   getOverlayMountEl().appendChild(overlay);
   overlay.querySelector('.close-x').onclick = ()=> overlay.remove();
   overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
 
-  /* --- Live word object, always reflecting whatever is currently typed, so the same
-     dictionary/AI-assistant panels used in review mode can be reused here too. --- */
-  const enInput = overlay.querySelector('#f-en');
-  const faInput = overlay.querySelector('#f-fa');
-  const exInput = overlay.querySelector('#f-ex');
-  const toolsBtn = overlay.querySelector('#f-toolsBtn');
-  const aiBtn = overlay.querySelector('#f-aiBtn');
-  const explainBtn = overlay.querySelector('#f-explainBtn');
-  const faSuggestBtn = overlay.querySelector('#f-fa-suggest');
-  const defSuggestBtn = overlay.querySelector('#f-def-suggest');
-  const defPreview = overlay.querySelector('#f-def-preview');
-  const exSuggestBtn = overlay.querySelector('#f-ex-suggest');
-
-  function currentWord(){
-    return { en: enInput.value.trim(), fa: faInput.value.trim(), example: exInput.value.trim(), note: '' };
-  }
-  function updateToolButtonsState(){
-    const hasEn = !!enInput.value.trim();
-    toolsBtn.disabled = !hasEn;
-    aiBtn.disabled = !hasEn;
-    explainBtn.disabled = !hasEn;
-    faSuggestBtn.disabled = !hasEn;
-    defSuggestBtn.disabled = !hasEn;
-    exSuggestBtn.disabled = !hasEn;
-  }
-  enInput.addEventListener('input', ()=>{ updateToolButtonsState(); defPreview.style.display='none'; defPreview.textContent=''; });
-  updateToolButtonsState();
-
-  toolsBtn.onclick = ()=>{ if(enInput.value.trim()) openBrowseToolsPanel(currentWord()); };
-  aiBtn.onclick = ()=>{ if(enInput.value.trim()) openAiPanel(currentWord()); };
-  explainBtn.onclick = ()=>{ if(enInput.value.trim()) openWordDetailPanel(currentWord()); };
-
-  /* --- "پیشنهاد بده" (suggest) for meaning + example: cached per English word so the two
-     buttons don't trigger two separate API calls when clicked back-to-back. --- */
-  let cachedSuggestion = null;
-  let cachedSuggestionFor = null;
-
-  async function getSuggestion(){
-    const en = enInput.value.trim();
-    if(en && cachedSuggestionFor===en && cachedSuggestion) return cachedSuggestion;
-    const settings = loadAiSettings();
-    if(!(settings.provider==='google' && settings.key)){
-      throw new Error('NO_KEY');
-    }
-    const result = await fetchWordSuggestion(settings.key, en);
-    cachedSuggestion = result;
-    cachedSuggestionFor = en;
-    return result;
-  }
-
-  function renderSuggestBox(boxEl, text, onAccept){
-    if(!text){
-      boxEl.innerHTML = `<div class="suggest-box">پیشنهادی دریافت نشد. دوباره تلاش کن.</div>`;
-      return;
-    }
-    boxEl.innerHTML = `
-      <div class="suggest-box">
-        <div class="suggest-text"><span class="en">${escapeHtml(text)}</span></div>
-        <div class="suggest-actions">
-          <button type="button" class="btn btn-primary btn-small" id="${boxEl.id}-accept">✓ استفاده از این پیشنهاد</button>
-          <button type="button" class="btn btn-ghost btn-small" id="${boxEl.id}-dismiss">✕ رد کردن</button>
-        </div>
-      </div>`;
-    boxEl.querySelector(`#${boxEl.id}-accept`).onclick = ()=>{ onAccept(text); boxEl.innerHTML=''; };
-    boxEl.querySelector(`#${boxEl.id}-dismiss`).onclick = ()=>{ boxEl.innerHTML=''; };
-  }
-
-  async function handleSuggestClick(kind, triggerBtn, boxEl){
-    const en = enInput.value.trim();
-    if(!en){ alert('اول کلمه انگلیسی را وارد کن.'); return; }
-    const originalLabel = triggerBtn.textContent;
-    triggerBtn.disabled = true;
-    triggerBtn.innerHTML = `<span class="spinner"></span> در حال دریافت...`;
-    boxEl.innerHTML = '';
-    try{
-      const suggestion = await getSuggestion();
-      const text = kind==='fa' ? suggestion.meaning : suggestion.example;
-      renderSuggestBox(boxEl, text, (accepted)=>{
-        if(kind==='fa') faInput.value = accepted; else exInput.value = accepted;
-      });
-    }catch(e){
-      if(e.message==='NO_KEY'){
-        boxEl.innerHTML = `<div class="suggest-box">هنوز کلید Google Gemini را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید رایگان خودتان را وارد کنید.</div>`;
-      } else {
-        boxEl.innerHTML = `<div class="suggest-box">درخواست ناموفق بود (${escapeHtml(e.message||'')}). محتمل‌ترین دلیل: نبود دسترسی به این سرویس از ایران بدون فیلترشکن، یا نامعتبر بودن کلید API.</div>`;
-      }
-    }finally{
-      triggerBtn.disabled = !enInput.value.trim();
-      triggerBtn.textContent = originalLabel;
-    }
-  }
-
-  faSuggestBtn.onclick = ()=> handleSuggestClick('fa', faSuggestBtn, overlay.querySelector('#f-fa-suggestBox'));
-  exSuggestBtn.onclick = ()=> handleSuggestClick('example', exSuggestBtn, overlay.querySelector('#f-ex-suggestBox'));
-
-  /* Definition (توضیح آموزشی) is display-only, mirroring how subtitle-mode word cards show
-     `w.definition` directly under the meaning — no accept/dismiss needed since it isn't saved
-     into a form field, just shown as extra context while filling in the word. */
-  defSuggestBtn.onclick = async ()=>{
-    const en = enInput.value.trim();
-    if(!en){ alert('اول کلمه انگلیسی را وارد کن.'); return; }
-    const originalLabel = defSuggestBtn.textContent;
-    defSuggestBtn.disabled = true;
-    defSuggestBtn.innerHTML = `<span class="spinner"></span> در حال دریافت...`;
-    defPreview.style.display = 'none';
-    try{
-      const suggestion = await getSuggestion();
-      if(suggestion.definition){
-        defPreview.textContent = suggestion.definition;
-        defPreview.style.display = '';
-      } else {
-        overlay.querySelector('#f-def-suggestBox').innerHTML = `<div class="suggest-box">توضیحی دریافت نشد. دوباره تلاش کن.</div>`;
-      }
-    }catch(e){
-      const boxEl = overlay.querySelector('#f-def-suggestBox');
-      if(e.message==='NO_KEY'){
-        boxEl.innerHTML = `<div class="suggest-box">هنوز کلید Google Gemini را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید رایگان خودتان را وارد کنید.</div>`;
-      } else {
-        boxEl.innerHTML = `<div class="suggest-box">درخواست ناموفق بود (${escapeHtml(e.message||'')}). محتمل‌ترین دلیل: نبود دسترسی به این سرویس از ایران بدون فیلترشکن، یا نامعتبر بودن کلید API.</div>`;
-      }
-    }finally{
-      defSuggestBtn.disabled = !enInput.value.trim();
-      defSuggestBtn.textContent = originalLabel;
-    }
-  };
-
-  overlay.querySelector('#f-save').onclick = async ()=>{
-    const en = overlay.querySelector('#f-en').value.trim();
-    const fa = overlay.querySelector('#f-fa').value.trim();
-    const example = overlay.querySelector('#f-ex').value.trim();
-    const note = overlay.querySelector('#f-note').value.trim();
-    if(!en || !fa){ alert('لطفاً کلمه انگلیسی و معنی فارسی را وارد کنید.'); return; }
-
-    if(isEdit){
-      Object.assign(existing, {en, fa, example, note});
-      await saveWords();
-      renderDrawers();
-      if(listPageRedraw) listPageRedraw();
-    } else {
-      await addWordToList(en, fa, example, note);
-    }
+  const input = overlay.querySelector('#qwe-en');
+  const go = ()=>{
+    const en = input.value.trim();
+    if(!en) return;
     overlay.remove();
+    openWordDetailPanel({ en, fa:'', example:'' }, {});
   };
-
-  if(isEdit){
-    overlay.querySelector('#f-delete').onclick = async ()=>{
-      if(confirm('این لغت حذف شود؟')){
-        words = words.filter(w=>w.id!==existing.id);
-        await saveWords();
-        overlay.remove();
-        renderDrawers();
-        if(listPageRedraw) listPageRedraw();
-      }
-    };
-  }
+  overlay.querySelector('#qwe-go').onclick = go;
+  input.onkeydown = (e)=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } };
+  setTimeout(()=> input.focus(), 30);
 }
 
 /* ---------- Word list (its own full page) ---------- */
@@ -5981,12 +5821,16 @@ function openWordDetailPanel(word, contextInfo){
       </div>
 
       <div class="wd-header">
-        <span class="wd-word" id="wdWordText">${escapeHtml(en)}</span>
-        <button type="button" class="wd-speak-btn" id="wdEditWordBtn" title="جستجوی کلمه‌ی دیگر">✏️</button>
-        <button type="button" class="wd-speak-btn" id="wdSpeakBtn" title="پخش تلفظ">🔊</button>
-        <button type="button" class="wd-speak-btn" id="wdToolsBtn" title="دیکشنری و ابزارها">🔗</button>
-        <button type="button" class="wd-speak-btn" id="wdAiBtn" title="دستیار هوشمند">🤖</button>
-        ${ready ? `<button type="button" class="wd-speak-btn" id="wdFreeDictHeaderBtn" title="دیکشنری آزاد (تعریف کامل، بدون نیاز به هوش مصنوعی)">📕</button>` : ''}
+        <span class="wd-word-group">
+          <span class="wd-word" id="wdWordText">${escapeHtml(en)}</span>
+          <button type="button" class="wd-speak-btn" id="wdEditWordBtn" title="جستجوی کلمه‌ی دیگر">✏️</button>
+          <button type="button" class="wd-speak-btn" id="wdSpeakBtn" title="پخش تلفظ">🔊</button>
+        </span>
+        <span class="wd-tools-group">
+          <button type="button" class="wd-speak-btn" id="wdToolsBtn" title="دیکشنری و ابزارها">🔗</button>
+          <button type="button" class="wd-speak-btn" id="wdAiBtn" title="دستیار هوشمند">🤖</button>
+          ${ready ? `<button type="button" class="wd-speak-btn" id="wdFreeDictHeaderBtn" title="دیکشنری آزاد (تعریف کامل، بدون نیاز به هوش مصنوعی)">📕</button>` : ''}
+        </span>
       </div>
       <div class="wd-quickmeaning" id="wdQuickMeaning">${state.quickMeaning ? escapeHtml(state.quickMeaning) : (ready ? '<span class="spinner"></span>' : '')}</div>
 
@@ -6014,7 +5858,7 @@ function openWordDetailPanel(word, contextInfo){
       </div>` : ''}</div>
       <div class="wd-status-row">
         <button type="button" class="btn btn-secondary btn-small" id="wdEditManualBtn">✏️ ویرایش دستی</button>
-        <button type="button" class="btn btn-ghost btn-small" id="wdDeleteBtn">🗑 حذف لغت</button>
+        <button type="button" class="btn btn-danger btn-small" id="wdDeleteBtn">🗑 حذف لغت</button>
       </div>
       <div id="wdManualEditWrap" style="display:none;"></div>
       `}
@@ -6625,7 +6469,7 @@ function openWordDetailPanel(word, contextInfo){
       const paraHtml = state.grammar.paragraph ? `<div class="ai-msg">${escapeHtml(state.grammar.paragraph)}</div>` : '';
       return paraHtml + dictBoxHtml(state.grammar);
     }
-    if(state.grammarError) return `<div class="ai-note">${state.grammarError}<div id="wdGrammarFreeDictWrap"></div></div>`;
+    if(state.grammarError) return `<div class="ai-note">${state.grammarError}</div><div id="wdGrammarFreeDictWrap"></div>`;
     return `<div class="ai-msg"><span class="spinner"></span> در حال تحلیل جمله...</div>`;
   }
 
@@ -6760,7 +6604,7 @@ function openWordDetailPanel(word, contextInfo){
 
 /* ---------- Wire up top buttons ---------- */
 $('#startReviewBtn').onclick = ()=> startReview();
-$('#addWordBtn').onclick = ()=> openAddForm();
+$('#addWordBtn').onclick = ()=> openQuickWordEntry();
 $('#listBtn').onclick = ()=> openListPage();
 $('#browseBtn').onclick = ()=> startBrowse();
 $('#episodeBtn').onclick = ()=> openEpisodePage();
