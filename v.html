@@ -6482,6 +6482,7 @@ function openWordDetailPanel(word, contextInfo){
   function parseExplainImport(raw){
     state.deepExplain = raw.trim();
     state.deepExplainError = '';
+    persistExplainToWord(state.deepExplain);
   }
   function parseExamplesImport(raw){
     const cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
@@ -6499,6 +6500,25 @@ function openWordDetailPanel(word, contextInfo){
   function persistExamplesToWord(list){
     if(wordEntry && (!wordEntry.moreExamples || !wordEntry.moreExamples.length) && list && list.length){
       wordEntry.moreExamples = list;
+      saveWords();
+    }
+  }
+
+  /* Same idea as persistExamplesToWord, but for the "دستور زبان" and "نکات کاربردی" tabs — these
+     used to only live in the in-memory `state` object for the lifetime of the panel, so opening
+     an already-added word's details, generating (or pasting from ChatGPT) fresh grammar/notes,
+     then closing the panel silently lost that work. Same never-overwrite rule: if the word
+     already has a saved grammar/practicalNotes value, a freshly (re)generated one here won't
+     clobber it. */
+  function persistGrammarToWord(g){
+    if(wordEntry && !wordEntry.grammar && g){
+      wordEntry.grammar = g;
+      saveWords();
+    }
+  }
+  function persistExplainToWord(text){
+    if(wordEntry && !wordEntry.practicalNotes && text){
+      wordEntry.practicalNotes = text;
       saveWords();
     }
   }
@@ -6522,6 +6542,8 @@ function openWordDetailPanel(word, contextInfo){
     if(!state.grammar.paragraph && !state.grammar.inContextMeanings.length && !state.grammar.generalMeanings.length && !list.length && !obj.practicalNotes) throw new Error('چیزی در پاسخ قابل تشخیص نبود');
     backfillMeaningFromGrammar(state.grammar);
     if(list.length) persistExamplesToWord(list);
+    persistGrammarToWord(state.grammar);
+    if(obj.practicalNotes && obj.practicalNotes.trim()) persistExplainToWord(state.deepExplain);
     state.tabLoaded.grammar = true;
     state.tabLoaded.explain = true;
     state.tabLoaded.examples = true;
@@ -6624,6 +6646,7 @@ function openWordDetailPanel(word, contextInfo){
     fetchGrammarExplanation(settings.key, en, sentence, dialogueContext).then(g=>{
       state.grammar = g;
       backfillMeaningFromGrammar(g);
+      persistGrammarToWord(g);
       if(state.activeTab!=='grammar') return;
       const wrap = tabContent.querySelector('#wdGrammarWrap');
       if(wrap) wrap.innerHTML = grammarTabHtml();
@@ -6653,6 +6676,7 @@ function openWordDetailPanel(word, contextInfo){
     if(state.deepExplain || state.deepExplainError) return;
     fetchPracticalUsageNotes(settings.key, en, state.quickMeaning, sentence, dialogueContext).then(text=>{
       state.deepExplain = text;
+      persistExplainToWord(text);
       if(state.activeTab!=='explain') return;
       const wrap = tabContent.querySelector('#wdExplainWrap');
       if(wrap) wrap.innerHTML = practicalNotesHtml();
