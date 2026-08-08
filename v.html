@@ -460,7 +460,13 @@
     font-size:15px; box-shadow:none; padding:0; color:var(--brass-dark); flex-shrink:0;
   }
   .wd-speak-btn:active{ background:var(--line); }
-  .wd-quickmeaning{ text-align:center; font-size:14px; font-weight:600; color:var(--ink); margin-bottom:16px; min-height:20px; }
+  .wd-quickmeaning{ text-align:center; font-size:14px; font-weight:600; color:var(--ink); margin-bottom:16px; min-height:20px; display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
+  .wd-meaning-update-btn{
+    background:var(--parchment-dark); border:1px solid var(--line); border-radius:50%;
+    width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center;
+    font-size:11px; box-shadow:none; padding:0; color:var(--brass-dark); flex-shrink:0;
+  }
+  .wd-meaning-update-btn:active{ background:var(--line); }
   .wd-qm-freedict-row{ display:flex; align-items:center; justify-content:center; gap:9px; flex-wrap:wrap; }
   .wd-qm-freedict-line{ font-size:13px; font-weight:500; color:var(--ink-soft); direction:ltr; }
   .wd-tab-placeholder{ display:flex; flex-direction:column; align-items:center; gap:10px; padding:22px 0; }
@@ -824,18 +830,21 @@
   .pron-btn:disabled{ opacity:.5; }
   .li-actions .pron-btn{ width:22px; height:22px; font-size:11px; border:none; background:transparent; color:var(--ink-soft); }
   .browse-meaning{ font-size:20px; font-weight:700; color:var(--ink); margin-bottom:12px; }
-  .browse-example{ background:var(--parchment-dark); border-radius:var(--radius-sm); padding:11px 15px; font-size:13.5px; color:var(--ink-soft); max-width:420px; line-height:1.7; }
-  .browse-example .en{ display:block; margin-bottom:3px; color:var(--ink); }
+  /* Saved example + "another example" widget, visually merged into one continuous card (joined
+     corners, thin dashed divider between) instead of two separate boxes in different colors —
+     they're both just "an example sentence for this word", so they should read as one unit. */
+  .browse-examples{ width:100%; max-width:420px; margin-top:12px; border-radius:var(--radius-sm); overflow:hidden; box-shadow:var(--shadow-sm); }
+  .browse-example{ background:var(--parchment-dark); padding:12px 16px; font-size:13.5px; color:var(--ink); line-height:1.7; text-align:left; direction:ltr; }
   .ai-example-box{
-    background:var(--brass-tint); border:1px solid var(--line); border-radius:var(--radius-sm);
-    padding:11px 15px; font-size:13.5px; color:var(--ink); max-width:420px; width:100%;
-    margin-top:12px; text-align:center;
+    background:var(--parchment-dark); padding:12px 16px; font-size:13.5px; color:var(--ink);
+    display:flex; flex-direction:column; gap:8px; text-align:left; direction:ltr;
   }
-  .ai-example-box .ai-example-head{ font-size:11px; font-weight:700; color:var(--brass-dark); margin-bottom:7px; }
-  .ai-example-box .ai-example-en{ direction:ltr; display:block; color:var(--ink); margin-bottom:5px; }
+  .browse-example + .ai-example-box{ border-top:1px dashed var(--line); }
+  .ai-example-box .ai-example-head{ font-size:11px; font-weight:700; color:var(--brass-dark); direction:rtl; text-align:right; }
+  .ai-example-box .ai-example-en{ display:block; color:var(--ink); }
   .ai-example-box .ai-example-fa{ color:var(--ink-soft); font-size:12.5px; }
-  .ai-example-box .ai-example-error{ color:var(--rust-dark); font-size:12.5px; }
-  .ai-example-box .btn{ margin-top:9px; }
+  .ai-example-box .ai-example-error{ color:var(--rust-dark); font-size:12.5px; direction:rtl; text-align:right; }
+  .ai-example-box .btn{ align-self:flex-end; width:auto; padding:7px 14px; margin-top:0; }
   .browse-note-toggle{ margin-top:16px; }
   .browse-bottom{
     flex-shrink:0; padding:14px 16px calc(14px + env(safe-area-inset-bottom));
@@ -1860,18 +1869,21 @@ function renderWordOfDayCard(){
 }
 
 /* Opens the "word of the day" suggestion in the exact same fullscreen card UI used for
-   browsing/reviewing regular words. If the word has already been added to the vocab list,
-   we open the real entry from `words` so edits (notes, grading) persist normally; otherwise
-   we build a lightweight stand-in object just for viewing/browsing this one card. */
-function openWordOfDayInDeck(cache){
+   browsing/reviewing regular words. If the word hasn't been added to the vocab list yet, it's
+   added right now (same as the card's own ➕ button) — NOT a throwaway stand-in object.
+   Reason: this view lets you tap through into "دستور زبان" / "دریافت کارت کامل از هوش مصنوعی"
+   and everything the AI produces there only ever gets saved onto a real entry from `words`
+   (via `words.find(...)` inside the detail panel) — a stand-in object that was never actually
+   in `words` looked identical on screen but silently dropped everything the moment the view
+   was closed, since nothing was ever pointing back at it. */
+async function openWordOfDayInDeck(cache){
   if(!cache) return;
   let w = words.find(x=> (x.en||'').trim().toLowerCase()===cache.en.trim().toLowerCase());
   if(!w){
-    w = {
-      id: 'wod_temp_'+Date.now(),
-      en: cache.en, fa: cache.fa, example: cache.example||'', note:'',
-      box: 1, nextReview: todayISO(), createdAt: todayISO(), history: []
-    };
+    await addWordToList(cache.en, cache.fa, cache.example||'', '', {});
+    w = words.find(x=> (x.en||'').trim().toLowerCase()===cache.en.trim().toLowerCase());
+    saveWordOfDayCache({...cache, added:true});
+    renderWordOfDayCard();
   }
   startBrowse([w], 0);
 }
@@ -4795,11 +4807,11 @@ function renderDeckCard(){
       <div class="word-row">
         <span class="browse-word en">${escapeHtml(w.en)}</span>
         <button class="pron-btn" id="deckPronBtn" title="پخش تلفظ">🔊</button>
+        <button class="pron-btn" id="deckToolsBtn" title="دیکشنری و ابزارها">🔗</button>
       </div>
       ${deckRevealed ? `
         <div class="browse-meaning">${escapeHtml(w.fa)}</div>
-        ${w.example ? `<div class="browse-example"><span class="en">${escapeHtml(w.example)}</span></div>` : ''}
-        <div class="ai-example-box" id="deckAiExampleBox">${renderDeckAiExampleContent()}</div>
+        ${w.example ? `<div class="browse-examples"><div class="browse-example"><span class="en">${escapeHtml(w.example)}</span></div><div class="ai-example-box" id="deckAiExampleBox">${renderDeckAiExampleContent()}</div></div>` : `<div class="browse-examples"><div class="ai-example-box" id="deckAiExampleBox">${renderDeckAiExampleContent()}</div></div>`}
       ` : `
         <button class="btn btn-secondary" id="deckRevealBtn">نمایش معنی</button>
       `}
@@ -4825,6 +4837,7 @@ function renderDeckCard(){
 
   deckEl.querySelector('#deckCloseBtn').onclick = closeDeck;
   deckEl.querySelector('#deckPronBtn').onclick = (e)=> playPronunciation(w.en, e.currentTarget);
+  deckEl.querySelector('#deckToolsBtn').onclick = ()=> openBrowseToolsPanel(w);
   const revealBtn = deckEl.querySelector('#deckRevealBtn');
   if(revealBtn) revealBtn.onclick = ()=>{ deckRevealed=true; deckInteracted=true; autoloadDeckExample(w); renderDeckCard(); };
 
@@ -6524,10 +6537,12 @@ function openWordDetailPanel(word, contextInfo){
   /* If the word was added before a Persian meaning was ever set (the "بدون معنی، بعداً کامل کن"
      path), and the grammar tab's answer arrives with meanings, back-fill that meaning onto the
      word itself — both the quick-meaning line up top and the saved record — so it's no longer
-     empty in "دستور زبان"/manual-edit, and shows up in review too. Never overwrites a meaning
-     the person already has (own text or a previous AI answer). */
+     empty in "دستور زبان"/manual-edit, and shows up in review too.
+     If a meaning was already there (own text, or an earlier single-word AI answer), it's never
+     silently overwritten — but if the grammar tab's answer is genuinely richer/different, a small
+     🔄 button is offered next to the quick-meaning line so the person can pull in the fuller
+     version themselves with one tap, instead of it only ever showing up buried in "دستور زبان". */
   function backfillMeaningFromGrammar(g){
-    if(state.quickMeaning) return;
     // Same comma-separated style as the 🤖 quick-meaning button (fetchQuickMeaningsLine), so the
     // top meaning line reads consistently no matter which AI path ends up filling it in. Prefers
     // generalMeanings (the word's meaning overall) over inContextMeanings (specific to one
@@ -6535,19 +6550,41 @@ function openWordDetailPanel(word, contextInfo){
     // not just a note about the one example sentence it happened to be learned from.
     const general = Array.isArray(g.generalMeanings) ? g.generalMeanings.filter(Boolean) : [];
     const inCtx = Array.isArray(g.inContextMeanings) ? g.inContextMeanings.filter(Boolean) : [];
-    const meaning = (general.length ? general : inCtx).join('، ');
-    if(!meaning) return;
+    const richMeaning = (general.length ? general : inCtx).join('، ');
+    if(!richMeaning) return;
+    if(!state.quickMeaning){
+      applyQuickMeaning(richMeaning);
+      return;
+    }
+    if(richMeaning.trim().toLowerCase() !== state.quickMeaning.trim().toLowerCase()){
+      offerMeaningUpdate(richMeaning);
+    }
+  }
+
+  function applyQuickMeaning(meaning){
     state.quickMeaning = meaning;
     const qmEl = overlay.querySelector('#wdQuickMeaning');
     if(qmEl) qmEl.innerHTML = escapeHtml(meaning);
     if(learnBtn && !alreadyAdded) learnBtn.disabled = false;
-    if(wordEntry && !wordEntry.fa){
+    if(wordEntry){
       wordEntry.fa = meaning;
       saveWords();
       renderDrawers();
       if(listPageRedraw) listPageRedraw();
       if(deckEl && currentDeckWord()===wordEntry) renderDeckCard();
     }
+  }
+
+  function offerMeaningUpdate(richMeaning){
+    const qmEl = overlay.querySelector('#wdQuickMeaning');
+    if(!qmEl || qmEl.querySelector('.wd-meaning-update-btn')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'wd-meaning-update-btn';
+    btn.title = 'به‌روزرسانی با معنی کامل‌تر: ' + richMeaning;
+    btn.textContent = '🔄';
+    btn.onclick = ()=>{ applyQuickMeaning(richMeaning); };
+    qmEl.appendChild(btn);
   }
 
   function dictBoxHtml(g){
