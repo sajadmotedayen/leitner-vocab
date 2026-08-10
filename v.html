@@ -284,12 +284,27 @@
   .close-x:active{ background:var(--line); }
 
   /* ===== In-app dictionary frame viewer ===== */
-  .frame-overlay{
-    position:fixed; inset:0; background:var(--panel);
-    z-index:60; display:flex; flex-direction:column;
+  .frame-overlay-backdrop{
+    position:fixed; inset:0; background:rgba(20,16,8,.35); z-index:59;
+    animation:foBackdropIn .18s ease;
   }
+  @keyframes foBackdropIn{ from{ opacity:0; } to{ opacity:1; } }
+  /* A bottom sheet by default — enough height to read/interact with the dictionary without the
+     rest of the app (video, word detail) being completely replaced behind it. .fo-expanded is an
+     explicit opt-in the person taps for, not the default, since most look-ups are quick. */
+  .frame-overlay{
+    position:fixed; left:0; right:0; bottom:0; top:auto; height:70vh; max-height:70vh;
+    background:var(--panel);
+    z-index:60; display:flex; flex-direction:column;
+    border-radius:18px 18px 0 0; box-shadow:0 -10px 30px rgba(0,0,0,.28);
+    animation:foSheetIn .2s ease;
+    transition:height .2s ease, border-radius .2s ease;
+  }
+  @keyframes foSheetIn{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
+  .frame-overlay.fo-expanded{ height:100vh; max-height:100vh; border-radius:0; }
+  .frame-overlay .fo-handle{ width:38px; height:4px; border-radius:999px; background:var(--line); margin:8px auto 0; flex:0 0 auto; }
   .frame-overlay .fo-head{
-    display:flex; align-items:center; gap:8px; padding:10px 12px;
+    display:flex; align-items:center; gap:8px; padding:10px 12px; flex-wrap:wrap;
     border-bottom:1px solid var(--line-soft); background:var(--panel);
     flex:0 0 auto;
   }
@@ -470,6 +485,11 @@
   }
   .wd-speak-btn:active{ background:var(--line); }
   .wd-quickmeaning{ text-align:center; font-size:14px; font-weight:600; color:var(--ink); margin-bottom:16px; min-height:20px; display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
+  /* بیاموز/فست‌دیکشنری shortcuts: same circular chip as the other header icons, just a bold
+     single English letter instead of an emoji glyph, colored to match each site's brand so
+     they're still easy to tell apart from the 🔗/🤖/📕 icons at a glance without needing a
+     dedicated row or extra label text. */
+  .wd-letter-btn{ font-family:'Lora',serif; font-weight:800; font-size:14px; }
   .wd-meaning-update-btn{
     background:var(--parchment-dark); border:1px solid var(--line); border-radius:50%;
     width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center;
@@ -1409,19 +1429,22 @@ function saveCefrLevel(v){
   try{ localStorage.setItem(CEFR_LEVEL_KEY, v || ''); }catch(e){}
 }
 
+/* بیاموز / فست دیکشنری used to live in TOOL_DEFS below (shown in the full "دیکشنری و ابزارها"
+   panel + Settings reorder list); they now have their own dedicated quick-access row in the
+   word-detail view instead, so they're kept as standalone URL builders rather than duplicated
+   in both places. */
+function bamoozUrl(en){
+  /* URL path is always the literal "w" (not the word's first letter) — b-amooz uses
+     ?word=... as the actual lookup key, e.g. dic.b-amooz.com/en/dictionary/w?word=hello */
+  return `https://dic.b-amooz.com/en/dictionary/w?word=${encodeURIComponent((en||'').trim())}`;
+}
+function fastdicUrl(en){
+  return `https://fastdic.com/word/${encodeURIComponent((en||'').trim().toLowerCase().replace(/\s+/g,'-'))}`;
+}
+
 /* ---------- Dictionary / AI tools shown in the "دیکشنری و ابزارها" panel ----------
    Order and enabled/disabled state are configurable from Settings. */
 const TOOL_DEFS = [
-  {id:'bamooz', label:'بیاموز', color:'#6a4fb3', kind:'link', embeddable:true, href:(w)=>{
-    const enRaw = (w.en||'').trim();
-    /* URL path is always the literal "w" (not the word's first letter) — b-amooz uses
-       ?word=... as the actual lookup key, e.g. dic.b-amooz.com/en/dictionary/w?word=hello */
-    return `https://dic.b-amooz.com/en/dictionary/w?word=${encodeURIComponent(enRaw)}`;
-  }},
-  {id:'fastdic', label:'فست دیکشنری', color:'#1abc9c', kind:'link', embeddable:true, href:(w)=>{
-    const enRaw = (w.en||'').trim();
-    return `https://fastdic.com/word/${encodeURIComponent(enRaw.toLowerCase().replace(/\s+/g,'-'))}`;
-  }},
   {id:'longman', label:'Longman', color:'#c0392b', kind:'link', href:(w)=> `https://www.ldoceonline.com/dictionary/${encodeURIComponent((w.en||'').trim())}`},
   {id:'oxford', label:'Oxford', color:'#2b579a', kind:'link', href:(w)=> `https://www.oxfordlearnersdictionaries.com/definition/english/${encodeURIComponent((w.en||'').trim())}`},
   {id:'collins', label:'Collins', color:'#e08e00', kind:'link', href:(w)=> `https://www.collinsdictionary.com/dictionary/english/${encodeURIComponent((w.en||'').trim())}`},
@@ -5240,12 +5263,17 @@ function openPromptComposer(word, opts){
    a pragmatic fix we do one silent automatic reload if 'load' hasn't fired within a few seconds,
    plus always offer a manual 🔄 reload button for anything this heuristic misses. */
 function openToolInFrame(url, label){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'frame-overlay-backdrop';
+
   const overlay = document.createElement('div');
   overlay.className = 'frame-overlay';
   overlay.innerHTML = `
+    <div class="fo-handle"></div>
     <div class="fo-head">
       <button class="fo-btn fo-close">✕</button>
       <div class="fo-title">${escapeHtml(label)}</div>
+      <button class="fo-btn fo-expand" title="تمام‌صفحه">⤢</button>
       <button class="fo-btn fo-reload" title="بارگذاری مجدد">🔄</button>
       <button class="fo-btn fo-open-tab">باز در تب جدید ↗</button>
     </div>
@@ -5253,7 +5281,13 @@ function openToolInFrame(url, label){
       <iframe src="${url}" referrerpolicy="no-referrer-when-downgrade"></iframe>
       <div class="fo-hint">اگه این سایت باز نشد، دکمه‌ی 🔄 بالا رو بزن یا از «باز در تب جدید» استفاده کن</div>
     </div>`;
-  document.body.appendChild(overlay);
+  // Mount inside the current fullscreen element when one is active (e.g. the video player in
+  // landscape fullscreen) — anything appended to document.body instead is invisible in that
+  // case, since the native Fullscreen API only paints the fullscreen element and its own
+  // descendants on top. Every other overlay in the app already does this; this one was missed.
+  const mount = getOverlayMountEl();
+  mount.appendChild(backdrop);
+  mount.appendChild(overlay);
 
   const iframe = overlay.querySelector('iframe');
   let loaded = false;
@@ -5264,9 +5298,17 @@ function openToolInFrame(url, label){
   iframe.addEventListener('load', ()=>{ loaded = true; });
   setTimeout(()=>{ if(!loaded) reload(); }, 3500);
 
-  overlay.querySelector('.fo-close').onclick = ()=> overlay.remove();
+  const close = ()=>{ overlay.remove(); backdrop.remove(); };
+  backdrop.onclick = close;
+  overlay.querySelector('.fo-close').onclick = close;
   overlay.querySelector('.fo-reload').onclick = reload;
   overlay.querySelector('.fo-open-tab').onclick = ()=> window.open(url, '_blank', 'noopener,noreferrer');
+  const expandBtn = overlay.querySelector('.fo-expand');
+  expandBtn.onclick = ()=>{
+    const expanded = overlay.classList.toggle('fo-expanded');
+    expandBtn.textContent = expanded ? '⤡' : '⤢';
+    expandBtn.title = expanded ? 'خروج از تمام‌صفحه' : 'تمام‌صفحه';
+  };
 }
 
 function openBrowseToolsPanel(w){
@@ -6245,6 +6287,8 @@ function openWordDetailPanel(word, contextInfo){
           <button type="button" class="wd-speak-btn" id="wdSpeakBtn" title="پخش تلفظ">🔊</button>
         </span>
         <span class="wd-tools-group">
+          <button type="button" class="wd-speak-btn wd-letter-btn" id="wdBamoozBtn" style="color:#6a4fb3;" title="بیاموز">B</button>
+          <button type="button" class="wd-speak-btn wd-letter-btn" id="wdFastdicBtn" style="color:#1abc9c;" title="فست دیکشنری">F</button>
           <button type="button" class="wd-speak-btn" id="wdToolsBtn" title="دیکشنری و ابزارها">🔗</button>
           <button type="button" class="wd-speak-btn" id="wdAiBtn" title="دستیار هوشمند">🤖</button>
           ${ready ? `<button type="button" class="wd-speak-btn" id="wdFreeDictHeaderBtn" title="دیکشنری آزاد (تعریف کامل، بدون نیاز به هوش مصنوعی)">📕</button>` : ''}
@@ -6328,6 +6372,12 @@ function openWordDetailPanel(word, contextInfo){
   overlay.querySelector('#wdSpeakBtn').onclick = (e)=> speakText(en, e.currentTarget);
   overlay.querySelector('#wdToolsBtn').onclick = ()=> openBrowseToolsPanel({ en, fa: state.quickMeaning||word.fa||'', example: sentence });
   overlay.querySelector('#wdAiBtn').onclick = ()=> openAiPanel({ en, fa: state.quickMeaning||word.fa||'', example: sentence });
+
+  /* Quick-dictionary row: same two embeddable sites available from the full "دیکشنری و ابزارها"
+     panel, just one tap away right under the AI's quick meaning — for the common case of
+     wanting a second, human-written Persian meaning fast without opening the full tool list. */
+  overlay.querySelector('#wdBamoozBtn').onclick = ()=> openToolInFrame(bamoozUrl(en), 'بیاموز');
+  overlay.querySelector('#wdFastdicBtn').onclick = ()=> openToolInFrame(fastdicUrl(en), 'فست دیکشنری');
 
   /* "📕" in the header — lets the free dictionary's full entry (all definitions/examples/
      synonyms) be pulled up directly, any time, with one tap. Previously this full box only ever
