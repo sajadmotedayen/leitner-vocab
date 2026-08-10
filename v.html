@@ -704,9 +704,9 @@
   /* The caption box itself ignores taps (so the video/controls beneath stay reachable), but
      each individual word span re-enables pointer events so it can be tapped on its own. */
   .vsync-caption{
-    position:absolute; left:0; right:0; bottom:var(--cap-bottom, 6%); display:flex;
+    position:absolute; left:0; right:0; bottom:max(var(--cap-bottom, 6%), 48px); display:flex;
     flex-direction:column; align-items:center; gap:3px;
-    pointer-events:none; padding:0 10px;
+    pointer-events:none; padding:0 10px; z-index:1;
   }
   .vsync-caption-text{
     background:transparent; color:#ffe140; font-size:calc(17px * var(--cap-scale, 1)); font-weight:800; line-height:1.5;
@@ -746,37 +746,122 @@
     color:#8bef6a; text-decoration:underline; text-decoration-color:#8bef6a; text-decoration-thickness:2px;
     text-underline-offset:3px; font-weight:800;
   }
-  .vsync-btn-row{
-    position:absolute; left:8px; top:8px; z-index:2; display:flex; gap:6px; pointer-events:auto;
+  /* Soft gradient scrim across the top of the player — the same trick YouTube/Netflix-style
+     players use so icon-only buttons stay legible over a bright frame without every single
+     button needing its own heavy dark backdrop. Sits below the buttons in z-index (they're at
+     2) and ignores taps so it never steals the gesture layer's clicks. */
+  .vsync-player::before{
+    content:''; position:absolute; inset:0 0 auto 0; height:64px; z-index:1; pointer-events:none;
+    background:linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,0));
   }
-  .vsync-sync-row{ top:44px; }
-  .vsync-pos-row{ left:auto; right:8px; top:44px; }
+  .vsync-player:fullscreen::before, .vsync-player:-webkit-full-screen::before{ height:90px; }
+  .vsync-btn-row{
+    position:absolute; left:10px; top:10px; z-index:2; display:flex; direction:ltr; gap:8px; pointer-events:auto;
+  }
   .vsync-sync-badge{
-    pointer-events:none; background:rgba(0,0,0,.4); color:#fff; font-size:11px; font-weight:700;
-    border-radius:8px; padding:6px 7px; display:flex; align-items:center; direction:ltr; min-width:38px; justify-content:center;
+    pointer-events:none; background:rgba(15,15,15,.6); color:#fff; font-size:11px; font-weight:700;
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:999px; padding:6px 9px; display:flex; align-items:center; direction:ltr; min-width:40px; justify-content:center;
   }
   .vsync-fs-btn{
-    pointer-events:auto;
-    background:rgba(0,0,0,.55); color:#fff; border:none; border-radius:8px;
-    font-size:16px; padding:6px 10px; cursor:pointer;
+    pointer-events:auto; flex-shrink:0;
+    background:rgba(15,15,15,.55); border:1px solid rgba(255,255,255,.14); color:#fff; font-size:15px; line-height:1;
+    width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:transform .12s ease, background .12s ease;
   }
+  .vsync-fs-btn:active{ transform:scale(.9); background:rgba(0,0,0,.75); }
+  /* Every top-of-player icon button (caption toggle, فا toggle, rotate) shares one visual
+     language: a uniform circular "glass" chip — translucent dark fill, a hairline border for
+     definition against busy video frames, and a gentle press-scale instead of a hard color
+     flash — rather than the old flat, mismatched-size rectangles. */
   .vsync-cap-size-btn{
     pointer-events:auto;
-    background:rgba(0,0,0,.55); color:#fff; border:none; border-radius:8px;
-    font-size:13px; font-weight:800; padding:6px 9px; cursor:pointer; line-height:1;
+    width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+    background:rgba(15,15,15,.55); color:#fff; border:1px solid rgba(255,255,255,.14); border-radius:50%;
+    font-size:14px; font-weight:800; padding:0; cursor:pointer; line-height:1;
+    box-shadow:0 2px 8px rgba(0,0,0,.3);
+    transition:transform .12s ease, background .12s ease, border-color .12s ease;
   }
-  .vsync-cap-size-btn:active{ background:rgba(0,0,0,.8); }
-  .vsync-cap-size-btn.active{ background:var(--brass-dark,#8a6a1f); }
+  .vsync-cap-size-btn:active{ transform:scale(.9); background:rgba(0,0,0,.75); }
+  .vsync-cap-size-btn.active{ background:var(--brass-dark,#8a6a1f); border-color:rgba(255,255,255,.3); }
+  /* Subtitle size, position, AND sync offset used to be up to three separate rows sitting
+     permanently at the top of the video — most of that space spent on settings people touch
+     once and then leave alone for the rest of the video. They're all folded behind the single
+     🔤 toggle now: tap it, this flyout pops up right under the main row (wrapping onto a second
+     line on narrower screens rather than running off-screen), tap it again to put it away. It
+     intentionally sits *above* anything behind it (z-index) rather than pushing content down,
+     since it's only ever open for a moment. */
+  .vsync-cap-flyout{
+    position:absolute; left:10px; top:52px; z-index:5; pointer-events:auto;
+    direction:ltr;
+    display:flex; align-items:center; justify-content:flex-start; gap:16px; row-gap:10px; flex-wrap:wrap; max-width:min(82vw, 270px);
+    animation:vsyncFlyoutIn .16s ease;
+  }
+  @keyframes vsyncFlyoutIn{ from{ opacity:0; transform:translateY(-6px) scale(.96); } to{ opacity:1; transform:none; } }
+  .vsync-flyout-group{
+    display:flex; align-items:center; gap:6px; flex-shrink:0;
+  }
+  .vsync-flyout-group .vsync-cap-size-btn{ width:34px; height:34px; font-size:12.5px; }
+  /* Volume — on-screen readout shown briefly while muting/unmuting or dragging (see
+     vsyncVolumePointer* handlers), centered over the video the same way MX Player's does, and
+     otherwise invisible so it never competes with the actual controls. */
+  .vsync-volume-hud{
+    position:absolute; top:50%; left:50%; z-index:6; pointer-events:none;
+    transform:translate(-50%,-50%);
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    background:rgba(0,0,0,.6); border-radius:14px; padding:16px 20px;
+    opacity:0; transition:opacity .18s ease;
+  }
+  .vsync-volume-hud.show{ opacity:1; }
+  .vsync-volume-icon{ font-size:26px; line-height:1; }
+  .vsync-volume-track{
+    width:6px; height:84px; background:rgba(255,255,255,.25); border-radius:999px;
+    overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end;
+  }
+  .vsync-volume-fill{ width:100%; background:#fff; border-radius:999px; }
+  .vsync-volume-pct{ font-size:12px; color:#fff; font-weight:700; direction:ltr; }
+  /* Double-tap left/right to seek ±10s, same gesture Chrome's own player uses — this is just the
+     brief circular flash confirming it happened, on whichever side was tapped. */
+  .vsync-seek-flash{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:60px; height:60px; border-radius:50%; background:rgba(0,0,0,.55);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    color:#fff; font-size:11px; font-weight:700; direction:ltr;
+    opacity:0; pointer-events:none; transition:opacity .15s ease; z-index:6;
+  }
+  .vsync-seek-flash.show{ opacity:1; }
+  .vsync-seek-flash-left{ left:14%; }
+  .vsync-seek-flash-right{ right:14%; }
+  .vsync-seek-flash-icon{ font-size:20px; line-height:1; }
+  /* The big, obvious center play/pause circle — the thing people actually expect to see and
+     tap, the way Chrome and every other video app shows one. It rides the same show/hide cycle
+     as everything else in .vsync-controls-layer, which already means it stays put whenever the
+     video is paused (the auto-hide timer only ever starts while playing) and otherwise fades in
+     on a tap and back out after a few seconds, same as the rest. */
+  .vsync-center-playpause{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    z-index:3; pointer-events:auto;
+    width:60px; height:60px; border-radius:50%;
+    background:rgba(0,0,0,.5); border:none; color:#fff;
+    font-size:22px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .vsync-center-playpause:active{ background:rgba(0,0,0,.7); }
   /* Rotate button lives at the top (native Chrome controls occupy the bottom strip), and stays
      hidden until the wrapper is actually fullscreen — it's meaningless outside of fullscreen and
      shouldn't sit in the way otherwise. */
   .vsync-rotate-btn{
-    display:none; position:absolute; top:8px; right:8px; z-index:2; pointer-events:auto;
-    background:rgba(0,0,0,.55); color:#fff; border:none; border-radius:8px;
-    font-size:16px; padding:6px 10px; cursor:pointer;
+    display:none; position:absolute; top:10px; right:10px; z-index:2; pointer-events:auto;
+    width:38px; height:38px; align-items:center; justify-content:center;
+    background:rgba(15,15,15,.55); color:#fff; border:1px solid rgba(255,255,255,.14); border-radius:50%;
+    font-size:16px; padding:0; cursor:pointer;
+    box-shadow:0 2px 8px rgba(0,0,0,.3);
+    transition:transform .12s ease, background .12s ease, border-color .12s ease;
   }
-  .vsync-player.vsync-fs-active .vsync-rotate-btn{ display:block; }
-  .vsync-rotate-btn.active{ background:var(--brass-dark,#8a6a1f); }
+  .vsync-player.vsync-fs-active .vsync-rotate-btn{ display:flex; }
+  .vsync-player.vsync-fs-active .vsync-prefs-rotate-btn{ display:none; }
+  .vsync-rotate-btn:active{ transform:scale(.9); background:rgba(0,0,0,.75); }
+  .vsync-rotate-btn.active{ background:var(--brass-dark,#8a6a1f); border-color:rgba(255,255,255,.3); }
   /* Manual "force landscape" rotate: lifts the player out of normal flow, rotates it 90deg and
      swaps its on-screen width/height so a landscape video fills a portrait-locked phone screen.
      Only meant to be toggled while the wrapper is fullscreen. */
@@ -788,6 +873,67 @@
   }
   .vsync-player.vsync-rotate video{
     width:100% !important; height:100% !important; max-height:none !important; object-fit:contain;
+  }
+  /* All the floating controls (rotate button + the 3 button rows) live in one wrapper so they
+     can be repositioned as a unit for the "force landscape" CSS-rotate fallback above. Normally
+     (not rotated) this wrapper is just a plain full-size layer sitting over the player — each
+     button row keeps using its own left/top/right exactly as before, no change in that case.
+     In `.vsync-rotate` mode, though, the player itself is rotated 90° (with width/height swapped)
+     to fake landscape on a portrait screen — and every descendant rotates right along with it.
+     That used to drag the buttons along too: a horizontal row of buttons rotates into a vertical
+     stack, and rows anchored to the same edge end up landing on top of each other, so everything
+     piled up in one corner instead of spanning all four. This wrapper cancels that rotation back
+     out for just the controls (same fixed-centered-and-rotated trick as the player itself, only
+     with the opposite angle and swapped dimensions), so the buttons render upright and land at
+     the actual screen corners the person sees — same layout as the non-rotated case, just correct
+     for the rotated video underneath it. */
+  .vsync-controls-layer{ position:absolute; inset:0; pointer-events:none; z-index:2; transition:opacity .25s ease; opacity:1; }
+  .vsync-player.vsync-rotate .vsync-controls-layer{
+    position:fixed !important; inset:auto !important; top:50% !important; left:50% !important;
+    width:100vw !important; height:100vh !important;
+    transform:translate(-50%,-50%) rotate(-90deg) !important;
+  }
+  /* Auto-hide, same idea as Chrome/MX Player's own controls: fade out during unattended
+     playback, tap the video to bring them back. The invisible gesture layer below stays tappable
+     the whole time regardless of this state, so a tap always works to bring the buttons back. */
+  .vsync-player.vsync-controls-hidden .vsync-controls-layer{ opacity:0; }
+  .vsync-player.vsync-controls-hidden .vsync-controls-layer,
+  .vsync-player.vsync-controls-hidden .vsync-controls-layer *{ pointer-events:none !important; }
+  /* Invisible layer that owns the volume swipe (and reveals the controls on any tap), covering
+     the whole video. It now covers the full height — the scrub bar below is ours too (see
+     .vsync-seek-row), sitting in a higher z-index, so it stays fully reachable on top of this
+     regardless. Sits *below* the caption text in z-index too, so tapping a caption word still
+     reaches the word for lookup instead of being swallowed here. `touch-action:none` is the
+     important part — without it, the browser can quietly decide a vertical finger-drag is a
+     page-scroll gesture (usually within the first couple of pixels) and takes over before this
+     ever gets a chance to call preventDefault, which is why dragging used to just scroll instead
+     of changing the volume. This tells it up front: nothing here scrolls, all of it is ours to
+     interpret. */
+  .vsync-gesture-layer{ position:absolute; inset:0; z-index:0; pointer-events:auto; touch-action:none; }
+  /* Our own play/pause + scrub bar, replacing the native Chrome control strip entirely — that
+     strip lived in a browser-internal layer the gesture layer above could never let a tap
+     through to (there's no such thing as "pass this click to the element behind me" in the
+     DOM), so once something sat on top of the video, the native bar was unreachable no matter
+     what the JS did. This one is ours, so it can live in the same auto-hide/reveal system as
+     the other buttons and actually stay reachable. */
+  .vsync-seek-row{
+    position:absolute; left:8px; right:8px; bottom:8px; z-index:2; pointer-events:auto;
+    display:flex; align-items:center; gap:9px;
+    background:rgba(0,0,0,.55); border-radius:10px; padding:6px 11px;
+  }
+  .vsync-time{ color:#fff; font-size:11px; direction:ltr; flex-shrink:0; min-width:30px; }
+  .vsync-seek-track{
+    position:relative; flex:1; height:18px; display:flex; align-items:center; cursor:pointer;
+    touch-action:none;
+  }
+  .vsync-seek-track::before{
+    content:''; position:absolute; left:0; right:0; height:4px;
+    background:rgba(255,255,255,.3); border-radius:999px;
+  }
+  .vsync-seek-fill{ position:absolute; left:0; height:4px; background:#fff; border-radius:999px; width:0%; }
+  .vsync-seek-handle{
+    position:absolute; width:12px; height:12px; border-radius:50%; background:#fff; left:0%;
+    transform:translateX(-50%); box-shadow:0 1px 3px rgba(0,0,0,.4);
   }
   .vsync-status{ font-size:12px; color:var(--ink-soft); margin-top:9px; }
   .vsync-hint{ font-size:11.5px; color:var(--ink-soft); margin-top:5px; }
@@ -2444,27 +2590,56 @@ function renderVsyncPlayer(){
     if(!videoEl || epVsyncLastRenderedSrc !== epVideoObjectUrl){
       holder.innerHTML = `
         <div class="vsync-player" id="epVsyncPlayer">
-          <video id="epVsyncVideo" src="${epVideoObjectUrl}" controls playsinline
+          <video id="epVsyncVideo" src="${epVideoObjectUrl}" playsinline
             oncontextmenu="return false;"></video>
           <div class="vsync-caption">
             <div class="vsync-caption-text" id="epVsyncCaptionText" style="display:none;"></div>
             <div class="vsync-caption-text vsync-caption-fa" id="epVsyncCaptionFaText" style="display:none;"></div>
           </div>
-          <button type="button" class="vsync-rotate-btn" id="epVsyncRotateBtn" title="چرخوندن ویدیو">⤾</button>
-          <div class="vsync-btn-row">
-            <button type="button" class="vsync-cap-size-btn" id="epVsyncCapMinusBtn" title="کوچک‌تر کردن زیرنویس">A−</button>
-            <button type="button" class="vsync-cap-size-btn" id="epVsyncCapPlusBtn" title="بزرگ‌تر کردن زیرنویس">A+</button>
-            <button type="button" class="vsync-cap-size-btn" id="epVsyncFaToggleBtn" title="نمایش/مخفی‌کردن ترجمه فارسی" style="display:none;">فا</button>
-            <button type="button" class="vsync-fs-btn" id="epVsyncFsBtn" title="فول‌اسکرین">⛶</button>
-          </div>
-          <div class="vsync-btn-row vsync-sync-row">
-            <button type="button" class="vsync-cap-size-btn" id="epVsyncSyncMinusBtn" title="زودتر نمایش بده">−۰.۵s</button>
-            <span class="vsync-sync-badge" id="epVsyncSyncBadge">0.0s</span>
-            <button type="button" class="vsync-cap-size-btn" id="epVsyncSyncPlusBtn" title="دیرتر نمایش بده">+۰.۵s</button>
-          </div>
-          <div class="vsync-btn-row vsync-pos-row">
-            <button type="button" class="vsync-cap-size-btn" id="epVsyncPosDownBtn" title="پایین بردن زیرنویس">⬇</button>
-            <button type="button" class="vsync-cap-size-btn" id="epVsyncPosUpBtn" title="بالا بردن زیرنویس">⬆</button>
+          <div class="vsync-gesture-layer" id="epVsyncGestureLayer"></div>
+          <div class="vsync-controls-layer">
+            <button type="button" class="vsync-rotate-btn" id="epVsyncRotateBtn" title="چرخوندن ویدیو">⤾</button>
+            <div class="vsync-btn-row">
+              <button type="button" class="vsync-cap-size-btn" id="epVsyncCapToggleBtn" title="تنظیم زیرنویس (اندازه، موقعیت، هماهنگی)">🔤</button>
+              <button type="button" class="vsync-cap-size-btn" id="epVsyncFaToggleBtn" title="نمایش/مخفی‌کردن ترجمه فارسی" style="display:none;">فا</button>
+            </div>
+            <div class="vsync-cap-flyout" id="epVsyncCapFlyout" style="display:none;">
+              <span class="vsync-flyout-group">
+                <button type="button" class="vsync-cap-size-btn" id="epVsyncCapMinusBtn" title="کوچک‌تر کردن زیرنویس">A−</button>
+                <button type="button" class="vsync-cap-size-btn" id="epVsyncCapPlusBtn" title="بزرگ‌تر کردن زیرنویس">A+</button>
+              </span>
+              <span class="vsync-flyout-group">
+                <button type="button" class="vsync-cap-size-btn" id="epVsyncPosDownBtn" title="پایین بردن زیرنویس">⬇</button>
+                <button type="button" class="vsync-cap-size-btn" id="epVsyncPosUpBtn" title="بالا بردن زیرنویس">⬆</button>
+              </span>
+              <span class="vsync-flyout-group">
+                <button type="button" class="vsync-cap-size-btn" id="epVsyncSyncMinusBtn" title="زودتر نمایش بده">−۰.۵s</button>
+                <span class="vsync-sync-badge" id="epVsyncSyncBadge">0.0s</span>
+                <button type="button" class="vsync-cap-size-btn" id="epVsyncSyncPlusBtn" title="دیرتر نمایش بده">+۰.۵s</button>
+              </span>
+            </div>
+            <div class="vsync-volume-hud" id="epVsyncVolumeHud">
+              <div class="vsync-volume-icon" id="epVsyncVolumeIcon">🔊</div>
+              <div class="vsync-volume-track"><div class="vsync-volume-fill" id="epVsyncVolumeFill"></div></div>
+              <div class="vsync-volume-pct" id="epVsyncVolumePct">100%</div>
+            </div>
+            <div class="vsync-seek-flash vsync-seek-flash-left" id="epVsyncSeekFlashLeft">
+              <span class="vsync-seek-flash-icon">⟲</span>10s
+            </div>
+            <div class="vsync-seek-flash vsync-seek-flash-right" id="epVsyncSeekFlashRight">
+              <span class="vsync-seek-flash-icon">⟳</span>10s
+            </div>
+            <button type="button" class="vsync-center-playpause" id="epVsyncCenterPlayPauseBtn" title="پخش/توقف">▶</button>
+            <div class="vsync-seek-row" id="epVsyncSeekRow">
+              <span class="vsync-time" id="epVsyncTimeCurrent">0:00</span>
+              <div class="vsync-seek-track" id="epVsyncSeekTrack">
+                <div class="vsync-seek-fill" id="epVsyncSeekFill"></div>
+                <div class="vsync-seek-handle" id="epVsyncSeekHandle"></div>
+              </div>
+              <span class="vsync-time" id="epVsyncTimeDuration">0:00</span>
+              <button type="button" class="vsync-fs-btn vsync-prefs-rotate-btn" id="epVsyncPreFsRotateBtn" title="چرخش و فول‌اسکرین مستقیم">⤾</button>
+              <button type="button" class="vsync-fs-btn" id="epVsyncFsBtn" title="فول‌اسکرین">⛶</button>
+            </div>
           </div>
         </div>`;
       videoEl = holder.querySelector('#epVsyncVideo');
@@ -2552,6 +2727,237 @@ function renderVsyncPlayer(){
         applyCapBottom();
       };
 
+      /* Size + position used to be two rows sitting there permanently; now they're tucked behind
+         this one toggle and only appear while actually being adjusted. */
+      const capToggleBtn = holder.querySelector('#epVsyncCapToggleBtn');
+      const capFlyout = holder.querySelector('#epVsyncCapFlyout');
+      capToggleBtn.onclick = ()=>{
+        const opening = capFlyout.style.display === 'none';
+        capFlyout.style.display = opening ? 'flex' : 'none';
+        capToggleBtn.classList.toggle('active', opening);
+      };
+
+      /* Volume swipe + auto-hide controls + our own play/pause & scrub bar, all owned by the
+         invisible gesture layer sitting over the video (see .vsync-gesture-layer CSS for why it
+         needs to be a dedicated element rather than listening on the video itself: without it
+         capturing the touch first with touch-action:none, the browser tends to treat a vertical
+         drag as a page-scroll before our own threshold check ever gets a chance to say
+         otherwise). There's no native Chrome control strip left to defer to any more — a layer
+         sitting on top of the video for the swipe gesture made it permanently unreachable no
+         matter what the JS did, since hit-testing happens before any of our code runs — so
+         play/pause and seeking are fully custom now too, living in the same show/hide cycle as
+         the rest of the buttons instead of a separate invisible system. */
+      const gestureLayer = holder.querySelector('#epVsyncGestureLayer');
+      const volumeHud = holder.querySelector('#epVsyncVolumeHud');
+      const volumeIcon = holder.querySelector('#epVsyncVolumeIcon');
+      const volumeFill = holder.querySelector('#epVsyncVolumeFill');
+      const volumePct = holder.querySelector('#epVsyncVolumePct');
+      const centerPlayPauseBtn = holder.querySelector('#epVsyncCenterPlayPauseBtn');
+      const timeCurrent = holder.querySelector('#epVsyncTimeCurrent');
+      const timeDuration = holder.querySelector('#epVsyncTimeDuration');
+      const seekTrack = holder.querySelector('#epVsyncSeekTrack');
+      const seekFill = holder.querySelector('#epVsyncSeekFill');
+      const seekHandle = holder.querySelector('#epVsyncSeekHandle');
+      const seekFlashLeft = holder.querySelector('#epVsyncSeekFlashLeft');
+      const seekFlashRight = holder.querySelector('#epVsyncSeekFlashRight');
+
+      let lastNonZeroVolume = parseFloat(localStorage.getItem('vsyncVolume'));
+      if(!(lastNonZeroVolume > 0)) lastNonZeroVolume = 1;
+      videoEl.volume = lastNonZeroVolume;
+
+      const renderVolumeHud = ()=>{
+        const vol = videoEl.muted ? 0 : videoEl.volume;
+        volumeIcon.textContent = vol===0 ? '🔇' : (vol < 0.5 ? '🔉' : '🔊');
+        volumeFill.style.height = Math.round(vol*100) + '%';
+        volumePct.textContent = Math.round(vol*100) + '%';
+      };
+      renderVolumeHud();
+
+      let volumeHudTimer = null;
+      const flashVolumeHud = ()=>{
+        volumeHud.classList.add('show');
+        clearTimeout(volumeHudTimer);
+        volumeHudTimer = setTimeout(()=> volumeHud.classList.remove('show'), 700);
+      };
+
+      /* Auto-hide the custom controls during unattended playback, same as Chrome/MX Player —
+         tapping the video toggles them (shows if hidden, hides if already showing — this is
+         actually how Chrome's own mobile controls behave, not just a "wake up" reveal); pausing
+         keeps them visible regardless. */
+      let controlsHideTimer = null;
+      const hideControlsNow = ()=>{
+        clearTimeout(controlsHideTimer);
+        playerEl.classList.add('vsync-controls-hidden');
+        capFlyout.style.display = 'none';
+        capToggleBtn.classList.remove('active');
+      };
+      const showControls = ()=>{
+        playerEl.classList.remove('vsync-controls-hidden');
+        clearTimeout(controlsHideTimer);
+        if(!videoEl.paused){
+          controlsHideTimer = setTimeout(hideControlsNow, 3000);
+        }
+      };
+      const toggleControls = ()=>{
+        if(playerEl.classList.contains('vsync-controls-hidden')) showControls();
+        else hideControlsNow();
+      };
+      videoEl.addEventListener('play', showControls);
+      videoEl.addEventListener('pause', ()=>{ clearTimeout(controlsHideTimer); playerEl.classList.remove('vsync-controls-hidden'); });
+      playerEl.addEventListener('pointerdown', showControls);
+      showControls();
+
+      /* Play/pause — just the one big centered circle now (same idea as Chrome's own
+         paused-state icon), plus the gesture layer's toggle for the controls themselves. A
+         second small button down in the scrub bar was redundant with it, so that's gone. */
+      const updatePlayPauseIcon = ()=>{
+        centerPlayPauseBtn.textContent = videoEl.paused ? '▶' : '⏸';
+      };
+      updatePlayPauseIcon();
+      const togglePlayPause = ()=>{ if(videoEl.paused) videoEl.play().catch(()=>{}); else videoEl.pause(); };
+      centerPlayPauseBtn.onclick = togglePlayPause;
+      videoEl.addEventListener('play', updatePlayPauseIcon);
+      videoEl.addEventListener('pause', updatePlayPauseIcon);
+
+      const fmtTime = (s)=>{
+        if(!isFinite(s) || s<0) s = 0;
+        const m = Math.floor(s/60), sec = Math.floor(s%60);
+        return m + ':' + String(sec).padStart(2,'0');
+      };
+      let seekDragging = false;
+      const updateSeekUI = ()=>{
+        if(seekDragging) return;
+        const dur = videoEl.duration || 0;
+        const pct = dur>0 ? (videoEl.currentTime/dur)*100 : 0;
+        seekFill.style.width = pct + '%';
+        seekHandle.style.left = pct + '%';
+        timeCurrent.textContent = fmtTime(videoEl.currentTime);
+        timeDuration.textContent = fmtTime(dur);
+      };
+      videoEl.addEventListener('timeupdate', updateSeekUI);
+      videoEl.addEventListener('loadedmetadata', updateSeekUI);
+      updateSeekUI();
+
+      const seekFromEvent = (e)=>{
+        const rect = seekTrack.getBoundingClientRect();
+        let pct = (e.clientX - rect.left) / rect.width;
+        pct = Math.min(1, Math.max(0, pct));
+        seekFill.style.width = (pct*100) + '%';
+        seekHandle.style.left = (pct*100) + '%';
+        timeCurrent.textContent = fmtTime(pct * (videoEl.duration || 0));
+        return pct;
+      };
+      seekTrack.addEventListener('pointerdown', (e)=>{
+        seekDragging = true;
+        showControls();
+        seekFromEvent(e);
+        try{ seekTrack.setPointerCapture(e.pointerId); }catch(err){}
+      });
+      seekTrack.addEventListener('pointermove', (e)=>{
+        if(!seekDragging) return;
+        e.preventDefault();
+        seekFromEvent(e);
+      });
+      seekTrack.addEventListener('pointerup', (e)=>{
+        if(!seekDragging) return;
+        const pct = seekFromEvent(e);
+        videoEl.currentTime = pct * (videoEl.duration || 0);
+        seekDragging = false;
+      });
+
+      /* Double-tap left/right to jump ±10s, the same gesture Chrome's own video controls use.
+         A single tap can't immediately be treated as "just a tap" — it has to wait a beat to see
+         whether a second one follows on the same side, the same way Chrome itself disambiguates
+         a tap from the first half of a double-tap. */
+      let seekFlashTimer = null;
+      const showSeekFlash = (side)=>{
+        const el = side==='right' ? seekFlashRight : seekFlashLeft;
+        const other = side==='right' ? seekFlashLeft : seekFlashRight;
+        other.classList.remove('show');
+        el.classList.add('show');
+        clearTimeout(seekFlashTimer);
+        seekFlashTimer = setTimeout(()=> el.classList.remove('show'), 550);
+      };
+      const seekBy = (deltaSeconds, side)=>{
+        const dur = videoEl.duration || Infinity;
+        videoEl.currentTime = Math.min(dur, Math.max(0, videoEl.currentTime + deltaSeconds));
+        showSeekFlash(side);
+        showControls();
+      };
+
+      /* Tap anywhere on empty video toggles the controls — matches Chrome's actual mobile
+         behavior (confirmed: it's a real toggle, not just a "wake up" reveal — tapping while the
+         bar is already showing hides it again). A tap here deliberately never touches play/pause
+         itself: that's the two dedicated buttons' job, or a double-tap on the same side, which
+         seeks instead. Since interacting with an actual button/scrub-bar already implies the
+         controls are visible, those keep using the simpler always-reveal listener below instead
+         of this disambiguation — this only needs to run for taps that land on the bare video. */
+      let gesture = null; // {x0,y0,pointerId,mode:'pending'|'volume'|'other', startVolume, height}
+      let lastTap = null; // {side, time} — for detecting a same-side double-tap-to-seek
+      let pendingToggleTimer = null;
+      const gesturePointerDown = (e)=>{
+        if(e.pointerType==='mouse' && e.button!==0) return;
+        e.stopPropagation(); // don't also trigger the blind "always show" listener on playerEl
+        const rect = gestureLayer.getBoundingClientRect();
+        gesture = {
+          x0:e.clientX, y0:e.clientY, pointerId:e.pointerId, mode:'pending',
+          isRight: (e.clientX - rect.left) > rect.width*0.5,
+          startVolume: videoEl.muted ? 0 : videoEl.volume,
+          height: rect.height
+        };
+        try{ gestureLayer.setPointerCapture(e.pointerId); }catch(err){}
+      };
+      const gesturePointerMove = (e)=>{
+        if(!gesture || gesture.pointerId!==e.pointerId) return;
+        const dx = e.clientX - gesture.x0, dy = e.clientY - gesture.y0;
+        if(gesture.mode==='pending'){
+          if(Math.hypot(dx,dy) < 12) return; // still could just be a tap
+          gesture.mode = (gesture.isRight && Math.abs(dy) > Math.abs(dx)) ? 'volume' : 'other';
+        }
+        if(gesture.mode==='volume'){
+          e.preventDefault();
+          const delta = -dy / (gesture.height * 0.75);
+          const newVol = Math.min(1, Math.max(0, gesture.startVolume + delta));
+          videoEl.muted = false;
+          videoEl.volume = newVol;
+          if(newVol > 0) lastNonZeroVolume = newVol;
+          renderVolumeHud();
+          flashVolumeHud();
+          showControls();
+        }
+      };
+      const gesturePointerUp = (e)=>{
+        if(!gesture || gesture.pointerId!==e.pointerId) return;
+        if(gesture.mode==='pending'){
+          const side = gesture.isRight ? 'right' : 'left';
+          const now = Date.now();
+          if(lastTap && lastTap.side===side && (now - lastTap.time) < 350){
+            // Second tap on the same side within the window — a double-tap-seek, not two clicks.
+            clearTimeout(pendingToggleTimer);
+            lastTap = null;
+            seekBy(side==='right' ? 10 : -10, side);
+          }else{
+            // Could still turn into a double-tap — hold off on the show/hide toggle until the
+            // window passes with nothing else arriving, or every double-tap would also flicker
+            // the controls' visibility right before seeking.
+            lastTap = { side, time: now };
+            clearTimeout(pendingToggleTimer);
+            pendingToggleTimer = setTimeout(()=>{
+              lastTap = null;
+              toggleControls();
+            }, 300);
+          }
+        }else if(gesture.mode==='volume'){
+          localStorage.setItem('vsyncVolume', videoEl.muted ? 0 : videoEl.volume);
+        }
+        gesture = null;
+      };
+      gestureLayer.addEventListener('pointerdown', gesturePointerDown);
+      gestureLayer.addEventListener('pointermove', gesturePointerMove, { passive:false });
+      gestureLayer.addEventListener('pointerup', gesturePointerUp);
+      gestureLayer.addEventListener('pointercancel', ()=>{ gesture = null; });
+
+
       /* Manual subtitle sync offset — shifts which cue counts as "active" without touching the
          .srt file itself, for when its timestamps run a bit early/late compared to this video. */
       const syncMinusBtn = holder.querySelector('#epVsyncSyncMinusBtn');
@@ -2623,6 +3029,18 @@ function renderVsyncPlayer(){
           }
         }
         playerEl.classList.toggle('vsync-rotate');
+      };
+      // Shortcut for the common case of "I already know I want landscape, skip the two-tap
+      // dance": lives in the seek row so it's reachable before fullscreen is even entered, and
+      // just chains the two existing actions — request fullscreen, then run the exact same
+      // rotate logic above — rather than duplicating that logic.
+      const preFsRotateBtn = holder.querySelector('#epVsyncPreFsRotateBtn');
+      preFsRotateBtn.onclick = async ()=>{
+        const isFs = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+        if(!isFs){
+          try{ await requestPlayerFullscreen(); }catch(err){}
+        }
+        rotateBtn.onclick();
       };
       // Show/hide the rotate button with fullscreen state, and reset rotation (both the real
       // orientation lock and the CSS fallback) the moment fullscreen ends, so nothing gets stuck.
