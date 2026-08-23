@@ -1898,14 +1898,14 @@ function saveWordOfDayCache(obj){
   try{ localStorage.setItem(WOD_STORAGE_KEY, JSON.stringify(obj)); }catch(e){}
 }
 
-/* Ask Gemini to suggest one new word, given a sample of the words the user already has. */
+/* Ask Gemini to suggest one new word to learn. The prompt no longer includes the user's own
+   vocabulary list (their learning history isn't sent to the AI) — instead, after the AI answers,
+   the caller (generateWordOfDay) checks the suggested word against knownWords itself and, if it
+   turns out to be a duplicate, simply asks again excluding it (see the alreadyHas check there). */
 async function fetchWordOfDaySuggestion(key, knownWords, avoidWords){
-  const knownSample = knownWords.slice(0, 200).join('، ');
   const avoidNote = (avoidWords && avoidWords.length) ? ` این کلمات را پیشنهاد نده چون قبلاً پیشنهاد شده‌اند: ${avoidWords.join('، ')}.` : '';
-  const systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. بر اساس فهرست کلماتی که کاربر از قبل در حال یادگیری آن‌هاست، دقیقاً یک کلمه انگلیسی تازه (که در آن فهرست نیست) پیشنهاد بده که برای کاربر مفید و قدم بعدی منطقی باشد — مثلاً هم‌خانواده با کلمات موجود، در همان سطح دشواری یا کمی بالاتر، یا پرکاربرد در موضوعاتی که از کلمات کاربر برمی‌آید. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown، بدون توضیح اضافه) با دقیقاً این کلیدها برگردان: {"en": "کلمه انگلیسی پیشنهادی", "fa": "معنی فارسی کوتاه و رایج", "definition": "شرح معنای همان کلمه به زبان انگلیسی ساده، به سبک دیکشنری تک‌زبانه (یک جمله کوتاه)", "example": "یک جمله نمونه انگلیسی ساده با همین کلمه", "translation": "ترجمه فارسی همان جمله نمونه"}.';
-  const userMessage = knownSample
-    ? `کلماتی که کاربر از قبل دارد: ${knownSample}.${avoidNote}`
-    : `کاربر هنوز کلمه‌ای ثبت نکرده؛ یک کلمه پرکاربرد و مفید برای شروع یادگیری زبان انگلیسی پیشنهاد بده.${avoidNote}`;
+  const systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. دقیقاً یک کلمه انگلیسی پرکاربرد و مفید پیشنهاد بده که برای یک زبان‌آموز فارسی‌زبان در سطح مبتدی تا متوسط، قدم بعدی منطقی برای یادگیری باشد. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown، بدون توضیح اضافه) با دقیقاً این کلیدها برگردان: {"en": "کلمه انگلیسی پیشنهادی", "fa": "معنی فارسی کوتاه و رایج", "definition": "شرح معنای همان کلمه به زبان انگلیسی ساده، به سبک دیکشنری تک‌زبانه (یک جمله کوتاه)", "example": "یک جمله نمونه انگلیسی ساده با همین کلمه", "translation": "ترجمه فارسی همان جمله نمونه"}.';
+  const userMessage = `یک کلمه انگلیسی پرکاربرد و مفید برای یادگیری پیشنهاد بده.${avoidNote}`;
   const raw = await geminiOnce(key, systemPrompt, userMessage);
   let cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
   const obj = JSON.parse(cleaned); // let a parse failure propagate — caller shows a friendly error
@@ -3383,9 +3383,9 @@ async function fetchSrtWordSelection(key, candidates, knownWords, level){
   const levelNote = level
     ? `کاربر می‌خواهد فقط کلماتی هم‌سطح ${level} (طبق چارچوب CEFR) ببیند؛ فقط از میان کاندیدها همان‌هایی را انتخاب کن که تقریباً همین سطح‌اند.`
     : (knownSample ? `کلماتی که کاربر از قبل بلد است (برای سنجش سطح او): ${knownSample}.` : 'کاربر هنوز کلمه‌ای ثبت نکرده؛ سطح او را مبتدی تا متوسط در نظر بگیر.');
-  const candidateList = candidates.map(c => `${c.en}(${c.count})`).join('، ');
-  const systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. در ادامه فهرستی از کلمات واقعی استخراج‌شده از زیرنویس یک فیلم/سریال به‌همراه تعداد تکرار هرکدام می‌آید. با توجه به سطح فعلی کاربر، دقیقاً از میان همین فهرست (بدون تغییر املا و بدون افزودن کلمه‌ی تازه) بین ۱۰ تا ۱۵ کلمه انتخاب کن که یادگیری‌شان برای او مفید و هم‌سطح باشد؛ کلمات خیلی بدیهی یا خیلی کمیاب/غیرضروری و همچنین اسم خاص یا نام شخصیت‌ها را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با این ساختار برگردان: {"words":[{"en":"...","fa":"...","definition":"...","level":"..."}]}.';
-  const userMessage = `${levelNote}\nفهرست کلمات کاندید از زیرنویس، به‌صورت کلمه(تعداد تکرار): ${candidateList}`;
+  const candidateList = candidates.map(c => c.en).join('، ');
+  const systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. در ادامه فهرستی از کلمات واقعی استخراج‌شده از زیرنویس یک فیلم/سریال می‌آید. با توجه به سطح فعلی کاربر، دقیقاً از میان همین فهرست (بدون تغییر املا و بدون افزودن کلمه‌ی تازه) بین ۱۰ تا ۱۵ کلمه انتخاب کن که یادگیری‌شان برای او مفید و هم‌سطح باشد؛ کلمات خیلی بدیهی یا خیلی کمیاب/غیرضروری و همچنین اسم خاص یا نام شخصیت‌ها را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با این ساختار برگردان: {"words":[{"en":"...","fa":"...","definition":"...","level":"..."}]}.';
+  const userMessage = `${levelNote}\nفهرست کلمات کاندید از زیرنویس: ${candidateList}`;
   const raw = await geminiOnce(key, systemPrompt, userMessage);
   let cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
   const obj = JSON.parse(cleaned);
@@ -3413,9 +3413,9 @@ async function fetchTextWordSelection(key, candidates, knownWords, level){
   const levelNote = level
     ? `کاربر می‌خواهد فقط کلماتی هم‌سطح ${level} (طبق چارچوب CEFR) ببیند؛ فقط از میان کاندیدها همان‌هایی را انتخاب کن که تقریباً همین سطح‌اند.`
     : (knownSample ? `کلماتی که کاربر از قبل بلد است (برای سنجش سطح او): ${knownSample}.` : 'کاربر هنوز کلمه‌ای ثبت نکرده؛ سطح او را مبتدی تا متوسط در نظر بگیر.');
-  const candidateList = candidates.map(c => `${c.en}(${c.count})`).join('، ');
-  const systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. در ادامه فهرستی از کلمات واقعی استخراج‌شده از یک متن انگلیسی که کاربر داده به‌همراه تعداد تکرار هرکدام می‌آید. با توجه به سطح فعلی کاربر، دقیقاً از میان همین فهرست (بدون تغییر املا و بدون افزودن کلمه‌ی تازه) بین ۱۰ تا ۲۰ کلمه انتخاب کن که یادگیری‌شان برای او مفید و هم‌سطح باشد؛ کلمات خیلی بدیهی یا خیلی کمیاب/غیرضروری را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با این ساختار برگردان: {"words":[{"en":"...","fa":"...","definition":"...","level":"..."}]}.';
-  const userMessage = `${levelNote}\nفهرست کلمات کاندید از متن، به‌صورت کلمه(تعداد تکرار): ${candidateList}`;
+  const candidateList = candidates.map(c => c.en).join('، ');
+  const systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. در ادامه فهرستی از کلمات واقعی استخراج‌شده از یک متن انگلیسی که کاربر داده می‌آید. با توجه به سطح فعلی کاربر، دقیقاً از میان همین فهرست (بدون تغییر املا و بدون افزودن کلمه‌ی تازه) بین ۱۰ تا ۲۰ کلمه انتخاب کن که یادگیری‌شان برای او مفید و هم‌سطح باشد؛ کلمات خیلی بدیهی یا خیلی کمیاب/غیرضروری را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با این ساختار برگردان: {"words":[{"en":"...","fa":"...","definition":"...","level":"..."}]}.';
+  const userMessage = `${levelNote}\nفهرست کلمات کاندید از متن: ${candidateList}`;
   const raw = await geminiOnce(key, systemPrompt, userMessage);
   let cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
   const obj = JSON.parse(cleaned);
@@ -3477,18 +3477,19 @@ async function fetchSrtIdiomSelection(key, lines, knownWords, level){
    matching them to the CEFR level — it is NOT restricted to a pre-extracted candidate list anymore
    (previously it could only choose from words the app's own JS vocabulary-extraction had already
    picked out, which meant its "analysis" was really just filtering/leveling that list, not real
-   reading). The candidate word(count) list is still attached, but purely as an optional priority
-   hint (frequency = worth learning), and knownWords is still attached so it can actively avoid
-   suggesting words the person already knows — both explicitly framed as non-restrictive below.
-   Grounding against fabrication now happens by checking the AI's picks against the real lines
-   text directly (see parseSrtWordResponse), not against the old candidate list. Idiom-finding is
-   still only requested when includeIdioms is true, reusing the same attached text. */
+   reading). The locally-extracted candidate words (with or without counts) are no longer sent to
+   the AI at all — not the words, not the counts, not even as a "priority hint" — the AI picks
+   entirely on its own by reading the real subtitle text. The `candidates` param is only still
+   accepted here so callers don't need to change their call sites; it's unused inside this
+   function now (candidates are still used elsewhere, for grounding the AI's picks against real
+   local data — see parseSrtWordResponse). knownWords is still attached so it can actively avoid
+   suggesting words the person already knows. Idiom-finding is still only requested when
+   includeIdioms is true, reusing the same attached text. */
 function buildSrtWordPrompt(candidates, lines, knownWords, level, includeIdioms){
   const levelLabel = level ? (CEFR_LEVELS.find(l=>l.value===level)||{}).label || level : '';
   const levelNote = level
     ? `سطح زبان کاربر دقیقاً «${levelLabel}» (کد ${level} طبق چارچوب CEFR) است؛ فقط و فقط کلماتی تقریباً هم‌سطح همین سطح را انتخاب کن — نه پایین‌تر، نه بالاتر.`
     : 'سطح زبان کاربر مشخص نشده (در ⚙ تنظیمات «سطح زبان» را انتخاب کن)؛ تا آن موقع کلماتی مناسب یک زبان‌آموز مبتدی تا متوسط انتخاب کن.';
-  const candidateList = (candidates||[]).map(c => `${c.en}(${c.count})`).join('، ');
   const knownSample = (knownWords||[]).slice(0, 200).join('، ');
 
   let systemPrompt = `تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی، مخصوص یک زبان‌آموز در سطح ${level ? `«${levelLabel}» (${level})` : 'مبتدی تا متوسط (چون هنوز سطح مشخص نکرده)'}. در ادامه‌ی پیام کاربر، خطوط واقعی زیرنویس یک فیلم/سریال می‌آید. با خواندن دقیق خودِ همین متن (نه حدس زدن از روی یک کلمه‌ی تنها)، خودت مستقلاً از میان کلماتی که واقعاً و عیناً در همین متن آمده‌اند (بدون تغییر املا) هرچند کلمه که یادگیری‌شان برای همین کاربر مفید و دقیقاً هم‌سطح ${level ? levelLabel : 'او'} باشد انتخاب کن — به هیچ تعداد خاصی محدود نباش. کلمات خیلی پایه/بدیهی (مثل be, have, go, this, and)، کلمات خیلی نادر یا غیرضروری، و اسم خاص یا نام شخصیت‌ها را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa) را دقیقاً بر اساس همان کاربردی که در متن واقعی زیرنویس دارد بنویس (نه صرفاً معنی عمومی دیکشنری، اگر با کاربرد این متن فرق دارد)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس.`;
@@ -3513,7 +3514,6 @@ function buildSrtWordPrompt(candidates, lines, knownWords, level, includeIdioms)
   let fullText = sampleLines.join('\n');
   if(fullText.length > MAX_CHARS) fullText = fullText.slice(0, MAX_CHARS);
   userMessage += `\n\nخطوط واقعی زیرنویس:\n${fullText}`;
-  if(candidateList) userMessage += `\n\n(راهنمای اولویت — لازم نیست فقط به این‌ها محدود بمونی): سیستم این کلمات رو به‌صورت خودکار به‌عنوان کلمات احتمالاً جدید برای کاربر و تعداد تکرارشون در متن بالا تشخیص داده، به‌صورت کلمه(تعداد تکرار): ${candidateList}`;
   if(knownSample) userMessage += `\n\nکلماتی که کاربر از قبل بلد است (این‌ها را دوباره پیشنهاد نده): ${knownSample}`;
 
   schema += '}';
