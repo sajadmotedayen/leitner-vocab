@@ -2159,13 +2159,6 @@ let vsyncLevelError = '';
 // when srtCandidatesPool/srtFullLines aren't populated.
 let vsyncLevelCandidates = [];
 let vsyncLevelLines = [];
-// When true (set by the combined "تحلیل + هایلایت + ساخت کارت کامل" button), the batch full-card
-// panel is opened automatically right after the next successful "تحلیل زیرنویس" submit, using the
-// word set that submit just produced — so the whole thing (analyze, highlight, build full offline
-// cards) happens as one guided flow instead of two separate button presses. Reset back to false
-// the moment it's consumed, so a later plain "شروع تحلیل" doesn't also trigger it.
-let pendingBatchCardAfterAnalyze = false;
-
 // "افزودن از متن": paste any English text in and get AI-picked vocabulary + Persian meanings to
 // review and add to the box — same underlying pipeline as the .srt word-suggestion flow above
 // (extractSrtVocabulary + a Gemini call), just fed plain pasted text instead of a subtitle file.
@@ -2482,7 +2475,7 @@ async function handleEpSyncSrtFile(file){
 /* Small status line shown right under the "📄 پیشنهاد کلمات و اصطلاحات + های‌لایت در پلیر" tool
    row, summarizing the current in-player highlight set (words + idioms together) — see
    renderSrtAnalyzePanel, the single flow that now produces both the suggestion list and this. */
-function renderVsyncLevelStatus(){
+function renderVsyncLevelStatus(transientMsg){
   const el = episodePageEl && episodePageEl.querySelector('#epVsyncLevelStatus');
   if(!el) return;
   if(vsyncLevelError){
@@ -2492,6 +2485,7 @@ function renderVsyncLevelStatus(){
   }else if(vsyncLevelWords.size>0){
     el.style.display = 'block';
     el.innerHTML = `
+      ${transientMsg ? `<div style="margin-bottom:8px;">${escapeHtml(transientMsg)}</div>` : ''}
       <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
         <input type="checkbox" id="epVsyncHighlightToggle" ${vsyncHighlightEnabled?'checked':''}>
         <span>✨ ${vsyncLevelWords.size} کلمه هم‌سطح ${vsyncHighlightEnabled ? 'در ویدیو های‌لایت می‌شود' : '(های‌لایت خاموش است)'}</span>
@@ -3609,6 +3603,131 @@ function parseSrtWordResponse(raw, candidates, lines){
   return wordItems.concat(idiomItems);
 }
 
+/* One-shot version of buildSrtWordPrompt + buildBatchFullCardPrompt merged into a single prompt/
+   single AI call, for the "📄📦 همه‌ی مراحل با هم" button: the AI both picks the words/idioms AND
+   writes each one's full card (grammar paragraph, in-context/general meanings, practical notes,
+   4 example sentences) in the same response, so there's no separate second round trip needed for
+   the cards. Reuses the exact same selection instructions/schema fields as the two source prompts
+   so parseCombinedAnalyzeCardResponse below can ground/apply results the same way the separate
+   flows already do. */
+function buildCombinedAnalyzeCardPrompt(candidates, lines, knownWords, level, includeIdioms){
+  const levelLabel = level ? (CEFR_LEVELS.find(l=>l.value===level)||{}).label || level : '';
+
+  let systemPrompt = `تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی، مخصوص یک زبان‌آموز در سطح ${level ? `«${levelLabel}» (${level})` : 'مبتدی تا متوسط (چون هنوز سطح مشخص نکرده)'}. در ادامه‌ی پیام کاربر، خطوط واقعی زیرنویس یک فیلم/سریال می‌آید. با خواندن دقیق خودِ همین متن (نه حدس زدن از روی یک کلمه‌ی تنها)، خودت مستقلاً از میان کلماتی که واقعاً و عیناً در همین متن آمده‌اند (بدون تغییر املا) هرچند کلمه که یادگیری‌شان برای همین کاربر مفید و هم‌سطح ${level ? levelLabel : 'او'} یا کمی بالاتر باشد انتخاب کن (کلمات پایین‌تر از سطح کاربر را انتخاب نکن) — به هیچ تعداد خاصی محدود نباش. کلمات خیلی پایه/بدیهی (مثل be, have, go, this, and)، کلمات خیلی نادر یا غیرضروری، و اسم خاص یا نام شخصیت‌ها را انتخاب نکن.`;
+
+  if(includeIdioms){
+    systemPrompt += ' علاوه بر این، از میان همان خطوط واقعی زیرنویس، اصطلاحات و عبارات idiomatic انگلیسی (نه تک‌کلمه‌های ساده) را که عیناً و کلمه‌به‌کلمه در همان متن آمده‌اند پیدا کن، هم‌سطح همان سطح بالا. اگر اصطلاح واقعی پیدا نکردی، آرایه‌ی idioms را خالی برگردان — چیزی از خودت اختراع نکن.';
+  }
+
+  systemPrompt += ` برای تک‌تک همه‌ی کلمات/اصطلاحاتی که همین‌طور انتخاب کردی — بدون هیچ استثنا — هم یک معنی فارسی کوتاه و رایج (fa) دقیقاً بر اساس کاربرد واقعی‌اش در همین متن زیرنویس، یک شرح انگلیسی ساده (definition)، تخمین سطح CEFR (level)، و هم یک کارت آموزشی کامل بنویس — دقیقاً به همان کامل‌بودن و جزئیاتی که اگر فقط همان یکی از تو خواسته می‌شد می‌نوشتی. زیاد بودن تعداد کلمات بهانه‌ای برای خلاصه یا کوتاه کردن هیچ‌کدام نیست؛ اگر پاسخ طولانی شود اشکالی ندارد. کارت کامل هر کلمه/اصطلاح شامل این فیلدهاست:
+"paragraph": ۲ تا ۳ جمله‌ی فارسی پیوسته و ساده که می‌گوید این کلمه/اصطلاح دقیقاً چه معنایی در همین بافت زیرنویس دارد — فقط اگر واقعاً نکته‌ی مفیدی هست اضافه کن (مثلاً فرق با معنی رایج‌تر)، وگرنه فقط معنی را کوتاه بگو.
+"inContextMeanings": آرایه‌ی ۱ تا ۳ معادل فارسی کوتاه مخصوص همین کاربرد.
+"generalMeanings": آرایه‌ی ۲ تا ۴ معادل فارسی کوتاه رایج این کلمه به‌طور کلی.
+"practicalNotes": متن ساده (نه JSON تو در تو)، با این قالب: هر عنوان با ** ** پررنگ و هر مورد زیرش با «- » شروع شود؛ فقط مواردی که واقعاً نکته‌ی مفیدی دارند: **ترکیب‌های رایج**، **اصطلاح‌ها** (اگر در یک عبارت رایج/فعل دوکلمه‌ای به‌کار می‌رود)، **کلمات مشابه** (۲ تا ۳ مورد با یک تفاوت کوتاه)، **نکته‌ی رایج فارسی‌زبانان** (اگر اشتباه معمولی وجود دارد)، **مترادف‌ها** (۲ تا ۴ مورد، جدا شده با «، »).
+"examples": آرایه‌ای با دقیقاً ۴ جمله‌ی نمونه‌ی انگلیسی طبیعی و متفاوت از هم با همین کلمه، هرکدام با فیلد "en" و ترجمه‌ی روان فارسی در "fa"؛ جمله‌ی واقعی خودِ زیرنویس را عیناً تکرار نکن.`;
+
+  let userMessage = '';
+  let wordFields = '"en":"...","fa":"...","definition":"...","level":"...","paragraph":"...","inContextMeanings":["..."],"generalMeanings":["..."],"practicalNotes":"...","examples":[{"en":"...","fa":"..."}]';
+  let schema = `{"words":[{${wordFields}}]`;
+  if(includeIdioms){
+    schema += `,"idioms":[{"en":"...","fa":"...","definition":"...","line":"...","paragraph":"...","inContextMeanings":["..."],"generalMeanings":["..."],"practicalNotes":"...","examples":[{"en":"...","fa":"..."}]}]`;
+    systemPrompt += ' برای هر اصطلاح، دقیقاً همان خط از متن ورودی که اصطلاح در آن آمده را بدون کوچک‌ترین تغییری در فیلد "line" کپی کن (باید عیناً با یکی از خط‌های ورودی یکی باشد).';
+  }
+  schema += '}';
+
+  const MAX_CHARS = 12000;
+  let sampleLines = lines;
+  if(lines.join('\n').length > MAX_CHARS){
+    const approxTargetLines = Math.max(50, Math.floor(MAX_CHARS/40));
+    const step = Math.max(1, Math.ceil(lines.length/approxTargetLines));
+    sampleLines = lines.filter((_,i)=> i % step === 0);
+  }
+  let fullText = sampleLines.join('\n');
+  if(fullText.length > MAX_CHARS) fullText = fullText.slice(0, MAX_CHARS);
+  userMessage += `خطوط واقعی زیرنویس:\n${fullText}`;
+  if(!level) userMessage += `\n\n(کاربر هنوز سطح زبانش را در ⚙ تنظیمات مشخص نکرده — طبق راهنمای بالا مبتدی تا متوسط در نظر بگیر.)`;
+
+  systemPrompt += ` فقط و فقط یک آبجکت JSON معتبر و خالص برگردان — بدون Markdown، بدون فنس \`\`\`json، بدون هیچ توضیح قبل یا بعدش — دقیقاً با این ساختار: ${schema}.`;
+
+  return { systemPrompt, userMessage };
+}
+
+/* Parses the combined prompt's response: grounds the chosen words/idioms against the real text
+   exactly like parseSrtWordResponse (so nothing hallucinated slips through), and — since each item
+   already carries its full card fields in the same object this time — also splits off a
+   `results` map in the exact shape applyBatchFullCardResults expects, so the existing, already-
+   tested apply logic can write the cards everywhere (vsyncLevelData, episodeSuggestions, saved
+   `words`) without a second AI round trip. Returns { items, results }. */
+function parseCombinedAnalyzeCardResponse(raw, candidates, lines){
+  let obj;
+  try{
+    obj = extractJsonObject(raw);
+  }catch(e){
+    throw new Error('این متن یک JSON معتبر نیست. مطمئن شو دقیقاً همون خروجی هوش مصنوعی رو (بدون توضیح اضافه‌ی خودت قبل یا بعدش) پیست کردی.');
+  }
+  if(!obj || typeof obj !== 'object') throw new Error('پاسخ به‌شکل یک آبجکت JSON نبود.');
+
+  const byWord = {};
+  (candidates||[]).forEach(c=>{ byWord[c.en] = c; });
+  const wordLineIdx = {};
+  (lines||[]).forEach((l, idx)=>{
+    if(!l) return;
+    const matches = l.match(/[A-Za-z']+/g);
+    if(!matches) return;
+    matches.forEach(m=>{
+      const lower = m.toLowerCase();
+      if(wordLineIdx[lower]===undefined) wordLineIdx[lower] = idx;
+    });
+  });
+
+  const cardFieldsOf = (w)=>{
+    const exList = Array.isArray(w.examples) ? w.examples.map(e=>({en:(e.en||'').trim(), fa:(e.fa||'').trim()})).filter(e=>e.en) : [];
+    const grammar = {
+      paragraph: (w.paragraph||'').trim(),
+      inContextMeanings: Array.isArray(w.inContextMeanings) ? w.inContextMeanings.filter(x=>typeof x==='string' && x.trim()) : [],
+      generalMeanings: Array.isArray(w.generalMeanings) ? w.generalMeanings.filter(x=>typeof x==='string' && x.trim()) : []
+    };
+    const practicalNotes = (w.practicalNotes||'').trim();
+    const hasCard = !!(grammar.paragraph || grammar.inContextMeanings.length || grammar.generalMeanings.length || practicalNotes || exList.length);
+    return hasCard ? { grammar, practicalNotes, moreExamples: exList } : null;
+  };
+
+  const results = {};
+  const wordItems = (Array.isArray(obj.words) ? obj.words : []).map(w=>{
+    const en = (w.en||'').trim(), fa = (w.fa||'').trim();
+    if(!en || !fa) return null;
+    const lower = en.trim().toLowerCase();
+    const c = byWord[lower];
+    let item;
+    if(c) item = { en, fa, definition:(w.definition||'').trim(), example: c.example, allExamples: c.allExamples, type:'word', level:(w.level||'').trim() };
+    else{
+      const idx = wordLineIdx[lower];
+      if(idx===undefined) return null; // not found anywhere in the real subtitle text — discard
+      const block = buildContextBlock(lines, idx);
+      const firstMatchLine = (block.find(l=>l.isMatch) || {}).text || lines[idx] || '';
+      item = { en, fa, definition:(w.definition||'').trim(), example: firstMatchLine, allExamples:[block], type:'word', level:(w.level||'').trim() };
+    }
+    const card = cardFieldsOf(w);
+    if(card) results[lower] = card;
+    return item;
+  }).filter(Boolean);
+
+  const lineIndexMap = new Map();
+  (lines||[]).forEach((l, idx)=>{ if(!lineIndexMap.has(l)) lineIndexMap.set(l, idx); });
+  const idiomItems = (Array.isArray(obj.idioms) ? obj.idioms : []).map(it=>{
+    const en = (it.en||'').trim(), fa = (it.fa||'').trim(), line = (it.line||'').trim();
+    if(!en || !fa || !line) return null;
+    if(!lineIndexMap.has(line)) return null; // not grounded in the real subtitle text — discard
+    const idx = lineIndexMap.get(line);
+    const card = cardFieldsOf(it);
+    if(card) results[en.trim().toLowerCase()] = card;
+    return { en, fa, definition:(it.definition||'').trim(), example: lines[idx], allExamples:[buildContextBlock(lines, idx)], type:'idiom' };
+  }).filter(Boolean);
+
+  if(wordItems.length===0 && idiomItems.length===0) throw new Error('هیچ کلمه یا اصطلاح معتبری در پاسخ پیدا نشد.');
+  return { items: wordItems.concat(idiomItems), results };
+}
+
 /* The "📄 تحلیل زیرنویس و پیشنهاد کلمات" panel: copy-the-prompt / open an external AI (ChatGPT or
    any other) / paste-the-answer-back — same fallback-to-external-AI pattern as
    renderSrtTranslatePanel, used here so this feature never touches the in-app Gemini key/quota.
@@ -3621,6 +3740,7 @@ function renderSrtAnalyzePanel(mode, panelSelector){
   const panel = episodePageEl && episodePageEl.querySelector(panelSelector);
   if(!panel) return;
   const isMore = mode==='more';
+  const isCombined = mode==='combined';
   panel.style.display = 'block';
   panel.dataset.mode = mode;
   const fileInput = episodePageEl.querySelector('#epSrtFile');
@@ -3631,25 +3751,31 @@ function renderSrtAnalyzePanel(mode, panelSelector){
   // and the person doesn't have to re-browse for the same file just to press this button again.
   const hasFile = hasPickedFile || !!epSyncSrtRawText;
   const hasResults = episodeSuggestions.length>0;
+  const needsFile = !isMore; // both 'new' and 'combined' need a file; 'more' reuses the existing pool
 
   panel.innerHTML = `
+    <div style="display:inline-block; font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px; margin-bottom:10px; background:${isCombined ? 'rgba(124,92,255,0.15); color:#7c5cff' : (isMore ? 'rgba(255,255,255,0.08); color:var(--ink-soft)' : 'rgba(60,160,255,0.15); color:#3ca0ff')};">
+      ${isMore ? '➕ حالت: کلمات بیشتر' : (isCombined ? '📄📦 حالت: تحلیل + های‌لایت + ساخت کارت کامل (یکجا)' : '📄 حالت: تحلیل زیرنویس و پیشنهاد کلمات')}
+    </div>
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">
       ${isMore
         ? 'یک درخواست برای یک دسته‌ی تازه از کلمات (به‌جز کلماتی که همین الان توی فهرست پایین هستن) آماده می‌کنه.'
-        : 'یک درخواست از روی کلمات واقعی همین زیرنویس آماده می‌کنه تا یک هوش مصنوعی خارجی (ChatGPT یا هر مدل دیگه) کلمات مناسب سطحت رو انتخاب و معنی کنه — بدون استفاده از سهمیه‌ی هوش مصنوعی داخل اپ.'}
-      جواب رو که گرفتی همینجا پیست کن تا به فهرست کلمات پایین اضافه بشه.
+        : isCombined
+          ? 'یک درخواست واحد از روی کلمات واقعی همین زیرنویس آماده می‌کنه تا یک هوش مصنوعی خارجی (ChatGPT یا هر مدل دیگه) هم کلمات مناسب سطحت رو انتخاب و معنی کنه، هم برای همون‌ها کارت آموزشی کامل (دستور زبان، نکات کاربردی، نمونه‌جمله) بسازه — همه در یک پاسخ، بدون استفاده از سهمیه‌ی هوش مصنوعی داخل اپ.'
+          : 'یک درخواست از روی کلمات واقعی همین زیرنویس آماده می‌کنه تا یک هوش مصنوعی خارجی (ChatGPT یا هر مدل دیگه) کلمات مناسب سطحت رو انتخاب و معنی کنه — بدون استفاده از سهمیه‌ی هوش مصنوعی داخل اپ.'}
+      جواب رو که گرفتی همینجا پیست کن تا به فهرست کلمات پایین اضافه بشه${isCombined ? ' و کارت کامل هرکدوم هم ذخیره بشه' : ''}.
     </div>
-    ${(!isMore && !hasFile) ? `<div class="ai-note" style="margin-bottom:8px;">اول از بالا یه فایل زیرنویس (.srt) انتخاب کن.</div>` : ''}
-    ${(!isMore && hasFile && !hasPickedFile) ? `<div class="ai-note" style="margin-bottom:8px;">📌 از همون زیرنویسی که قبلاً برای این قسمت انتخاب کرده بودی (${escapeHtml(epSyncSrtFileName||'')}) استفاده می‌شه — لازم نیست دوباره فایل رو انتخاب کنی.</div>` : ''}
+    ${(needsFile && !hasFile) ? `<div class="ai-note" style="margin-bottom:8px;">اول از بالا یه فایل زیرنویس (.srt) انتخاب کن.</div>` : ''}
+    ${(needsFile && hasFile && !hasPickedFile) ? `<div class="ai-note" style="margin-bottom:8px;">📌 از همون زیرنویسی که قبلاً برای این قسمت انتخاب کرده بودی (${escapeHtml(epSyncSrtFileName||'')}) استفاده می‌شه — لازم نیست دوباره فایل رو انتخاب کنی.</div>` : ''}
     <div class="actions">
-      <button type="button" class="btn btn-primary btn-small" id="epSrtAnalyzeShareBtn" ${(!isMore && !hasFile)?'disabled':''}>📤 اشتراک‌گذاری / کپی متن درخواست</button>
+      <button type="button" class="btn btn-primary btn-small" id="epSrtAnalyzeShareBtn" ${(needsFile && !hasFile)?'disabled':''}>📤 اشتراک‌گذاری / کپی متن درخواست</button>
     </div>
     <div id="epSrtAnalyzeCopyMsg" style="display:none;font-size:11.5px;color:var(--ink-soft);margin-top:6px;"></div>
     <textarea id="epSrtAnalyzePromptBox" readonly style="min-height:90px;margin-top:8px;font-size:11.5px;direction:ltr;text-align:left;"></textarea>
     <label style="margin-top:14px;">جواب هوش مصنوعی رو اینجا پیست کن</label>
     <textarea id="epSrtAnalyzePasteBox" placeholder="آبجکت JSON پاسخ رو اینجا پیست کن..." style="min-height:110px;"></textarea>
     <div class="actions" style="margin-top:8px;">
-      <button type="button" class="btn btn-primary btn-small" id="epSrtAnalyzeSubmitBtn">✅ ${isMore ? 'افزودن به فهرست' : 'ثبت کلمات'}</button>
+      <button type="button" class="btn btn-primary btn-small" id="epSrtAnalyzeSubmitBtn">✅ ${isMore ? 'افزودن به فهرست' : (isCombined ? 'ثبت کلمات + کارت‌ها' : 'ثبت کلمات')}</button>
       ${(!isMore && hasResults) ? `<button type="button" class="btn btn-ghost btn-small" id="epSrtAnalyzeClearBtn">🗑 حذف پیشنهادهای فعلی</button>` : ''}
     </div>
     <div id="epSrtAnalyzeErr" class="ai-note" style="display:none;margin-top:8px;"></div>`;
@@ -3695,7 +3821,9 @@ function renderSrtAnalyzePanel(mode, panelSelector){
         includeIdioms = true;
       }
 
-      const { systemPrompt, userMessage } = buildSrtWordPrompt(candidates, lines, knownWords, episodeLevel, includeIdioms);
+      const { systemPrompt, userMessage } = isCombined
+        ? buildCombinedAnalyzeCardPrompt(candidates, lines, knownWords, episodeLevel, includeIdioms)
+        : buildSrtWordPrompt(candidates, lines, knownWords, episodeLevel, includeIdioms);
       const fullText = systemPrompt + '\n\n' + userMessage;
       const box = panel.querySelector('#epSrtAnalyzePromptBox');
       box.value = fullText;
@@ -3731,7 +3859,14 @@ function renderSrtAnalyzePanel(mode, panelSelector){
       // response generated from either panel's "share" click grounds correctly against either.
       const groundCandidates = srtCandidatesPool.length ? srtCandidatesPool : vsyncLevelCandidates;
       const groundLines = srtFullLines.length ? srtFullLines : vsyncLevelLines;
-      const newItems = parseSrtWordResponse(raw, groundCandidates, groundLines);
+      let newItems, combinedResults = null;
+      if(isCombined){
+        const parsed = parseCombinedAnalyzeCardResponse(raw, groundCandidates, groundLines);
+        newItems = parsed.items;
+        combinedResults = parsed.results;
+      }else{
+        newItems = parseSrtWordResponse(raw, groundCandidates, groundLines);
+      }
       if(isMore){
         const shownLower = new Set(episodeSuggestions.map(w=>w.en.trim().toLowerCase()));
         const uniqueNew = newItems.filter(w=>!shownLower.has(w.en.trim().toLowerCase()));
@@ -3754,15 +3889,18 @@ function renderSrtAnalyzePanel(mode, panelSelector){
         vsyncLevelError = '';
         if(vsyncHighlightEnabled === undefined) vsyncHighlightEnabled = true;
       }
+      let combinedCardCount = 0;
+      if(combinedResults && Object.keys(combinedResults).length){
+        // Combined-mode answer already carried each word/idiom's full card — apply it right here
+        // with the same tested logic the separate batch-card panel uses, instead of opening a
+        // second panel for a second AI round trip.
+        combinedCardCount = applyBatchFullCardResults(combinedResults);
+      }
       panel.style.display = 'none';
       renderEpisodeResults();
-      renderVsyncLevelStatus();
+      renderVsyncLevelStatus(combinedCardCount>0 ? `✅ کارت کامل ${combinedCardCount} کلمه/اصطلاح هم همین‌جا ذخیره شد — از این به بعد آفلاین هم در دسترس است.` : '');
       updateVsyncCaptionNow();
       saveVsyncLastState(); // persist right away so the result survives a close/reload immediately, not just on pagehide
-      if(pendingBatchCardAfterAnalyze){
-        pendingBatchCardAfterAnalyze = false;
-        openBatchCardPanelForHighlighted();
-      }
     }catch(e){
       errEl.textContent = `پاسخ قابل خواندن نبود: ${escapeHtml(e.message||'')} — مطمئن شو دقیقاً همون خروجی JSON رو (بدون توضیح اضافه‌ی خودت) کپی کردی.`;
       errEl.style.display = 'block';
@@ -4087,19 +4225,23 @@ function renderEpisodePage(){
   const srtAnalyzeToggleBtn = episodePageEl.querySelector('#epSrtAnalyzeToggleBtn');
   if(srtAnalyzeToggleBtn) srtAnalyzeToggleBtn.onclick = ()=>{
     const panel = episodePageEl.querySelector('#epSrtAnalyzePanel');
-    if(panel.style.display==='none') renderSrtAnalyzePanel('new');
+    // If the panel is already open in a DIFFERENT mode (e.g. "combined"), switch it to 'new'
+    // instead of just closing it — otherwise pressing this button would look like nothing
+    // happened while actually a different flow's panel stayed open underneath.
+    if(panel.style.display==='none' || panel.dataset.mode!=='new') renderSrtAnalyzePanel('new');
     else panel.style.display = 'none';
   };
-  // Combined shortcut: runs the normal "تحلیل زیرنویس" flow, then — the moment that submit
-  // succeeds and the highlight set is known — automatically opens the batch full-card panel for
-  // exactly those words too, so analyze+highlight+build-all-cards happens as one guided flow
-  // instead of pressing two separate buttons. If the analyze submit fails or is cancelled, the
-  // flag is simply left set and nothing extra happens until a submit actually succeeds.
+  // Combined shortcut: opens the SAME panel but in 'combined' mode, which builds one merged
+  // prompt (buildCombinedAnalyzeCardPrompt) asking the external AI to pick the words/idioms AND
+  // write each one's full card in a single response — so analyze+highlight+build-all-cards
+  // happens with one prompt and one paste, not two separate round trips.
   const srtAnalyzeAndCardBtn = episodePageEl.querySelector('#epSrtAnalyzeAndCardBtn');
   if(srtAnalyzeAndCardBtn) srtAnalyzeAndCardBtn.onclick = ()=>{
-    pendingBatchCardAfterAnalyze = true;
-    renderSrtAnalyzePanel('new');
     const panel = episodePageEl.querySelector('#epSrtAnalyzePanel');
+    // Same toggle-aware behavior as the "شروع تحلیل" button above: closes only if this exact
+    // mode is already the one showing, otherwise (re)opens the panel switched to 'combined'.
+    if(panel.style.display!=='none' && panel.dataset.mode==='combined'){ panel.style.display = 'none'; return; }
+    renderSrtAnalyzePanel('combined');
     if(panel) panel.scrollIntoView({ block:'start', behavior:'smooth' });
   };
   if(SUPPORTS_FS_ACCESS){
@@ -6279,9 +6421,10 @@ function renderBatchCardPanel(panelSelector, items){
   if(closeBtn) closeBtn.onclick = ()=>{ panel.style.display = 'none'; panel.innerHTML=''; };
 }
 
-/* Opens the batch full-card panel for the whole current highlight set — used both by the
-   standalone "📦 ساخت کارت کامل همه" button and, right after a successful analyze, by the
-   combined "تحلیل + هایلایت + ساخت کارت کامل" button (via pendingBatchCardAfterAnalyze). */
+/* Opens the batch full-card panel for the whole current highlight set — used by the standalone
+   "📦 ساخت کارت کامل برای هر N کلمه‌ی هایلایت" button (the combined analyze+card button now
+   builds cards in the same single prompt/response, via buildCombinedAnalyzeCardPrompt, so it no
+   longer needs this second-round-trip panel). */
 function openBatchCardPanelForHighlighted(){
   const items = currentHighlightedWordItems();
   if(items.length===0) return;
