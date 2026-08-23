@@ -632,6 +632,13 @@
     font-size:10.5px; padding:3px 9px; border-radius:999px; font-weight:800;
     background:#fffef9; color:var(--brass-dark); border:1px solid var(--line); direction:ltr; flex-shrink:0;
   }
+  /* Marks a suggestion the person already knows (saved in the box, or tapped "✓ بلدم") — the AI
+     is no longer told to avoid these when picking (see buildSrtWordPrompt), so this is how they're
+     told apart at a glance in the suggestion list, same blue used for the video-caption variant. */
+  .ep-known-badge{
+    font-size:10.5px; padding:3px 9px; border-radius:999px; font-weight:800;
+    background:#e3eefc; color:#2b5fa3; direction:rtl; flex-shrink:0;
+  }
   .ep-word-card .ep-fa{ font-weight:700; margin:3px 0 5px; }
   .ep-word-card .ep-ex{ font-size:12.5px; color:var(--ink-soft); direction:ltr; text-align:left; }
   .ep-word-card .ep-def{ font-size:12px; color:var(--ink-soft); direction:ltr; text-align:left; margin-bottom:5px; }
@@ -675,6 +682,12 @@
      person specifically tapped to look at. */
   .srt-level-hit{
     background:var(--sage-tint); color:var(--sage-dark); font-weight:700; border-radius:4px; padding:0 2px;
+  }
+  /* Same idea as .srt-level-hit but for a level word the person already knows (in the vocab box
+     or marked "✓ بلدم") — kept visually distinct (blue instead of green) so it's clear at a
+     glance this one doesn't need fresh attention. */
+  .srt-known-hit{
+    background:#e3eefc; color:#2b5fa3; font-weight:700; border-radius:4px; padding:0 2px;
   }
 
   /* Offline video + subtitle sync player */
@@ -764,6 +777,19 @@
      distinguishable, keeping the same black outline for readability. */
   .vsync-word-level{
     color:#8bef6a; text-decoration:underline; text-decoration-color:#8bef6a; text-decoration-thickness:2px;
+    text-underline-offset:3px; font-weight:800;
+  }
+  /* Idioms/expressions are highlighted as one tappable unit (not word-by-word) in a distinct
+     color from single level words, so it's visually clear it's a whole phrase with its own
+     idiomatic meaning, not just a level-matching word. */
+  .vsync-word-idiom{
+    color:#ffb454; text-decoration-color:#ffb454;
+  }
+  /* A level word the person already knows (in the vocab box or marked "✓ بلدم") gets this blue
+     instead of the normal green/orange — the AI is no longer told to skip already-known words
+     (see buildSrtWordPrompt), so this is how they're told apart on the video itself. */
+  .vsync-word-known{
+    color:#7ec8ff; text-decoration:underline; text-decoration-color:#7ec8ff; text-decoration-thickness:2px;
     text-underline-offset:3px; font-weight:800;
   }
   /* Soft gradient scrim across the top of the player — the same trick YouTube/Netflix-style
@@ -2081,7 +2107,6 @@ let episodeLevel = loadCefrLevel(); // '' = any level, else a CEFR code like 'A2
 // be shown in one place and any selected word can be located/highlighted inside it.
 let srtFullLines = [];
 let srtHighlightWord = null; // the word/idiom currently highlighted inside the full-subtitle panel
-let episodeIncludeIdioms = true; // whether to also ask for idioms alongside single words
 let episodeTypeFilter = 'all'; // 'all' | 'word' | 'idiom' — which cards to show in the results list
 let episodeIdiomError = null; // set if the idiom step of an .srt analysis fails, without wiping out the word results
 
@@ -2127,13 +2152,19 @@ let vsyncLevelData = {};
 // flip without losing/regenerating the underlying AI result. Defaults to on whenever a set exists.
 let vsyncHighlightEnabled = true;
 let vsyncLevelError = '';
-// The candidate pool + real lines behind the currently-open "های‌لایت کلمات هم‌سطح در پلیر"
-// external-AI prompt — kept around between the "share/copy prompt" click and the "paste answer
-// back" click so the pasted JSON can be grounded against the real subtitle text (see
-// renderVsyncLevelPanel below), exactly like srtCandidatesPool/srtFullLines do for the separate
-// "تحلیل زیرنویس و پیشنهاد کلمات" flow.
+// Legacy candidate pool + real lines from the old, now-removed separate "های‌لایت کلمات هم‌سطح
+// در پلیر" panel (its own share/paste round trip has been merged into the single "تحلیل زیرنویس و
+// پیشنهاد کلمات" flow — see renderSrtAnalyzePanel). Kept only so a JSON response someone already
+// generated from that old flow, or an old saved session, can still ground correctly as a fallback
+// when srtCandidatesPool/srtFullLines aren't populated.
 let vsyncLevelCandidates = [];
 let vsyncLevelLines = [];
+// When true (set by the combined "تحلیل + هایلایت + ساخت کارت کامل" button), the batch full-card
+// panel is opened automatically right after the next successful "تحلیل زیرنویس" submit, using the
+// word set that submit just produced — so the whole thing (analyze, highlight, build full offline
+// cards) happens as one guided flow instead of two separate button presses. Reset back to false
+// the moment it's consumed, so a later plain "شروع تحلیل" doesn't also trigger it.
+let pendingBatchCardAfterAnalyze = false;
 
 // "افزودن از متن": paste any English text in and get AI-picked vocabulary + Persian meanings to
 // review and add to the box — same underlying pipeline as the .srt word-suggestion flow above
@@ -2277,7 +2308,8 @@ function saveVsyncLastState(){
       typeFilter: episodeTypeFilter,
       candidatesPool: srtCandidatesPool,
       fullLines: srtFullLines,
-      // "🎯 های‌لایت کلمات هم‌سطح در پلیر" result — same idea, for the in-player highlight set.
+      // "🎯 های‌لایت کلمات هم‌سطح" result — same idea, for the in-player highlight set. Now
+      // always populated together with `suggestions` below by the single merged analyze flow.
       levelWords: vsyncLevelWords.size ? [...vsyncLevelWords] : [],
       levelData: vsyncLevelData,
       levelCandidates: vsyncLevelCandidates,
@@ -2423,8 +2455,9 @@ async function resumeVsyncFromHandle(){
 
 /* Called when the person picks the .srt file to sync alongside the chosen video. Just caches the
    raw text and parses cues — the level-based highlight analysis itself is NOT run automatically
-   here; it only runs when the person presses the "های‌لایت کلمات هم‌سطح در پلیر" button (see
-   the click handler wired in renderEpisodePage), since it costs an AI request. */
+   here; it only runs when the person presses the "شروع تحلیل" button (📄 پیشنهاد کلمات و
+   اصطلاحات + های‌لایت در پلیر — see the click handler wired in renderEpisodePage), since it
+   costs an AI request. */
 async function handleEpSyncSrtFile(file){
   const last = loadVsyncLastState();
   const sameFile = !!(last && last.srtName===file.name);
@@ -2446,9 +2479,9 @@ async function handleEpSyncSrtFile(file){
   saveVsyncLastState();
 }
 
-/* Small status line under the "سطح زبان" select, showing the result of the external-AI
-   word-selection below (see renderVsyncLevelPanel) without requiring the word-suggestion list to
-   be open at all. */
+/* Small status line shown right under the "📄 پیشنهاد کلمات و اصطلاحات + های‌لایت در پلیر" tool
+   row, summarizing the current in-player highlight set (words + idioms together) — see
+   renderSrtAnalyzePanel, the single flow that now produces both the suggestion list and this. */
 function renderVsyncLevelStatus(){
   const el = episodePageEl && episodePageEl.querySelector('#epVsyncLevelStatus');
   if(!el) return;
@@ -2462,7 +2495,10 @@ function renderVsyncLevelStatus(){
       <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
         <input type="checkbox" id="epVsyncHighlightToggle" ${vsyncHighlightEnabled?'checked':''}>
         <span>✨ ${vsyncLevelWords.size} کلمه هم‌سطح ${vsyncHighlightEnabled ? 'در ویدیو های‌لایت می‌شود' : '(های‌لایت خاموش است)'}</span>
-      </label>`;
+      </label>
+      <div class="actions" style="margin-top:8px;">
+        <button type="button" class="btn btn-secondary btn-small" id="epBatchCardOpenBtn">📦 ساخت کارت کامل برای هر ${vsyncLevelWords.size} کلمه‌ی هایلایت (آفلاین)</button>
+      </div>`;
     const toggle = el.querySelector('#epVsyncHighlightToggle');
     if(toggle) toggle.onchange = ()=>{
       vsyncHighlightEnabled = toggle.checked;
@@ -2470,122 +2506,12 @@ function renderVsyncLevelStatus(){
       updateVsyncCaptionNow();
       saveVsyncLastState();
     };
+    const batchBtn = el.querySelector('#epBatchCardOpenBtn');
+    if(batchBtn) batchBtn.onclick = ()=> openBatchCardPanelForHighlighted();
   }else{
     el.style.display = 'none';
     el.innerHTML = '';
   }
-}
-
-/* The "🎯 های‌لایت کلمات هم‌سطح در پلیر" panel: same copy-the-prompt / open an external AI
-   (ChatGPT or any other) / paste-the-answer-back pattern as renderSrtAnalyzePanel — this feature
-   used to call the in-app Gemini key directly (fetchSrtWordSelection); it now shares the exact
-   same prompt-building/response-grounding pipeline (buildSrtWordPrompt + parseSrtWordResponse) so
-   it never touches the in-app AI key/quota either, and the person doesn't have to think about
-   two different "AI word list" flows on this page. Only the plain word list is asked for here
-   (no idioms — idioms aren't part of the caption highlight logic), and it's always words-only
-   (isMore/append semantics from the other panel don't apply — a fresh prompt just replaces
-   whatever level word set was there before). */
-function renderVsyncLevelPanel(){
-  const panel = episodePageEl && episodePageEl.querySelector('#epVsyncLevelPanel');
-  if(!panel) return;
-  panel.style.display = 'block';
-  panel.innerHTML = `
-    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">
-      یک درخواست از روی کلمات واقعی همین زیرنویس آماده می‌کنه تا یک هوش مصنوعی خارجی (ChatGPT یا هر مدل دیگه) کلمات هم‌سطحت رو مشخص کنه — بدون استفاده از سهمیه‌ی هوش مصنوعی داخل اپ. جواب رو که گرفتی همینجا پیست کن تا همون کلمات توی پلیر های‌لایت بشن.
-    </div>
-    ${!epSyncSrtRawText ? `<div class="ai-note" style="margin-bottom:8px;">اول از «فایل زیرنویس (.srt) همین قسمت» بالاتر یک فایل انتخاب کن.</div>` : ''}
-    <div class="actions">
-      <button type="button" class="btn btn-primary btn-small" id="epVsyncLevelShareBtn" ${!epSyncSrtRawText?'disabled':''}>📤 اشتراک‌گذاری / کپی متن درخواست</button>
-    </div>
-    <div id="epVsyncLevelCopyMsg" style="display:none;font-size:11.5px;color:var(--ink-soft);margin-top:6px;"></div>
-    <textarea id="epVsyncLevelPromptBox" readonly style="min-height:90px;margin-top:8px;font-size:11.5px;direction:ltr;text-align:left;"></textarea>
-    <label style="margin-top:14px;">جواب هوش مصنوعی رو اینجا پیست کن</label>
-    <textarea id="epVsyncLevelPasteBox" placeholder="آبجکت JSON پاسخ رو اینجا پیست کن..." style="min-height:110px;"></textarea>
-    <div class="actions" style="margin-top:8px;">
-      <button type="button" class="btn btn-primary btn-small" id="epVsyncLevelSubmitBtn">✅ ثبت و های‌لایت</button>
-    </div>
-    <div id="epVsyncLevelErr" class="ai-note" style="display:none;margin-top:8px;"></div>`;
-
-  panel.querySelector('#epVsyncLevelShareBtn').onclick = async ()=>{
-    const btn = panel.querySelector('#epVsyncLevelShareBtn');
-    const errEl = panel.querySelector('#epVsyncLevelErr');
-    errEl.style.display = 'none';
-    btn.disabled = true;
-    const origText = btn.textContent;
-    btn.textContent = 'در حال آماده‌سازی...';
-    try{
-      if(!epSyncSrtRawText) throw new Error('اول از «فایل زیرنویس (.srt) همین قسمت» بالاتر یک فایل انتخاب کن.');
-      const lines = parseSrtLines(epSyncSrtRawText);
-      if(lines.length===0) throw new Error('از این فایل .srt متنی استخراج نشد؛ مطمئن شو فایل srt معتبر است.');
-      const knownWords = words.map(w=>w.en).filter(Boolean);
-      const knownLower = new Set(knownWords.map(w=>w.trim().toLowerCase()));
-      loadWordSet(KNOWN_WORDS_KEY).forEach(w=> knownLower.add(w));
-      loadWordSet(IGNORED_WORDS_KEY).forEach(w=> knownLower.add(w));
-      const candidates = extractSrtVocabulary(lines, knownLower).slice(0, 150);
-      if(candidates.length===0) throw new Error('کلمه‌ی جدیدی (غیر از کلمه‌هایی که بلدی) در این زیرنویس پیدا نشد.');
-      // Shared with the "📄 تحلیل زیرنویس و پیشنهاد کلمات" panel's own srtCandidatesPool/
-      // srtFullLines (not separate vsyncLevel* copies anymore) — so a response generated from
-      // either panel's "share" click can be pasted into either panel's paste box and still
-      // ground correctly, instead of silently failing because the two panels held two different
-      // snapshots of "the real subtitle text".
-      srtCandidatesPool = candidates;
-      srtFullLines = lines;
-      vsyncLevelCandidates = candidates;
-      vsyncLevelLines = lines;
-      const { systemPrompt, userMessage } = buildSrtWordPrompt(candidates, lines, knownWords, episodeLevel, false);
-      const fullText = systemPrompt + '\n\n' + userMessage;
-      const box = panel.querySelector('#epVsyncLevelPromptBox');
-      box.value = fullText;
-      const msg = panel.querySelector('#epVsyncLevelCopyMsg');
-      if(navigator.share){
-        try{ await navigator.share({ text: fullText }); return; }
-        catch(e2){ /* cancelled or failed — fall through to clipboard copy below */ }
-      }
-      try{
-        await navigator.clipboard.writeText(fullText);
-        if(msg){ msg.textContent = '✅ کپی شد — برو تو ChatGPT (یا هر هوش مصنوعی دیگه) پیستش کن.'; msg.style.display = 'block'; }
-      }catch(e3){
-        box.focus();
-        box.select();
-        if(msg){ msg.textContent = 'کپی خودکار نشد؛ متن بالا انتخاب شد، Ctrl+C رو بزن.'; msg.style.display = 'block'; }
-      }
-    }catch(e){
-      errEl.textContent = e && e.message ? e.message : String(e);
-      errEl.style.display = 'block';
-    }finally{
-      btn.disabled = false;
-      btn.textContent = origText;
-    }
-  };
-
-  panel.querySelector('#epVsyncLevelSubmitBtn').onclick = ()=>{
-    const errEl = panel.querySelector('#epVsyncLevelErr');
-    errEl.style.display = 'none';
-    const raw = panel.querySelector('#epVsyncLevelPasteBox').value;
-    try{
-      if(!raw.trim()) throw new Error('چیزی پیست نشده');
-      // Use whichever of the two shared pools/lines is populated — either this panel's own
-      // "share" click or the "📄 تحلیل زیرنویس" panel's could have set it, and either is valid
-      // grounding data since both now read from the exact same subtitle file.
-      const groundCandidates = srtCandidatesPool.length ? srtCandidatesPool : vsyncLevelCandidates;
-      const groundLines = srtFullLines.length ? srtFullLines : vsyncLevelLines;
-      if(groundCandidates.length===0 && groundLines.length===0) throw new Error('اول یک‌بار «اشتراک‌گذاری / کپی متن درخواست» رو (از این پنل یا از پنل «تحلیل زیرنویس و پیشنهاد کلمات») بزن.');
-      const items = parseSrtWordResponse(raw, groundCandidates, groundLines);
-      const wordItems = items.filter(it=>it.type==='word');
-      if(wordItems.length===0) throw new Error('کلمه‌ی معتبری در پاسخ پیدا نشد.');
-      vsyncLevelWords = new Set(wordItems.map(w=>w.en.trim().toLowerCase()).filter(Boolean));
-      wordItems.forEach(w=>{ const key=w.en.trim().toLowerCase(); if(key) vsyncLevelData[key]=w; });
-      vsyncLevelError = '';
-      panel.style.display = 'none';
-      renderVsyncLevelStatus();
-      updateVsyncCaptionNow();
-      renderSrtFullPanel();
-      saveVsyncLastState(); // persist right away so the result survives a close/reload immediately, not just on pagehide
-    }catch(e){
-      errEl.textContent = `پاسخ قابل خواندن نبود: ${escapeHtml(e.message||'')} — مطمئن شو دقیقاً همون خروجی JSON رو (بدون توضیح اضافه‌ی خودت) کپی کردی.`;
-      errEl.style.display = 'block';
-    }
-  };
 }
 
 /* Renders (or re-renders) the video element + caption overlay inside the episode page, and
@@ -3100,20 +3026,42 @@ function renderVsyncPlayer(){
 /* Wraps each word of a (already-safe, since it's user-supplied local subtitle text) caption
    line in a clickable span, so any word can be tapped during playback. Text is escaped first so
    only the spans this function itself adds ever reach innerHTML. */
-function wordSpansHtml(text, levelWords){
+/* Turns a caption line into tappable spans. Idiom entries in `levelWords` (multi-word phrases,
+   detected by containing whitespace) are matched as a literal case-insensitive substring FIRST
+   and wrapped whole in one tappable span — so e.g. "give up" becomes one tap target with the
+   idiom's own meaning, instead of "give" and "up" being two separate, individually-meaningless
+   word taps. Everything outside an idiom match still gets the normal per-word tokenizing below. */
+function wordSpansHtml(text, levelWords, knownWords){
   const raw = text || '';
-  // Word-match on the RAW text first, then escape each piece individually — escaping the whole
-  // string up front (as this used to do) turns a literal " into the entity &quot;, and the word
-  // regex would then wrongly match the letters "quot" inside that entity as if it were a real
-  // word, tearing the entity apart into a stray clickable "quot" span on screen.
-  return raw.replace(/([A-Za-z']+)|([^A-Za-z']+)/g, (m, word, rest)=>{
+  const tokenizeWords = (chunk)=> chunk.replace(/([A-Za-z']+)|([^A-Za-z']+)/g, (m, word, rest)=>{
     if(word){
-      const isLevelWord = !!levelWords && levelWords.has(word.toLowerCase());
-      const cls = isLevelWord ? 'vsync-word vsync-word-level' : 'vsync-word';
+      const lower = word.toLowerCase();
+      const isLevelWord = !!levelWords && levelWords.has(lower);
+      const isKnown = isLevelWord && !!knownWords && knownWords.has(lower);
+      const cls = isKnown ? 'vsync-word vsync-word-known' : (isLevelWord ? 'vsync-word vsync-word-level' : 'vsync-word');
       return `<span class="${cls}" data-w="${escapeHtml(word)}">${escapeHtml(word)}</span>`;
     }
     return escapeHtml(rest);
   });
+
+  const idioms = levelWords ? Array.from(levelWords).filter(w=>/\s/.test(w)).sort((a,b)=>b.length-a.length) : [];
+  if(idioms.length===0) return tokenizeWords(raw);
+
+  const pattern = idioms.map(escapeRegExp).join('|');
+  let re;
+  try{ re = new RegExp(pattern, 'gi'); }catch(e){ return tokenizeWords(raw); }
+
+  let out = '', lastIndex = 0, m;
+  while((m = re.exec(raw))){
+    out += tokenizeWords(raw.slice(lastIndex, m.index));
+    const idiomKnown = !!knownWords && knownWords.has(m[0].toLowerCase());
+    const idiomCls = idiomKnown ? 'vsync-word vsync-word-known' : 'vsync-word vsync-word-level vsync-word-idiom';
+    out += `<span class="${idiomCls}" data-w="${escapeHtml(m[0])}">${escapeHtml(m[0])}</span>`;
+    lastIndex = m.index + m[0].length;
+    if(m[0].length===0) re.lastIndex++;
+  }
+  out += tokenizeWords(raw.slice(lastIndex));
+  return out;
 }
 
 /* Re-draws whatever caption is currently showing over the video, right now, using the latest
@@ -3238,7 +3186,7 @@ function updateVsyncCaptionNow(){
     captionText.style.display = 'none'; captionText.innerHTML = '';
   }else{
     captionText.style.display = 'inline-block';
-    captionText.innerHTML = wordSpansHtml(epVideoCues[idx].text, buildLevelWordSet());
+    captionText.innerHTML = wordSpansHtml(epVideoCues[idx].text, buildLevelWordSet(), buildKnownLevelWordSet());
   }
   if(captionFaText){
     // Same cue index as the English line above (epFaCues is index-aligned with epVideoCues), so
@@ -3275,7 +3223,11 @@ function handleVsyncWordTap(videoEl, word, cueText, dialogueContext){
     const fromSuggestions = episodeSuggestions.find(w=> (w.en||'').trim().toLowerCase()===wLower);
     if(fromSuggestions) known = fromSuggestions;
   }
-  const wordObj = known ? { en: known.en || word, fa: known.fa || '', example: known.example || '' } : { en: word };
+  const wordObj = known
+    ? { en: known.en || word, fa: known.fa || '', example: known.example || '',
+        grammar: known.grammar || null, practicalNotes: known.practicalNotes || '',
+        moreExamples: (known.moreExamples && known.moreExamples.length) ? known.moreExamples : null }
+    : { en: word };
   openWordDetailPanel(wordObj, { sentence: (known && known.example) || cueText || '', context: dialogueContext || '' });
 }
 
@@ -3381,7 +3333,7 @@ function extractSrtVocabulary(lines, knownLowerSet){
 async function fetchSrtWordSelection(key, candidates, knownWords, level){
   const knownSample = knownWords.slice(0, 200).join('، ');
   const levelNote = level
-    ? `کاربر می‌خواهد فقط کلماتی هم‌سطح ${level} (طبق چارچوب CEFR) ببیند؛ فقط از میان کاندیدها همان‌هایی را انتخاب کن که تقریباً همین سطح‌اند.`
+    ? `کاربر می‌خواهد کلماتی هم‌سطح ${level} یا بالاتر (طبق چارچوب CEFR) ببیند؛ از میان کاندیدها کلماتی را انتخاب کن که سطحشان تقریباً همین سطح یا سخت‌تر از آن است — کلمات پایین‌تر از این سطح را انتخاب نکن.`
     : (knownSample ? `کلماتی که کاربر از قبل بلد است (برای سنجش سطح او): ${knownSample}.` : 'کاربر هنوز کلمه‌ای ثبت نکرده؛ سطح او را مبتدی تا متوسط در نظر بگیر.');
   const candidateList = candidates.map(c => c.en).join('، ');
   const systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. در ادامه فهرستی از کلمات واقعی استخراج‌شده از زیرنویس یک فیلم/سریال می‌آید. با توجه به سطح فعلی کاربر، دقیقاً از میان همین فهرست (بدون تغییر املا و بدون افزودن کلمه‌ی تازه) بین ۱۰ تا ۱۵ کلمه انتخاب کن که یادگیری‌شان برای او مفید و هم‌سطح باشد؛ کلمات خیلی بدیهی یا خیلی کمیاب/غیرضروری و همچنین اسم خاص یا نام شخصیت‌ها را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با این ساختار برگردان: {"words":[{"en":"...","fa":"...","definition":"...","level":"..."}]}.';
@@ -3411,7 +3363,7 @@ function splitTextIntoSentences(text){
 async function fetchTextWordSelection(key, candidates, knownWords, level){
   const knownSample = knownWords.slice(0, 200).join('، ');
   const levelNote = level
-    ? `کاربر می‌خواهد فقط کلماتی هم‌سطح ${level} (طبق چارچوب CEFR) ببیند؛ فقط از میان کاندیدها همان‌هایی را انتخاب کن که تقریباً همین سطح‌اند.`
+    ? `کاربر می‌خواهد کلماتی هم‌سطح ${level} یا بالاتر (طبق چارچوب CEFR) ببیند؛ از میان کاندیدها کلماتی را انتخاب کن که سطحشان تقریباً همین سطح یا سخت‌تر از آن است — کلمات پایین‌تر از این سطح را انتخاب نکن.`
     : (knownSample ? `کلماتی که کاربر از قبل بلد است (برای سنجش سطح او): ${knownSample}.` : 'کاربر هنوز کلمه‌ای ثبت نکرده؛ سطح او را مبتدی تا متوسط در نظر بگیر.');
   const candidateList = candidates.map(c => c.en).join('، ');
   const systemPrompt = 'تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی. در ادامه فهرستی از کلمات واقعی استخراج‌شده از یک متن انگلیسی که کاربر داده می‌آید. با توجه به سطح فعلی کاربر، دقیقاً از میان همین فهرست (بدون تغییر املا و بدون افزودن کلمه‌ی تازه) بین ۱۰ تا ۲۰ کلمه انتخاب کن که یادگیری‌شان برای او مفید و هم‌سطح باشد؛ کلمات خیلی بدیهی یا خیلی کمیاب/غیرضروری را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس. فقط و فقط یک آبجکت JSON معتبر و خالص (بدون Markdown) با این ساختار برگردان: {"words":[{"en":"...","fa":"...","definition":"...","level":"..."}]}.';
@@ -3487,14 +3439,10 @@ async function fetchSrtIdiomSelection(key, lines, knownWords, level){
    includeIdioms is true, reusing the same attached text. */
 function buildSrtWordPrompt(candidates, lines, knownWords, level, includeIdioms){
   const levelLabel = level ? (CEFR_LEVELS.find(l=>l.value===level)||{}).label || level : '';
-  const levelNote = level
-    ? `سطح زبان کاربر دقیقاً «${levelLabel}» (کد ${level} طبق چارچوب CEFR) است؛ فقط و فقط کلماتی تقریباً هم‌سطح همین سطح را انتخاب کن — نه پایین‌تر، نه بالاتر.`
-    : 'سطح زبان کاربر مشخص نشده (در ⚙ تنظیمات «سطح زبان» را انتخاب کن)؛ تا آن موقع کلماتی مناسب یک زبان‌آموز مبتدی تا متوسط انتخاب کن.';
-  const knownSample = (knownWords||[]).slice(0, 200).join('، ');
 
-  let systemPrompt = `تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی، مخصوص یک زبان‌آموز در سطح ${level ? `«${levelLabel}» (${level})` : 'مبتدی تا متوسط (چون هنوز سطح مشخص نکرده)'}. در ادامه‌ی پیام کاربر، خطوط واقعی زیرنویس یک فیلم/سریال می‌آید. با خواندن دقیق خودِ همین متن (نه حدس زدن از روی یک کلمه‌ی تنها)، خودت مستقلاً از میان کلماتی که واقعاً و عیناً در همین متن آمده‌اند (بدون تغییر املا) هرچند کلمه که یادگیری‌شان برای همین کاربر مفید و دقیقاً هم‌سطح ${level ? levelLabel : 'او'} باشد انتخاب کن — به هیچ تعداد خاصی محدود نباش. کلمات خیلی پایه/بدیهی (مثل be, have, go, this, and)، کلمات خیلی نادر یا غیرضروری، و اسم خاص یا نام شخصیت‌ها را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa) را دقیقاً بر اساس همان کاربردی که در متن واقعی زیرنویس دارد بنویس (نه صرفاً معنی عمومی دیکشنری، اگر با کاربرد این متن فرق دارد)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس.`;
+  let systemPrompt = `تو یک مربی یادگیری واژگان زبان انگلیسی برای فارسی‌زبانان هستی، مخصوص یک زبان‌آموز در سطح ${level ? `«${levelLabel}» (${level})` : 'مبتدی تا متوسط (چون هنوز سطح مشخص نکرده)'}. در ادامه‌ی پیام کاربر، خطوط واقعی زیرنویس یک فیلم/سریال می‌آید. با خواندن دقیق خودِ همین متن (نه حدس زدن از روی یک کلمه‌ی تنها)، خودت مستقلاً از میان کلماتی که واقعاً و عیناً در همین متن آمده‌اند (بدون تغییر املا) هرچند کلمه که یادگیری‌شان برای همین کاربر مفید و هم‌سطح ${level ? levelLabel : 'او'} یا کمی بالاتر باشد انتخاب کن (کلمات پایین‌تر از سطح کاربر را انتخاب نکن) — به هیچ تعداد خاصی محدود نباش. کلمات خیلی پایه/بدیهی (مثل be, have, go, this, and)، کلمات خیلی نادر یا غیرضروری، و اسم خاص یا نام شخصیت‌ها را انتخاب نکن. برای هر کلمه‌ی انتخابی، معنی فارسی کوتاه و رایج (fa) را دقیقاً بر اساس همان کاربردی که در متن واقعی زیرنویس دارد بنویس (نه صرفاً معنی عمومی دیکشنری، اگر با کاربرد این متن فرق دارد)، یک شرح انگلیسی ساده از معنایش (definition)، و تخمین سطح آن طبق چارچوب CEFR (level, مثل A2 یا B1) بنویس.`;
 
-  let userMessage = `🎯 سطح زبان: ${levelNote}`;
+  let userMessage = '';
   let schema = '{"words":[{"en":"...","fa":"...","definition":"...","level":"..."}]';
 
   if(includeIdioms){
@@ -3513,8 +3461,15 @@ function buildSrtWordPrompt(candidates, lines, knownWords, level, includeIdioms)
   }
   let fullText = sampleLines.join('\n');
   if(fullText.length > MAX_CHARS) fullText = fullText.slice(0, MAX_CHARS);
-  userMessage += `\n\nخطوط واقعی زیرنویس:\n${fullText}`;
-  if(knownSample) userMessage += `\n\nکلماتی که کاربر از قبل بلد است (این‌ها را دوباره پیشنهاد نده): ${knownSample}`;
+  userMessage += `خطوط واقعی زیرنویس:\n${fullText}`;
+  if(!level) userMessage += `\n\n(کاربر هنوز سطح زبانش را در ⚙ تنظیمات مشخص نکرده — طبق راهنمای بالا مبتدی تا متوسط در نظر بگیر.)`;
+  // Deliberately NOT telling the AI which words the person already knows (used to send that list
+  // here with a "don't suggest these again" note): with a large vocabulary that list eats prompt
+  // space and still isn't reliable — some already-known words would slip through anyway, and some
+  // genuinely new ones could get skipped just for loosely resembling a known one. Instead the AI
+  // picks freely from the real text, and afterward every already-known word among its picks is
+  // simply highlighted in a different color (see buildKnownLevelWordSet/isWordAlreadyKnown) rather
+  // than being filtered out — so nothing worth reviewing is silently lost either way.
 
   schema += '}';
   systemPrompt += ` فقط و فقط یک آبجکت JSON معتبر و خالص برگردان — بدون Markdown، بدون فنس \`\`\`json، بدون هیچ توضیح قبل یا بعدش — دقیقاً با این ساختار: ${schema}.`;
@@ -3734,7 +3689,10 @@ function renderSrtAnalyzePanel(mode, panelSelector){
         loadWordSet(IGNORED_WORDS_KEY).forEach(w=> knownLower.add(w));
         srtCandidatesPool = extractSrtVocabulary(lines, knownLower);
         candidates = srtCandidatesPool.slice(0, 150);
-        includeIdioms = episodeIncludeIdioms;
+        // Idioms are always requested alongside single words now — highlighting in the player
+        // treats an idiom as one whole tappable unit too (see wordSpansHtml), so there's no
+        // reason to ever skip asking for them.
+        includeIdioms = true;
       }
 
       const { systemPrompt, userMessage } = buildSrtWordPrompt(candidates, lines, knownWords, episodeLevel, includeIdioms);
@@ -3787,14 +3745,12 @@ function renderSrtAnalyzePanel(mode, panelSelector){
         episodeError = null;
         episodeIdiomError = null;
       }
-      // Same single AI answer now also drives the in-player caption highlight (see
-      // "🎯 های‌لایت کلمات هم‌سطح در پلیر") — no need to run that separate prompt/paste round
-      // trip too. The standalone panel still exists for anyone who only wants highlighting
-      // without the suggestion list, but this is the normal path now.
-      const allWordItems = episodeSuggestions.filter(w=>w.type==='word');
-      if(allWordItems.length){
-        vsyncLevelWords = new Set(allWordItems.map(w=>w.en.trim().toLowerCase()).filter(Boolean));
-        allWordItems.forEach(w=>{ const key=w.en.trim().toLowerCase(); if(key) vsyncLevelData[key]=w; });
+      // Same single AI answer now also drives the in-player caption highlight (both words and
+      // idioms — an idiom phrase gets highlighted/tapped as one whole unit, see wordSpansHtml)
+      // — no separate "های‌لایت" prompt/paste round trip needed anymore; this is the one flow.
+      if(episodeSuggestions.length){
+        vsyncLevelWords = new Set(episodeSuggestions.map(w=>w.en.trim().toLowerCase()).filter(Boolean));
+        episodeSuggestions.forEach(w=>{ const key=w.en.trim().toLowerCase(); if(key) vsyncLevelData[key]=w; });
         vsyncLevelError = '';
         if(vsyncHighlightEnabled === undefined) vsyncHighlightEnabled = true;
       }
@@ -3803,6 +3759,10 @@ function renderSrtAnalyzePanel(mode, panelSelector){
       renderVsyncLevelStatus();
       updateVsyncCaptionNow();
       saveVsyncLastState(); // persist right away so the result survives a close/reload immediately, not just on pagehide
+      if(pendingBatchCardAfterAnalyze){
+        pendingBatchCardAfterAnalyze = false;
+        openBatchCardPanelForHighlighted();
+      }
     }catch(e){
       errEl.textContent = `پاسخ قابل خواندن نبود: ${escapeHtml(e.message||'')} — مطمئن شو دقیقاً همون خروجی JSON رو (بدون توضیح اضافه‌ی خودت) کپی کردی.`;
       errEl.style.display = 'block';
@@ -4096,21 +4056,16 @@ function renderEpisodePage(){
         <div class="vsync-body">
 
         <div class="ai-tool-row">
-          <span class="ai-tool-label">📄 پیشنهاد کلمات و اصطلاحات</span>
+          <span class="ai-tool-label">📄 پیشنهاد کلمات و اصطلاحات + های‌لایت در پلیر</span>
           <button class="btn btn-primary btn-small" id="epSrtAnalyzeToggleBtn">شروع تحلیل</button>
         </div>
-        <label class="ep-checkbox-label">
-          <input type="checkbox" id="epIncludeIdioms" ${episodeIncludeIdioms?'checked':''}>
-          اصطلاحات (idioms) را هم پیشنهاد بده
-        </label>
-        <div id="epSrtAnalyzePanel" style="display:none; margin-top:10px;"></div>
-
-        <div class="ai-tool-row">
-          <span class="ai-tool-label">🎯 های‌لایت کلمات هم‌سطح</span>
-          <button class="btn btn-secondary btn-small" id="epVsyncLevelBtn">شروع های‌لایت</button>
-        </div>
         <div class="ai-note" id="epVsyncLevelStatus" style="display:none; margin-top:10px;"></div>
-        <div id="epVsyncLevelPanel" style="display:none; margin-top:10px;"></div>
+        <div id="epSrtAnalyzePanel" style="display:none; margin-top:10px;"></div>
+        <div id="epBatchCardPanel" style="display:none; margin-top:10px;"></div>
+        <div class="ai-tool-row" style="margin-top:8px;">
+          <span class="ai-tool-label">📄📦 همه‌ی مراحل با هم: تحلیل + های‌لایت + ساخت کارت کامل</span>
+          <button type="button" class="btn btn-secondary btn-small" id="epSrtAnalyzeAndCardBtn">شروع</button>
+        </div>
 
         <div class="ai-tool-row">
           <span class="ai-tool-label">🌐 ترجمه‌ی کامل زیرنویس</span>
@@ -4129,19 +4084,23 @@ function renderEpisodePage(){
   if(settingsBtn) settingsBtn.onclick = ()=>{ closeEpisodePage(); openSettingsPage(); };
   const epLevelLink = episodePageEl.querySelector('#epLevelSettingsLink');
   if(epLevelLink) epLevelLink.onclick = (e)=>{ e.preventDefault(); closeEpisodePage(); openSettingsPage(); };
-  const vsyncLevelBtn = episodePageEl.querySelector('#epVsyncLevelBtn');
-  if(vsyncLevelBtn) vsyncLevelBtn.onclick = ()=>{
-    const panel = episodePageEl.querySelector('#epVsyncLevelPanel');
-    if(panel.style.display==='none') renderVsyncLevelPanel();
-    else panel.style.display = 'none';
-  };
-  const idiomChk = episodePageEl.querySelector('#epIncludeIdioms');
-  if(idiomChk) idiomChk.onchange = ()=>{ episodeIncludeIdioms = idiomChk.checked; };
   const srtAnalyzeToggleBtn = episodePageEl.querySelector('#epSrtAnalyzeToggleBtn');
   if(srtAnalyzeToggleBtn) srtAnalyzeToggleBtn.onclick = ()=>{
     const panel = episodePageEl.querySelector('#epSrtAnalyzePanel');
     if(panel.style.display==='none') renderSrtAnalyzePanel('new');
     else panel.style.display = 'none';
+  };
+  // Combined shortcut: runs the normal "تحلیل زیرنویس" flow, then — the moment that submit
+  // succeeds and the highlight set is known — automatically opens the batch full-card panel for
+  // exactly those words too, so analyze+highlight+build-all-cards happens as one guided flow
+  // instead of pressing two separate buttons. If the analyze submit fails or is cancelled, the
+  // flag is simply left set and nothing extra happens until a submit actually succeeds.
+  const srtAnalyzeAndCardBtn = episodePageEl.querySelector('#epSrtAnalyzeAndCardBtn');
+  if(srtAnalyzeAndCardBtn) srtAnalyzeAndCardBtn.onclick = ()=>{
+    pendingBatchCardAfterAnalyze = true;
+    renderSrtAnalyzePanel('new');
+    const panel = episodePageEl.querySelector('#epSrtAnalyzePanel');
+    if(panel) panel.scrollIntoView({ block:'start', behavior:'smooth' });
   };
   if(SUPPORTS_FS_ACCESS){
     const pickSmartBtn = episodePageEl.querySelector('#epVideoPickSmartBtn');
@@ -4199,13 +4158,32 @@ function buildLevelWordSet(){
   return vsyncHighlightEnabled ? vsyncLevelWords : new Set();
 }
 
+/* A word/idiom counts as "already known" for highlighting purposes if it's saved in the vocab box
+   (any level, including archived/mastered) or was explicitly marked "✓ بلدم". Idioms (which
+   contain whitespace) are checked as a whole phrase the same way. */
+function isWordAlreadyKnown(lowerWord){
+  if(words.some(w=>(w.en||'').trim().toLowerCase()===lowerWord)) return true;
+  return loadWordSet(KNOWN_WORDS_KEY).has(lowerWord);
+}
+
+/* Subset of the current highlight set (vsyncLevelWords) that's already known — used so the caption
+   highlight and full-subtitle view can mark those in a different color instead of the normal
+   "new word" green/orange, since the AI itself is no longer told to skip them (see
+   buildSrtWordPrompt) and may legitimately re-pick a word the person already knows. */
+function buildKnownLevelWordSet(){
+  const set = buildLevelWordSet();
+  const out = new Set();
+  set.forEach(w=>{ if(isWordAlreadyKnown(w)) out.add(w); });
+  return out;
+}
+
 /* Builds the HTML for one subtitle line, wrapping every occurrence of any word in `levelWords`
    (the level-picked word/idiom list) in a <mark class="srt-level-hit">, and every occurrence of
    `activeWord` (the single word the person tapped "دیدن در متن کامل زیرنویس" on, if any) in
    <mark class="srt-hit"> instead so it stands out from the rest. Whole-word matching is used for
    single words; a plain (still case-insensitive) substring match is used for idioms, since
    they're multi-word phrases. */
-function highlightLineHtml(text, levelWords, activeWord){
+function highlightLineHtml(text, levelWords, activeWord, knownWords){
   const activeNorm = activeWord ? activeWord.trim().toLowerCase() : '';
   const targets = new Set(levelWords || []);
   if(activeNorm) targets.add(activeNorm);
@@ -4222,7 +4200,11 @@ function highlightLineHtml(text, levelWords, activeWord){
   let out = '', lastIndex = 0, m;
   while((m = re.exec(text))){
     out += escapeHtml(text.slice(lastIndex, m.index));
-    const cls = m[0].trim().toLowerCase()===activeNorm ? 'srt-hit' : 'srt-level-hit';
+    const lower = m[0].trim().toLowerCase();
+    let cls;
+    if(lower===activeNorm) cls = 'srt-hit';
+    else if(knownWords && knownWords.has(lower)) cls = 'srt-known-hit';
+    else cls = 'srt-level-hit';
     out += `<mark class="${cls}">${escapeHtml(m[0])}</mark>`;
     lastIndex = m.index + m[0].length;
     if(m[0].length===0) re.lastIndex++;
@@ -4240,8 +4222,9 @@ function renderSrtFullPanel(scrollToMatch){
   if(!body) return;
   if(srtFullLines.length===0){ body.innerHTML=''; return; }
   const levelWords = buildLevelWordSet();
+  const knownWords = buildKnownLevelWordSet();
   body.innerHTML = srtFullLines.map((line, idx)=>{
-    const html = highlightLineHtml(line, levelWords, srtHighlightWord);
+    const html = highlightLineHtml(line, levelWords, srtHighlightWord, knownWords);
     const isHit = !!srtHighlightWord && html.indexOf('class="srt-hit"')!==-1;
     return `<div class="srt-line${isHit?' srt-line-hit':''}" data-idx="${idx}">${html}</div>`;
   }).join('');
@@ -4301,6 +4284,7 @@ function renderEpisodeResults(){
       if(episodeTypeFilter==='word' && w.type==='idiom') return '';
       if(episodeTypeFilter==='idiom' && w.type!=='idiom') return '';
       const isActive = srtHighlightWord && srtHighlightWord.trim().toLowerCase()===w.en.trim().toLowerCase();
+      const alreadyKnown = isWordAlreadyKnown(w.en.trim().toLowerCase());
       return `
       <div class="ep-word-card ${episodeSelected.has(i)?'selected':''}" data-idx="${i}">
         <input type="checkbox" ${episodeSelected.has(i)?'checked':''}>
@@ -4309,6 +4293,7 @@ function renderEpisodeResults(){
             <div class="ep-en">${escapeHtml(w.en)}</div>
             ${w.type==='idiom' ? `<span class="ep-type-badge idiom">🗣️ اصطلاح</span>` : ''}
             ${w.level ? `<span class="ep-level-badge">${escapeHtml(w.level)}</span>` : ''}
+            ${alreadyKnown ? `<span class="ep-known-badge">✓ قبلاً بلدی</span>` : ''}
           </div>
           <div class="ep-fa">${escapeHtml(w.fa)}</div>
           ${w.definition ? `<div class="ep-def">${escapeHtml(w.definition)}</div>` : ''}
@@ -4402,12 +4387,19 @@ function renderEpisodeResults(){
       episodeSelected.forEach(idx=>{
         const w = episodeSuggestions[idx];
         if(!w || existingLower.has(w.en.trim().toLowerCase())) return;
-        words.push({
+        const newW = {
           id: 'w_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
           en: w.en, fa: w.fa, example: w.example||'', note:'',
           type: w.type || 'word',
           box: 1, nextReview: todayISO(), createdAt: todayISO()
-        });
+        };
+        // If a batch/full-card AI answer was already generated for this word (via "📦 ساخت کارت
+        // کامل"), carry it straight onto the newly saved word — see applyBatchFullCardResults —
+        // instead of leaving it stranded on the now-unused suggestion object.
+        if(w.grammar) newW.grammar = w.grammar;
+        if(w.practicalNotes) newW.practicalNotes = w.practicalNotes;
+        if(w.moreExamples && w.moreExamples.length) newW.moreExamples = w.moreExamples;
+        words.push(newW);
         existingLower.add(w.en.trim().toLowerCase());
         addedCount++;
       });
@@ -5427,7 +5419,7 @@ function openSettingsPage(){
         </summary>
         <div class="ss-body">
           <div class="ai-note" style="margin-bottom:8px;">
-            یک‌بار سطحت رو اینجا انتخاب کن — همه‌جای اپ (تحلیل زیرنویس، افزودن از متن، های‌لایت کلمات هم‌سطح در پلیر) خودکار از همین استفاده می‌کنن، دیگه لازم نیست هر بار دوباره انتخابش کنی.
+            یک‌بار سطحت رو اینجا انتخاب کن — همه‌جای اپ (تحلیل زیرنویس و های‌لایت در پلیر، افزودن از متن) خودکار از همین استفاده می‌کنن، دیگه لازم نیست هر بار دوباره انتخابش کنی.
           </div>
           <select id="s-cefr-level" style="width:100%;">
             ${CEFR_LEVELS.map(l=>`<option value="${l.value}" ${curLevel===l.value?'selected':''}>${escapeHtml(l.label)}</option>`).join('')}
@@ -6015,6 +6007,289 @@ function buildFullCardImportPrompt(wordObj, sentence, en, fa, dialogueContext){
   return { systemPrompt, userMessage };
 }
 
+/* ---------- Batch "کارت کامل" for every currently-highlighted word ----------
+   Same exact card (دستور زبان + نکات کاربردی + نمونه‌ها) buildFullCardImportPrompt asks for one
+   word at a time, but for the WHOLE set of words the level-analysis just highlighted, in a single
+   copy-prompt/paste-answer round trip — so the person isn't stuck opening each highlighted word
+   one by one just to get it ready offline. The instructions are repeated in full for every word
+   (nothing is allowed to be shortened/skipped just because there are many of them) and the model
+   is explicitly told not to drop or summarize any entry.
+   The whole real subtitle text (srtFullLines — same capped/sampled attachment buildSrtWordPrompt
+   uses) is attached too, so every card is grounded in the real episode — story, tone, who's
+   talking to whom — instead of the model only seeing each word sitting alone in one short
+   isolated sentence with no surrounding scene. The per-word marked sentence is kept as a quick
+   locator inside that full text, not as the only context the model gets. */
+function buildBatchFullCardPrompt(items){
+  const MAX_CHARS = 12000;
+  let sampleLines = srtFullLines || [];
+  if(sampleLines.join('\n').length > MAX_CHARS){
+    const approxTargetLines = Math.max(50, Math.floor(MAX_CHARS/40));
+    const step = Math.max(1, Math.ceil(sampleLines.length/approxTargetLines));
+    sampleLines = sampleLines.filter((_,i)=> i % step === 0);
+  }
+  let fullText = sampleLines.join('\n');
+  if(fullText.length > MAX_CHARS) fullText = fullText.slice(0, MAX_CHARS);
+  const hasFullText = !!fullText.trim();
+
+  const list = items.map((it,i)=>{
+    const marked = it.example ? markTargetWordInSentence(it.example, it.en) : '';
+    return `${i+1}. "${it.en}"${marked ? ` — ${marked}` : ''}`;
+  }).join('\n');
+
+  const systemPrompt = `تو یک دستیار یادگیری واژگان زبان انگلیسی برای فارسی‌زبانانی. زبانت ساده و در سطح یک زبان‌آموز باشد، نه اصطلاحات دانشگاهی یا زبان‌شناسی.
+${hasFullText ? `در پیام کاربر، اول کل متن واقعی زیرنویس یک فیلم/سریال می‌آید و بعد فهرست ${items.length} کلمه‌ی انگلیسی. کل این متن را بخوان تا داستان، لحن، و رابطه‌ی شخصیت‌ها را بفهمی — معنی و توضیح هر کلمه را بر اساس کاربرد واقعی‌اش در همین بافت کامل بساز، نه فقط با نگاه به یک جمله‌ی تک و بی‌زمینه دور و برش.` : `در ادامه فهرست ${items.length} کلمه‌ی انگلیسی می‌آید.`}
+برای تک‌تک همه‌ی این ${items.length} کلمه — بدون هیچ استثنا — دقیقاً به همان کامل‌بودن و جزئیاتی که اگر فقط همان یک کلمه از تو خواسته می‌شد می‌نوشتی، یک کارت آموزشی کامل بساز که هر سه بخش زیر را همزمان پوشش بدهد: دستور زبان و معنی در بافت واقعی‌اش، نکات کاربردی، و چند نمونه‌جمله‌ی دیگر. زیاد بودن تعداد کلمات بهانه‌ای برای خلاصه یا کوتاه کردن هیچ‌کدام نیست؛ اگر پاسخ طولانی شود اشکالی ندارد.
+فقط و فقط یک آرایه‌ی JSON معتبر و خالص برگردان — بدون Markdown، بدون فنس \`\`\`json، بدون هیچ توضیح قبل یا بعدش، دقیقاً و فقط خودِ آرایه، با دقیقاً ${items.length} عضو، به همان ترتیبی که کلمات داده شدند، هر عضو با این ساختار دقیق:
+{
+"en": "همان کلمه‌ی انگلیسی، دقیقاً همان‌طور که داده شد",
+"paragraph": "۲ تا ۳ جمله‌ی فارسی پیوسته، با زبان ساده و روزمره، که ${hasFullText ? 'بر اساس کاربرد واقعی این کلمه در کل زیرنویس' : 'با توجه به جمله‌ی هدف'} می‌گوید این کلمه دقیقاً چه معنایی دارد. فقط اگر واقعاً نکته‌ی مفیدی هست اضافه کن — مثلاً اگر معنی این کلمه در همین بافت با معنی رایج‌ترش فرق دارد، یا چرا همین کلمه به‌جای یک کلمه‌ی ساده‌تر انتخاب شده؛ وگرنه فقط معنی را کوتاه بگو",
+"inContextMeanings": ["۱ تا ۳ معادل فارسی کوتاه مخصوص همین کاربرد"],
+"generalMeanings": ["۲ تا ۴ معادل فارسی کوتاه رایج این کلمه به‌طور کلی"],
+"practicalNotes": "متن نکات کاربردی، به‌صورت متن ساده (نه JSON تو در تو)، با همین قالب: هر عنوان با ** ** پررنگ شود و هر مورد زیرش با خط تیره «- » شروع شود؛ فقط مواردی را بنویس که واقعاً نکته‌ی مفیدی دارند و بقیه را کلاً حذف کن: **ترکیب‌های رایج** (۲ تا ۳ ترکیب پرکاربرد با همین کلمه، هرکدام با معنی فارسی کوتاه)، **اصطلاح‌ها** (اگر این کلمه در یک اصطلاح یا فعل دوکلمه‌ای رایج به‌کار می‌رود، ۱ تا ۳ مورد با معنی فارسی)، **کلمات مشابه** (۲ تا ۳ کلمه‌ی نزدیک‌معنی که معمولاً با این کلمه قاطی می‌شوند، هرکدام با یک تفاوت کوتاه)، **نکته‌ی رایج فارسی‌زبانان** (یک اشتباه معمول که فارسی‌زبانان با این کلمه می‌کنند، اگر چنین چیزی وجود دارد)، **مترادف‌ها** (۲ تا ۴ مترادف نزدیک انگلیسی، جدا شده با «، »)",
+"examples": [{"en": "یک جمله نمونه انگلیسی طبیعی و کوتاه با همین کلمه", "fa": "ترجمه فارسی روان همان جمله"}]
+}
+در examples هر کلمه دقیقاً ۴ جمله‌ی متفاوت از هم بساز، هرکدام با موقعیت یا زمینه‌ای متفاوت از بقیه، و جمله‌ی واقعی همان کلمه را عیناً تکرار نکن.`;
+
+  const userMessage = (hasFullText ? `متن کامل زیرنویس:\n${fullText}\n\n` : '') + `فهرست ${items.length} کلمه:\n\n${list}`;
+  return { systemPrompt, userMessage };
+}
+
+/* Same spirit as extractJsonObject above, but for a top-level JSON ARRAY of objects — and, unlike
+   a plain JSON.parse, a single malformed object inside the array does NOT fail the whole thing.
+   Order of attempts:
+     1. Parse the cleaned text as-is — the common case, when the answer is already valid JSON.
+     2. Run it through extractJsonObject's whole repair pipeline (fence-stripping, smart quotes,
+        trailing commas, unescaped inner quotes) in case the array-as-a-whole just has one of
+        those common, fixable syntax issues.
+     3. Last resort — and the one that matters most in practice: walk the text and pull out every
+        top-level {...} object individually (respecting quoted strings/escapes so a "}" inside a
+        string doesn't end an object early), then JSON.parse each one on its own, running the same
+        extractJsonObject repair on any individual object that doesn't parse as-is. Any one object
+        that's still unreadable after that is simply skipped — a single stray comma or missing
+        bracket in one entry no longer means throwing away every other word's already-good answer.
+   Returns { items, skipped } — skipped is how many object-shaped chunks were found but couldn't
+   be parsed at all, purely for an honest "N ثبت شد، M ناخوانا بود" style message afterward. */
+function extractJsonArrayLenient(raw){
+  const cleaned = (raw||'').trim().replace(/```json/gi, '```').replace(/```/g, '').trim();
+  try{
+    const v = JSON.parse(cleaned);
+    if(Array.isArray(v)) return { items: v, skipped: 0 };
+  }catch(e){ /* keep trying */ }
+  try{
+    const v = extractJsonObject(cleaned);
+    if(Array.isArray(v)) return { items: v, skipped: 0 };
+  }catch(e){ /* keep trying */ }
+
+  const chunks = [];
+  let depth = 0, start = -1, inStr = false, strCh = '', esc = false;
+  for(let i=0;i<cleaned.length;i++){
+    const ch = cleaned[i];
+    if(inStr){
+      if(esc){ esc = false; }
+      else if(ch === '\\'){ esc = true; }
+      else if(ch === strCh){ inStr = false; }
+      continue;
+    }
+    if(ch === '"' || ch === "'"){ inStr = true; strCh = ch; continue; }
+    if(ch === '{'){ if(depth===0) start = i; depth++; continue; }
+    if(ch === '}'){
+      depth--;
+      if(depth===0 && start!==-1){ chunks.push(cleaned.slice(start, i+1)); start = -1; }
+      continue;
+    }
+  }
+  if(chunks.length===0) throw new Error('هیچ آبجکتی داخل پاسخ پیدا نشد.');
+  const items = [];
+  let skipped = 0;
+  chunks.forEach(chunk=>{
+    try{ items.push(JSON.parse(chunk)); return; }catch(e){ /* try the repair pipeline below */ }
+    try{ items.push(extractJsonObject(chunk)); }
+    catch(e2){ skipped++; } // this one object is unreadable even after repair attempts — skip it, don't fail the whole batch
+  });
+  return { items, skipped };
+}
+
+/* Grounds the pasted batch answer against the exact word list it was requested for (same idea as
+   parseSrtWordResponse elsewhere): anything the model returned for an "en" that wasn't actually
+   asked for is silently dropped, and any word with literally nothing usable in its object is
+   skipped rather than overwriting existing data with an empty card. Returns { results, skipped } —
+   results is a map keyed by lowercased "en" -> { grammar, practicalNotes, moreExamples }, in the
+   exact shape persistGrammarToWord/persistExplainToWord/persistExamplesToWord (and vsyncLevelData)
+   expect; skipped is how many object-shaped entries in the answer couldn't be read at all (used
+   for an honest partial-success message instead of silently dropping them). Uses
+   extractJsonArrayLenient so a single malformed entry never throws away the rest of an otherwise
+   good batch answer. */
+function parseBatchFullCardResponse(raw, items){
+  const { items: arr, skipped } = extractJsonArrayLenient(raw);
+  if(!Array.isArray(arr) || arr.length===0) throw new Error('پاسخ یک آرایه‌ی JSON نبود یا چیزی داخلش پیدا نشد.');
+  const wantedLower = new Set(items.map(it=>it.en.trim().toLowerCase()));
+  const results = {};
+  arr.forEach(obj=>{
+    if(!obj || typeof obj!=='object') return;
+    const enKey = (obj.en||'').trim().toLowerCase();
+    if(!enKey || !wantedLower.has(enKey)) return; // not one of the words actually requested — discard
+    const exList = Array.isArray(obj.examples) ? obj.examples.map(e=>({en:(e.en||'').trim(), fa:(e.fa||'').trim()})).filter(e=>e.en) : [];
+    const grammar = {
+      paragraph: (obj.paragraph||'').trim(),
+      inContextMeanings: Array.isArray(obj.inContextMeanings) ? obj.inContextMeanings.filter(x=>typeof x==='string' && x.trim()) : [],
+      generalMeanings: Array.isArray(obj.generalMeanings) ? obj.generalMeanings.filter(x=>typeof x==='string' && x.trim()) : []
+    };
+    const practicalNotes = (obj.practicalNotes||'').trim();
+    if(!grammar.paragraph && !grammar.inContextMeanings.length && !grammar.generalMeanings.length && !practicalNotes && !exList.length) return;
+    results[enKey] = { grammar, practicalNotes, moreExamples: exList };
+  });
+  if(Object.keys(results).length===0) throw new Error('هیچ کلمه‌ی معتبری در پاسخ پیدا نشد.');
+  return { results, skipped };
+}
+
+/* Writes each word's batch-built card everywhere it needs to be so it's usable offline right
+   away, without spending any further AI call:
+     - vsyncLevelData (the in-player highlight cache) — persisted automatically by
+       saveVsyncLastState(), so it survives closing the app.
+     - episodeSuggestions — so pressing the normal "➕ افزودن به فهرست لغات" button afterward
+       carries the card straight onto the saved word (see the ep-word-card ➕ handler).
+     - the word itself, if it's already saved in `words` — same never-overwrite rule used
+       everywhere else in the app (persistGrammarToWord etc.): a card the word already has is
+       never clobbered by a fresh batch run.
+   Returns how many words actually got a card applied. */
+function applyBatchFullCardResults(results){
+  let appliedCount = 0;
+  let touchedSavedWords = false;
+  Object.keys(results).forEach(key=>{
+    const r = results[key];
+    appliedCount++;
+    if(vsyncLevelData[key]){
+      vsyncLevelData[key].grammar = r.grammar;
+      vsyncLevelData[key].practicalNotes = r.practicalNotes;
+      if(r.moreExamples && r.moreExamples.length) vsyncLevelData[key].moreExamples = r.moreExamples;
+    }
+    const sIdx = episodeSuggestions.findIndex(w=>(w.en||'').trim().toLowerCase()===key);
+    if(sIdx>=0){
+      episodeSuggestions[sIdx].grammar = r.grammar;
+      episodeSuggestions[sIdx].practicalNotes = r.practicalNotes;
+      if(r.moreExamples && r.moreExamples.length) episodeSuggestions[sIdx].moreExamples = r.moreExamples;
+    }
+    const wordEntry = words.find(w=>(w.en||'').trim().toLowerCase()===key);
+    if(wordEntry){
+      if(!wordEntry.grammar && (r.grammar.paragraph || r.grammar.inContextMeanings.length || r.grammar.generalMeanings.length)){ wordEntry.grammar = r.grammar; touchedSavedWords = true; }
+      if(!wordEntry.practicalNotes && r.practicalNotes){ wordEntry.practicalNotes = r.practicalNotes; touchedSavedWords = true; }
+      if((!wordEntry.moreExamples || !wordEntry.moreExamples.length) && r.moreExamples && r.moreExamples.length){ wordEntry.moreExamples = r.moreExamples; touchedSavedWords = true; }
+    }
+  });
+  if(touchedSavedWords) saveWords();
+  saveVsyncLastState();
+  return appliedCount;
+}
+
+/* The current highlight set (vsyncLevelWords), resolved back to {en, fa, example} using whatever
+   the level-analysis already knows about each word (vsyncLevelData) — this is the exact word list
+   the batch full-card panel builds its prompt from. */
+function currentHighlightedWordItems(){
+  return [...vsyncLevelWords].map(key=>{
+    const d = vsyncLevelData[key];
+    return { en: (d && d.en) ? d.en : key, fa: (d && d.fa) || '', example: (d && d.example) || '' };
+  });
+}
+
+/* The "📦 ساخت کارت کامل برای همه‌ی کلمات هایلایت" panel: same copy-prompt/paste-answer pattern as
+   renderSrtAnalyzePanel, but for buildBatchFullCardPrompt/parseBatchFullCardResponse above,
+   covering every word in `items` (normally the whole current highlight set) in one round trip. */
+function renderBatchCardPanel(panelSelector, items){
+  const panel = episodePageEl && episodePageEl.querySelector(panelSelector);
+  if(!panel) return;
+  if(!items || items.length===0){ panel.style.display = 'none'; panel.innerHTML=''; return; }
+  panel.style.display = 'block';
+
+  panel.innerHTML = `
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">
+      یک درخواست برای کارت کامل (دستور زبان، نکات کاربردی، نمونه‌جمله) هر ${items.length} کلمه‌ی هایلایت‌شده، همه با هم، آماده می‌کند — هیچ‌کدام خلاصه یا حذف نمی‌شود. جواب را که از یک هوش مصنوعی خارجی (ChatGPT یا هر مدل دیگر) گرفتی، همین‌جا پیست کن تا همه‌ی کارت‌ها یک‌جا و آفلاین ذخیره شوند و دیگر لازم نباشد یکی‌یکی این کار را تکرار کنی.
+    </div>
+    <div class="actions">
+      <button type="button" class="btn btn-primary btn-small" id="epBatchCardShareBtn">📤 اشتراک‌گذاری / کپی متن درخواست</button>
+    </div>
+    <div id="epBatchCardCopyMsg" style="display:none;font-size:11.5px;color:var(--ink-soft);margin-top:6px;"></div>
+    <textarea id="epBatchCardPromptBox" readonly style="min-height:90px;margin-top:8px;font-size:11.5px;direction:ltr;text-align:left;"></textarea>
+    <label style="margin-top:14px;">جواب هوش مصنوعی را اینجا پیست کن</label>
+    <textarea id="epBatchCardPasteBox" placeholder="آرایه‌ی JSON پاسخ را اینجا پیست کن..." style="min-height:110px;"></textarea>
+    <div class="actions" style="margin-top:8px;">
+      <button type="button" class="btn btn-primary btn-small" id="epBatchCardSubmitBtn">✅ ثبت کارت‌ها</button>
+      <button type="button" class="btn btn-ghost btn-small" id="epBatchCardCloseBtn">بستن</button>
+    </div>
+    <div id="epBatchCardErr" class="ai-note" style="display:none;margin-top:8px;"></div>
+    <div id="epBatchCardOk" class="ai-note" style="display:none;margin-top:8px;"></div>`;
+
+  panel.querySelector('#epBatchCardShareBtn').onclick = async ()=>{
+    const btn = panel.querySelector('#epBatchCardShareBtn');
+    const errEl = panel.querySelector('#epBatchCardErr');
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    const origText = btn.textContent;
+    btn.textContent = 'در حال آماده‌سازی...';
+    try{
+      const { systemPrompt, userMessage } = buildBatchFullCardPrompt(items);
+      const fullText = systemPrompt + '\n\n' + userMessage;
+      const box = panel.querySelector('#epBatchCardPromptBox');
+      box.value = fullText;
+      const msg = panel.querySelector('#epBatchCardCopyMsg');
+      if(navigator.share){
+        try{ await navigator.share({ text: fullText }); return; }
+        catch(e2){ /* cancelled or failed — fall through to clipboard copy below */ }
+      }
+      try{
+        await navigator.clipboard.writeText(fullText);
+        if(msg){ msg.textContent = '✅ کپی شد — برو تو ChatGPT (یا هر هوش مصنوعی دیگه) پیستش کن.'; msg.style.display = 'block'; }
+      }catch(e3){
+        box.focus();
+        box.select();
+        if(msg){ msg.textContent = 'کپی خودکار نشد؛ متن بالا انتخاب شد، Ctrl+C رو بزن.'; msg.style.display = 'block'; }
+      }
+    }catch(e){
+      errEl.textContent = e && e.message ? e.message : String(e);
+      errEl.style.display = 'block';
+    }finally{
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
+  };
+
+  panel.querySelector('#epBatchCardSubmitBtn').onclick = ()=>{
+    const errEl = panel.querySelector('#epBatchCardErr');
+    const okEl = panel.querySelector('#epBatchCardOk');
+    errEl.style.display = 'none';
+    okEl.style.display = 'none';
+    const raw = panel.querySelector('#epBatchCardPasteBox').value;
+    try{
+      if(!raw.trim()) throw new Error('چیزی پیست نشده');
+      const { results, skipped } = parseBatchFullCardResponse(raw, items);
+      const count = applyBatchFullCardResults(results);
+      const missing = items.length - count - skipped;
+      let msg = `✅ کارت کامل ${count} کلمه ذخیره شد — از این به بعد آفلاین هم در دسترس است.`;
+      if(skipped>0) msg += ` (${skipped} مورد به‌خاطر یک خرابی نحوی در همون بخش از پاسخ ناخوانا بود و رد شد — بقیه سالم ثبت شدن.)`;
+      if(missing>0) msg += ` (${missing} کلمه‌ی دیگه اصلاً توی پاسخ پیدا نشد — شاید نیاز باشه دوباره درخواستش کنی.)`;
+      okEl.textContent = msg;
+      okEl.style.display = 'block';
+      panel.querySelector('#epBatchCardPasteBox').value = '';
+    }catch(e){
+      errEl.textContent = `پاسخ قابل خواندن نبود: ${escapeHtml(e.message||'')} — مطمئن شو دقیقاً همون خروجی JSON رو (بدون توضیح اضافه‌ی خودت) کپی کردی.`;
+      errEl.style.display = 'block';
+    }
+  };
+
+  const closeBtn = panel.querySelector('#epBatchCardCloseBtn');
+  if(closeBtn) closeBtn.onclick = ()=>{ panel.style.display = 'none'; panel.innerHTML=''; };
+}
+
+/* Opens the batch full-card panel for the whole current highlight set — used both by the
+   standalone "📦 ساخت کارت کامل همه" button and, right after a successful analyze, by the
+   combined "تحلیل + هایلایت + ساخت کارت کامل" button (via pendingBatchCardAfterAnalyze). */
+function openBatchCardPanelForHighlighted(){
+  const items = currentHighlightedWordItems();
+  if(items.length===0) return;
+  renderBatchCardPanel('#epBatchCardPanel', items);
+  const panel = episodePageEl && episodePageEl.querySelector('#epBatchCardPanel');
+  if(panel) panel.scrollIntoView({ block:'start', behavior:'smooth' });
+}
+
 /* Single merged prompt for the "دستور زبان" tab: one AI call that returns a short free-flowing
    Persian paragraph (the word's precise meaning in this exact sentence, only noting why this
    word was chosen or how its meaning here differs from the common one if that's genuinely
@@ -6226,9 +6501,10 @@ function openWordDetailPanel(word, contextInfo){
   })();
 
   const state = { quickMeaning: (word.fa||'').trim(), sentenceTranslation:'',
-    grammar: (wordEntry && wordEntry.grammar) || null, grammarError:'',
-    deepExplain: (wordEntry && wordEntry.practicalNotes) || null, deepExplainError:'',
-    moreExamples: (wordEntry && wordEntry.moreExamples && wordEntry.moreExamples.length) ? wordEntry.moreExamples : null,
+    grammar: (wordEntry && wordEntry.grammar) || word.grammar || null, grammarError:'',
+    deepExplain: (wordEntry && wordEntry.practicalNotes) || word.practicalNotes || null, deepExplainError:'',
+    moreExamples: (wordEntry && wordEntry.moreExamples && wordEntry.moreExamples.length) ? wordEntry.moreExamples
+      : ((word.moreExamples && word.moreExamples.length) ? word.moreExamples : null),
     activeTab:'grammar', idiom: findGroundedIdiomForWord(en, sentence),
     /* Each tab only fires its in-app AI (Gemini) requests the first time it's actually opened —
        not automatically when the panel appears — since every "جزئیات کلمه" open shouldn't cost
@@ -6241,9 +6517,9 @@ function openWordDetailPanel(word, contextInfo){
        panel shows the cached answer immediately instead of firing a new AI call for something
        already known. */
     tabLoaded: {
-      grammar: !!(wordEntry && wordEntry.grammar),
-      explain: !!(wordEntry && wordEntry.practicalNotes),
-      examples: !!(wordEntry && wordEntry.moreExamples && wordEntry.moreExamples.length)
+      grammar: !!((wordEntry && wordEntry.grammar) || word.grammar),
+      explain: !!((wordEntry && wordEntry.practicalNotes) || word.practicalNotes),
+      examples: !!((wordEntry && wordEntry.moreExamples && wordEntry.moreExamples.length) || (word.moreExamples && word.moreExamples.length))
     } };
 
   /* Builds the "part of an idiom" callout box for whichever idiom (local or AI-checked) was
