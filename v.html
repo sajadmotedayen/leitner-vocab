@@ -616,8 +616,9 @@
   .ep-word-card{
     display:flex; align-items:flex-start; gap:10px;
     background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-sm);
+    box-shadow:var(--shadow-sm);
     padding:13px 15px; margin-bottom:10px; cursor:pointer;
-    transition:background .12s ease, border-color .12s ease;
+    transition:background .12s ease, border-color .12s ease, box-shadow .12s ease;
   }
   .ep-word-card.selected{ background:var(--sage-tint); border-color:var(--sage); }
   .ep-word-card input[type=checkbox]{ margin-top:4px; flex-shrink:0; pointer-events:none; }
@@ -657,7 +658,7 @@
   /* Full-subtitle reference panel */
   .srt-full-wrap{
     border:1px solid var(--line); border-radius:var(--radius); padding:13px 15px; margin-bottom:16px;
-    background:var(--panel);
+    background:var(--panel); box-shadow:var(--shadow-sm);
   }
   .srt-full-head{
     display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;
@@ -690,27 +691,80 @@
     background:#e3eefc; color:#2b5fa3; font-weight:700; border-radius:4px; padding:0 2px;
   }
 
-  /* Offline video + subtitle sync player */
+  /* Offline video + subtitle sync player — top-level "فیلم" page cards */
   .vsync-wrap{
-    border:1px solid var(--line-soft); border-radius:var(--radius); margin-bottom:14px;
+    border:1px solid var(--line-soft); border-radius:var(--radius); margin-bottom:16px;
     background:var(--panel); box-shadow:var(--shadow-sm); overflow:hidden;
   }
   .vsync-head{
-    display:flex; align-items:center; gap:8px;
+    display:flex; align-items:center; gap:9px;
     font-weight:800; font-size:13.5px; color:var(--brass-dark); letter-spacing:.01em;
-    padding:13px 15px; margin:0; border-bottom:1px solid var(--line-soft);
+    padding:14px 16px; margin:0; border-bottom:1px solid var(--line-soft);
+    background:linear-gradient(180deg, rgba(171,132,70,.06), transparent 90%);
   }
-  .vsync-body{ padding:14px 15px 15px; }
+  .vsync-body{ padding:15px 16px 16px; }
   .vsync-body .actions{ margin-bottom:0; justify-content:flex-start; }
-  .vsync-body .ai-note{ margin-bottom:12px; padding:10px 12px; }
-  /* Each of the three AI-assist tools is one plain row: icon+label on the right, action button on
-     the left. No card, no description text — matches the rest of the app's flat, minimal style. */
+  .vsync-body .ai-note{ margin-bottom:14px; padding:10px 12px; }
+  /* Each of the three AI-assist tools is one plain row: label on the right, action button on the
+     left, separated by a thin divider so the whole card reads as one tidy list with a consistent
+     vertical rhythm — still no extra card/description clutter, matching the app's flat style. */
   .ai-tool-row{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    padding:10px 0; border-top:1px solid var(--line-soft);
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    padding:12px 0; border-top:1px solid var(--line-soft);
   }
   .ai-tool-row:first-child{ border-top:none; padding-top:0; }
-  .ai-tool-label{ font-size:13px; font-weight:700; color:var(--ink); }
+  .ai-tool-row .btn{ flex-shrink:0; }
+  .ai-tool-title{ font-size:13px; font-weight:700; color:var(--ink); line-height:1.5; display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .ai-tool-badge{
+    font-size:10px; font-weight:800; color:var(--sage-dark); background:var(--sage-tint);
+    border-radius:999px; padding:2px 8px; letter-spacing:.01em;
+  }
+  /* The share→paste→submit flow that opens under the analyze/translate rows: a distinct tinted
+     card with numbered steps, so it reads as one guided sequence instead of a loose stack of
+     buttons and textareas glued together. */
+  .ai-flow-card{
+    background:var(--parchment); border:1px solid var(--line-soft); border-radius:var(--radius-sm);
+    padding:14px 15px 15px;
+  }
+  .ai-flow-badge-row{ display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+  .ai-flow-badge{
+    display:inline-block; font-size:11.5px; font-weight:700; padding:4px 11px; border-radius:20px;
+  }
+  .ai-flow-badge.mode-new{ background:rgba(60,160,255,.15); color:#2b7cc4; }
+  .ai-flow-badge.mode-combined{ background:rgba(124,92,255,.15); color:#6b4fd6; }
+  .ai-flow-badge.mode-more{ background:var(--panel); color:var(--ink-soft); border:1px solid var(--line-soft); }
+  .ai-flow-help-btn{
+    width:22px; height:22px; border-radius:50%; border:1px solid var(--line); background:var(--panel);
+    color:var(--ink-soft); font-size:12px; line-height:1; cursor:pointer; flex:none; padding:0;
+  }
+  .ai-flow-desc{ font-size:12.5px; color:var(--ink-soft); line-height:1.85; margin-bottom:10px; }
+  .ai-flow-card .ai-note{ margin-bottom:10px; }
+  .ai-flow-step{ margin-top:16px; padding-top:16px; border-top:1px dashed var(--line-soft); }
+  .ai-flow-step.ai-flow-step-first{ margin-top:2px; padding-top:0; border-top:none; }
+  .ai-flow-step-label{
+    display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700;
+    color:var(--brass-dark); margin-bottom:9px;
+  }
+  .ai-flow-step-num{
+    width:20px; height:20px; border-radius:50%; background:var(--brass-tint); color:var(--brass-dark);
+    font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .ai-flow-step .actions{ margin-bottom:0; }
+  .ai-flow-hint{ font-size:11.5px; color:var(--sage-dark); margin-top:7px; }
+  .ai-flow-textarea{ margin-top:9px; min-height:100px; }
+  .ai-flow-textarea[readonly]{ font-size:11.5px; direction:ltr; text-align:left; min-height:80px; background:var(--panel); }
+  /* Compact highlight-status bar under the "پیشنهاد کلمات و اصطلاحات" row — a single slim row
+     instead of a full-width note box, so it reads as a quick status/toggle rather than a
+     separate content block competing with the rest of the card. */
+  .vsync-hl-status{ font-size:12.5px; color:var(--ink-soft); line-height:1.7; }
+  .vsync-hl-bar{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    background:var(--sage-tint); border:1px solid var(--sage); border-radius:var(--radius-sm);
+    padding:9px 12px;
+  }
+  .vsync-hl-toggle{ display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12.5px; font-weight:700; color:var(--sage-dark); }
+  .vsync-hl-toggle input[type=checkbox]{ width:auto; margin:0; }
+  .vsync-hl-bar .btn{ flex-shrink:0; }
   /* Native <input type=file> is visually hidden; its paired <label> (styled as an ordinary
      btn-secondary pill, in Persian) is the only thing the person actually sees/taps — keeps every
      file-picker on this page looking like the rest of the app's buttons instead of the browser's
@@ -720,10 +774,21 @@
     overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
   }
   .file-pick-btn{ cursor:pointer; }
-  .vsync-inputs{ display:flex; flex-direction:column; gap:10px; margin-bottom:4px; }
-  .file-pick-row{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
-  .file-pick-label{ font-size:12.5px; font-weight:700; color:var(--ink-soft); min-width:64px; }
-  .file-pick-name{ font-size:11.5px; color:var(--ink-faint); direction:ltr; text-align:left; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .vsync-inputs{ display:flex; flex-direction:column; gap:9px; margin-bottom:2px; }
+  /* Each file field now reads as one tidy pill-shaped row (soft fill, own border/radius) instead
+     of the label/button/filename floating loosely on the bare card background. */
+  .file-pick-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:var(--parchment); border:1px solid var(--line-soft); border-radius:var(--radius-sm);
+    padding:10px 12px;
+  }
+  .file-pick-label{ font-size:12.5px; font-weight:700; color:var(--ink-soft); min-width:64px; flex-shrink:0; }
+  .file-pick-name{ font-size:11.5px; color:var(--ink-faint); direction:ltr; text-align:left; flex:1; min-width:60px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+  /* Tapped once, a truncated filename un-clips and wraps so the full name is readable; tapping
+     again collapses it back to the single-line ellipsis form. */
+  .file-pick-name.expanded{
+    white-space:normal; word-break:break-all; overflow:visible; text-overflow:clip; flex-basis:100%;
+  }
   .vsync-player{
     position:relative; width:100%; background:#000; border-radius:var(--radius-sm); overflow:hidden; margin-top:4px;
   }
@@ -2472,9 +2537,9 @@ async function handleEpSyncSrtFile(file){
   saveVsyncLastState();
 }
 
-/* Small status line shown right under the "📄 پیشنهاد کلمات و اصطلاحات + های‌لایت در پلیر" tool
-   row, summarizing the current in-player highlight set (words + idioms together) — see
-   renderSrtAnalyzePanel, the single flow that now produces both the suggestion list and this. */
+/* Slim status bar shown right under the "📄 پیشنهاد کلمات و اصطلاحات" tool row, summarizing the
+   current in-player highlight set (words + idioms together) — see renderSrtAnalyzePanel, the
+   single flow that now produces both the suggestion list and this. */
 function renderVsyncLevelStatus(transientMsg){
   const el = episodePageEl && episodePageEl.querySelector('#epVsyncLevelStatus');
   if(!el) return;
@@ -2483,16 +2548,21 @@ function renderVsyncLevelStatus(transientMsg){
     el.innerHTML = '';
     el.textContent = vsyncLevelError;
   }else if(vsyncLevelWords.size>0){
+    // The "ساخت کارت کامل" round trip is only worth offering while at least one highlighted
+    // word/idiom is still missing its full card — e.g. after the plain "تحلیل" flow. Once
+    // "همه‌ی مراحل با هم" (combined mode) has already filled every card, or a later batch run
+    // catches up the rest, this stays hidden instead of sitting there with nothing left to do.
+    const missingCard = [...vsyncLevelWords].some(k => !(vsyncLevelData[k] && vsyncLevelData[k].grammar));
     el.style.display = 'block';
     el.innerHTML = `
-      ${transientMsg ? `<div style="margin-bottom:8px;">${escapeHtml(transientMsg)}</div>` : ''}
-      <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-        <input type="checkbox" id="epVsyncHighlightToggle" ${vsyncHighlightEnabled?'checked':''}>
-        <span>✨ ${vsyncLevelWords.size} کلمه هم‌سطح ${vsyncHighlightEnabled ? 'در ویدیو های‌لایت می‌شود' : '(های‌لایت خاموش است)'}</span>
-      </label>
-      <div class="actions" style="margin-top:8px;">
-        <button type="button" class="btn btn-secondary btn-small" id="epBatchCardOpenBtn">📦 ساخت کارت کامل برای هر ${vsyncLevelWords.size} کلمه‌ی هایلایت (آفلاین)</button>
-      </div>`;
+      <div class="vsync-hl-bar">
+        <label class="vsync-hl-toggle">
+          <input type="checkbox" id="epVsyncHighlightToggle" ${vsyncHighlightEnabled?'checked':''}>
+          <span>✨ ${vsyncLevelWords.size} کلمه هم‌سطح ${vsyncHighlightEnabled ? '— های‌لایت روشن' : '— های‌لایت خاموش'}</span>
+        </label>
+        ${missingCard ? `<button type="button" class="btn btn-ghost btn-small" id="epBatchCardOpenBtn">📦 ساخت کارت کامل</button>` : ''}
+      </div>
+      ${transientMsg ? `<div class="ai-flow-hint">${escapeHtml(transientMsg)}</div>` : ''}`;
     const toggle = el.querySelector('#epVsyncHighlightToggle');
     if(toggle) toggle.onchange = ()=>{
       vsyncHighlightEnabled = toggle.checked;
@@ -3089,22 +3159,35 @@ function renderSrtTranslatePanel(){
   }
   const already = epFaCues.length===epVideoCues.length && epFaCues.length>0;
   panel.innerHTML = `
-    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">
-      همه‌ی ${epVideoCues.length} خط این زیرنویس رو با شماره آماده می‌کنه تا یک هوش مصنوعی (ChatGPT یا هر مدل دیگه) با در نظر گرفتن سیاق کل قسمت، یک‌جا ترجمه کنه. جواب رو که گرفتی همینجا پیست کن — به‌عنوان زیرنویس فارسی، زیر خط انگلیسی توی پلیر بالا نشون داده می‌شه.
+    <div class="ai-flow-card">
+    <div class="ai-flow-desc">
+      ترجمه‌ی هر ${epVideoCues.length} خط رو با یک هوش مصنوعی (ChatGPT یا هر مدل دیگه) بگیر و اینجا پیست کن.
     </div>
-    ${already ? `<div class="ai-note" style="margin-bottom:8px;">✅ همین الان ${epFaCues.length} خط ترجمه بارگذاری شده و در پلیر فعاله (دکمه‌ی «فا» بالای ویدیو).</div>` : ''}
-    <div class="actions">
-      <button type="button" class="btn btn-primary btn-small" id="epSrtTransShareBtn">📤 اشتراک‌گذاری / کپی متن درخواست</button>
+    ${already ? `<div class="ai-note">✅ ${epFaCues.length} خط ترجمه فعاله (دکمه‌ی «فا» بالای ویدیو).</div>` : ''}
+
+    <div class="ai-flow-step ai-flow-step-first">
+      <div class="ai-flow-step-label"><span class="ai-flow-step-num">۱</span>کپی درخواست</div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary btn-small" id="epSrtTransShareBtn">📤 اشتراک‌گذاری / کپی متن درخواست</button>
+      </div>
+      <div id="epSrtTransCopyMsg" class="ai-flow-hint" style="display:none;"></div>
+      <textarea id="epSrtTransPromptBox" readonly class="ai-flow-textarea"></textarea>
     </div>
-    <div id="epSrtTransCopyMsg" style="display:none;font-size:11.5px;color:var(--ink-soft);margin-top:6px;"></div>
-    <textarea id="epSrtTransPromptBox" readonly style="min-height:90px;margin-top:8px;font-size:11.5px;direction:ltr;text-align:left;"></textarea>
-    <label style="margin-top:14px;">جواب هوش مصنوعی رو اینجا پیست کن</label>
-    <textarea id="epSrtTransPasteBox" placeholder="آرایه‌ی JSON پاسخ رو اینجا پیست کن..." style="min-height:110px;"></textarea>
-    <div class="actions" style="margin-top:8px;">
-      <button type="button" class="btn btn-primary btn-small" id="epSrtTransSubmitBtn">✅ ثبت ترجمه</button>
-      ${already ? `<button type="button" class="btn btn-ghost btn-small" id="epSrtTransClearBtn">🗑 حذف ترجمه‌ی فعلی</button>` : ''}
+
+    <div class="ai-flow-step">
+      <div class="ai-flow-step-label"><span class="ai-flow-step-num">۲</span>پیست جواب</div>
+      <textarea id="epSrtTransPasteBox" class="ai-flow-textarea" placeholder="آرایه‌ی JSON پاسخ رو اینجا پیست کن..."></textarea>
     </div>
-    <div id="epSrtTransErr" class="ai-note" style="display:none;margin-top:8px;"></div>`;
+
+    <div class="ai-flow-step">
+      <div class="ai-flow-step-label"><span class="ai-flow-step-num">۳</span>ثبت</div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary btn-small" id="epSrtTransSubmitBtn">✅ ثبت ترجمه</button>
+        ${already ? `<button type="button" class="btn btn-ghost btn-small" id="epSrtTransClearBtn">🗑 حذف ترجمه‌ی فعلی</button>` : ''}
+      </div>
+      <div id="epSrtTransErr" class="ai-note" style="display:none;"></div>
+    </div>
+    </div>`;
 
   /* Still one button, one tap: on phones (where navigator.share works and lists the ChatGPT/AI
      app directly), try that first. If share isn't available, gets cancelled, or fails (mainly a
@@ -3754,10 +3837,14 @@ function renderSrtAnalyzePanel(mode, panelSelector){
   const needsFile = !isMore; // both 'new' and 'combined' need a file; 'more' reuses the existing pool
 
   panel.innerHTML = `
-    <div style="display:inline-block; font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px; margin-bottom:10px; background:${isCombined ? 'rgba(124,92,255,0.15); color:#7c5cff' : (isMore ? 'rgba(255,255,255,0.08); color:var(--ink-soft)' : 'rgba(60,160,255,0.15); color:#3ca0ff')};">
-      ${isMore ? '➕ حالت: کلمات بیشتر' : (isCombined ? '📄📦 حالت: تحلیل + های‌لایت + ساخت کارت کامل (یکجا)' : '📄 حالت: تحلیل زیرنویس و پیشنهاد کلمات')}
+    <div class="ai-flow-card">
+    <div class="ai-flow-badge-row">
+      <span class="ai-flow-badge ${isCombined ? 'mode-combined' : (isMore ? 'mode-more' : 'mode-new')}">
+        ${isMore ? '➕ کلمات بیشتر' : (isCombined ? '📦 تحلیل + کارت کامل (یکجا)' : '📄 تحلیل زیرنویس')}
+      </span>
+      <button type="button" id="epSrtAnalyzeHelpBtn" class="ai-flow-help-btn" title="راهنما">ⓘ</button>
     </div>
-    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">
+    <div id="epSrtAnalyzeHelpText" class="ai-flow-desc" style="display:none;">
       ${isMore
         ? 'یک درخواست برای یک دسته‌ی تازه از کلمات (به‌جز کلماتی که همین الان توی فهرست پایین هستن) آماده می‌کنه.'
         : isCombined
@@ -3765,20 +3852,39 @@ function renderSrtAnalyzePanel(mode, panelSelector){
           : 'یک درخواست از روی کلمات واقعی همین زیرنویس آماده می‌کنه تا یک هوش مصنوعی خارجی (ChatGPT یا هر مدل دیگه) کلمات مناسب سطحت رو انتخاب و معنی کنه — بدون استفاده از سهمیه‌ی هوش مصنوعی داخل اپ.'}
       جواب رو که گرفتی همینجا پیست کن تا به فهرست کلمات پایین اضافه بشه${isCombined ? ' و کارت کامل هرکدوم هم ذخیره بشه' : ''}.
     </div>
-    ${(needsFile && !hasFile) ? `<div class="ai-note" style="margin-bottom:8px;">اول از بالا یه فایل زیرنویس (.srt) انتخاب کن.</div>` : ''}
-    ${(needsFile && hasFile && !hasPickedFile) ? `<div class="ai-note" style="margin-bottom:8px;">📌 از همون زیرنویسی که قبلاً برای این قسمت انتخاب کرده بودی (${escapeHtml(epSyncSrtFileName||'')}) استفاده می‌شه — لازم نیست دوباره فایل رو انتخاب کنی.</div>` : ''}
-    <div class="actions">
-      <button type="button" class="btn btn-primary btn-small" id="epSrtAnalyzeShareBtn" ${(needsFile && !hasFile)?'disabled':''}>📤 اشتراک‌گذاری / کپی متن درخواست</button>
+    ${(needsFile && !hasFile) ? `<div class="ai-note">اول از بالا یه فایل زیرنویس (.srt) انتخاب کن.</div>` : ''}
+    ${(needsFile && hasFile && !hasPickedFile) ? `<div class="ai-note">📌 از همون زیرنویسی که قبلاً برای این قسمت انتخاب کرده بودی (${escapeHtml(epSyncSrtFileName||'')}) استفاده می‌شه — لازم نیست دوباره فایل رو انتخاب کنی.</div>` : ''}
+
+    <div class="ai-flow-step ai-flow-step-first">
+      <div class="ai-flow-step-label"><span class="ai-flow-step-num">۱</span>کپی درخواست</div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary btn-small" id="epSrtAnalyzeShareBtn" ${(needsFile && !hasFile)?'disabled':''}>📤 اشتراک‌گذاری / کپی متن درخواست</button>
+      </div>
+      <div id="epSrtAnalyzeCopyMsg" class="ai-flow-hint" style="display:none;"></div>
+      <textarea id="epSrtAnalyzePromptBox" readonly class="ai-flow-textarea"></textarea>
     </div>
-    <div id="epSrtAnalyzeCopyMsg" style="display:none;font-size:11.5px;color:var(--ink-soft);margin-top:6px;"></div>
-    <textarea id="epSrtAnalyzePromptBox" readonly style="min-height:90px;margin-top:8px;font-size:11.5px;direction:ltr;text-align:left;"></textarea>
-    <label style="margin-top:14px;">جواب هوش مصنوعی رو اینجا پیست کن</label>
-    <textarea id="epSrtAnalyzePasteBox" placeholder="آبجکت JSON پاسخ رو اینجا پیست کن..." style="min-height:110px;"></textarea>
-    <div class="actions" style="margin-top:8px;">
-      <button type="button" class="btn btn-primary btn-small" id="epSrtAnalyzeSubmitBtn">✅ ${isMore ? 'افزودن به فهرست' : (isCombined ? 'ثبت کلمات + کارت‌ها' : 'ثبت کلمات')}</button>
-      ${(!isMore && hasResults) ? `<button type="button" class="btn btn-ghost btn-small" id="epSrtAnalyzeClearBtn">🗑 حذف پیشنهادهای فعلی</button>` : ''}
+
+    <div class="ai-flow-step">
+      <div class="ai-flow-step-label"><span class="ai-flow-step-num">۲</span>پیست جواب</div>
+      <textarea id="epSrtAnalyzePasteBox" class="ai-flow-textarea" placeholder="آبجکت JSON پاسخ رو اینجا پیست کن..."></textarea>
     </div>
-    <div id="epSrtAnalyzeErr" class="ai-note" style="display:none;margin-top:8px;"></div>`;
+
+    <div class="ai-flow-step">
+      <div class="ai-flow-step-label"><span class="ai-flow-step-num">۳</span>ثبت</div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary btn-small" id="epSrtAnalyzeSubmitBtn">✅ ${isMore ? 'افزودن به فهرست' : (isCombined ? 'ثبت کلمات + کارت‌ها' : 'ثبت کلمات')}</button>
+        ${(!isMore && hasResults) ? `<button type="button" class="btn btn-ghost btn-small" id="epSrtAnalyzeClearBtn">🗑 حذف پیشنهادهای فعلی</button>` : ''}
+      </div>
+      <div id="epSrtAnalyzeErr" class="ai-note" style="display:none;"></div>
+    </div>
+    </div>`;
+
+  const helpBtn = panel.querySelector('#epSrtAnalyzeHelpBtn');
+  const helpText = panel.querySelector('#epSrtAnalyzeHelpText');
+  if(helpBtn && helpText) helpBtn.onclick = ()=>{
+    const showing = helpText.style.display !== 'none';
+    helpText.style.display = showing ? 'none' : 'block';
+  };
 
   panel.querySelector('#epSrtAnalyzeShareBtn').onclick = async ()=>{
     const btn = panel.querySelector('#epSrtAnalyzeShareBtn');
@@ -4170,7 +4276,7 @@ function renderEpisodePage(){
               <label class="btn btn-secondary btn-small file-pick-btn" for="epVideoFile">انتخاب فایل</label>
               <input type="file" id="epVideoFile" accept="video/*" class="file-input-hidden">
             `}
-            <span class="file-pick-name">${epVideoFileName ? escapeHtml(epVideoFileName) : 'اختیاری'}</span>
+            <span class="file-pick-name" id="epVideoFileNameSpan" title="${epVideoFileName ? escapeHtml(epVideoFileName) : ''}">${epVideoFileName ? escapeHtml(epVideoFileName) : 'اختیاری'}</span>
           </div>
           ${SUPPORTS_FS_ACCESS ? `
           <div class="file-pick-row" id="epVideoResumeRow" style="display:none;">
@@ -4181,7 +4287,7 @@ function renderEpisodePage(){
             <span class="file-pick-label">📝 زیرنویس</span>
             <label class="btn btn-secondary btn-small file-pick-btn" for="epSrtFile">انتخاب فایل .srt</label>
             <input type="file" id="epSrtFile" accept=".srt" class="file-input-hidden">
-            <span class="file-pick-name">${epSyncSrtFileName ? escapeHtml(epSyncSrtFileName) : 'همین قسمت'}</span>
+            <span class="file-pick-name" id="epSrtFileNameSpan" title="${epSyncSrtFileName ? escapeHtml(epSyncSrtFileName) : ''}">${epSyncSrtFileName ? escapeHtml(epSyncSrtFileName) : 'همین قسمت'}</span>
           </div>
         </div>
         <div id="epVsyncPlayerHolder"></div>
@@ -4194,19 +4300,19 @@ function renderEpisodePage(){
         <div class="vsync-body">
 
         <div class="ai-tool-row">
-          <span class="ai-tool-label">📄 پیشنهاد کلمات و اصطلاحات + های‌لایت در پلیر</span>
+          <span class="ai-tool-title">📄 پیشنهاد کلمات و اصطلاحات</span>
           <button class="btn btn-primary btn-small" id="epSrtAnalyzeToggleBtn">شروع تحلیل</button>
         </div>
-        <div class="ai-note" id="epVsyncLevelStatus" style="display:none; margin-top:10px;"></div>
-        <div id="epSrtAnalyzePanel" style="display:none; margin-top:10px;"></div>
-        <div id="epBatchCardPanel" style="display:none; margin-top:10px;"></div>
-        <div class="ai-tool-row" style="margin-top:8px;">
-          <span class="ai-tool-label">📄📦 همه‌ی مراحل با هم: تحلیل + های‌لایت + ساخت کارت کامل</span>
+        <div class="ai-tool-row">
+          <span class="ai-tool-title">📦 همه‌ی مراحل با هم <span class="ai-tool-badge">کامل‌تر</span></span>
           <button type="button" class="btn btn-secondary btn-small" id="epSrtAnalyzeAndCardBtn">شروع</button>
         </div>
+        <div class="vsync-hl-status" id="epVsyncLevelStatus" style="display:none; margin-top:10px;"></div>
+        <div id="epSrtAnalyzePanel" style="display:none; margin-top:10px;"></div>
+        <div id="epBatchCardPanel" style="display:none; margin-top:10px;"></div>
 
         <div class="ai-tool-row">
-          <span class="ai-tool-label">🌐 ترجمه‌ی کامل زیرنویس</span>
+          <span class="ai-tool-title">🌐 ترجمه‌ی کامل زیرنویس</span>
           <button type="button" class="btn btn-secondary btn-small" id="epSrtTranslateBtn">شروع ترجمه</button>
         </div>
         <div id="epSrtTranslatePanel" style="display:none; margin-top:10px;"></div>
@@ -4283,6 +4389,11 @@ function renderEpisodePage(){
     if(panel.style.display==='none') renderSrtTranslatePanel();
     else panel.style.display = 'none';
   };
+  // Tap a (possibly truncated) file name to see it in full, tap again to collapse it back —
+  // covers long video/subtitle file names the single-line ellipsis would otherwise hide.
+  episodePageEl.querySelectorAll('.file-pick-name').forEach(el=>{
+    el.onclick = ()=> el.classList.toggle('expanded');
+  });
   renderVsyncPlayer();
   renderVsyncLevelStatus();
 
