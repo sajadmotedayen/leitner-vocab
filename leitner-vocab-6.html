@@ -2583,14 +2583,31 @@ class YtVideoFacade{
   destroy(){ clearInterval(this._pollTimer); }
 }
 
+/* Plain fetch to YouTube's timedtext endpoint fails from most pages — it doesn't send an
+   Access-Control-Allow-Origin header for arbitrary sites, so the browser blocks reading the
+   response even though the request itself succeeded. This retries through a public CORS proxy
+   when that happens, which is what actually makes caption fetching work in practice; the direct
+   attempt is tried first since it's faster and doesn't depend on a third-party proxy staying up. */
+async function fetchTextWithCorsFallback(url){
+  try{
+    const res = await fetch(url);
+    if(res.ok){
+      const text = await res.text();
+      if(text) return text;
+    }
+  }catch(e){ /* likely CORS — fall through to the proxy below */ }
+  const proxied = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+  const res2 = await fetch(proxied);
+  if(!res2.ok) throw new Error('http '+res2.status);
+  return await res2.text();
+}
+
 /* Fetches the list of caption tracks YouTube has for a video (manual + auto-generated, in
    whichever languages exist) via the same undocumented endpoint the YouTube web player itself
    uses. Not an official/guaranteed API — see fetchYoutubeCaptionCues for how failures here are
    handled. */
 async function fetchYoutubeCaptionTracks(videoId){
-  const res = await fetch(`https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(videoId)}`);
-  if(!res.ok) throw new Error('http '+res.status);
-  const xmlText = await res.text();
+  const xmlText = await fetchTextWithCorsFallback(`https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(videoId)}`);
   const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
   return Array.from(doc.querySelectorAll('track')).map(t=>({
     lang: t.getAttribute('lang_code') || '',
@@ -2607,10 +2624,9 @@ function pickBestYoutubeCaptionTrack(tracks){
 
 /* Downloads and parses the actual caption cues for a video, in this app's normal {start,end,text}
    shape (seconds), so everything downstream (updateVsyncCaptionNow, translation, level-highlight
-   analysis) treats it exactly like a parsed .srt. Throws on any failure — most commonly a CORS
-   rejection, since this undocumented endpoint isn't guaranteed to allow being read from an
-   arbitrary page the way it's meant to be read from youtube.com itself; the caller is expected to
-   catch this and degrade gracefully (video keeps playing, person can still pick a local .srt). */
+   analysis) treats it exactly like a parsed .srt. Throws on any failure (e.g. the CORS-proxy
+   fallback above being unreachable too) — the caller is expected to catch this and degrade
+   gracefully (video keeps playing, person can still pick a local .srt). */
 async function fetchYoutubeCaptionCues(videoId){
   let lang = 'en', kind = '';
   try{
@@ -2624,17 +2640,16 @@ async function fetchYoutubeCaptionCues(videoId){
   }
   const params = new URLSearchParams({ v: videoId, lang, fmt:'json3' });
   if(kind==='asr') params.set('kind','asr');
-  const res = await fetch(`https://www.youtube.com/api/timedtext?${params.toString()}`);
-  if(!res.ok) throw new Error('http '+res.status);
-  const data = await res.json();
+  const text = await fetchTextWithCorsFallback(`https://www.youtube.com/api/timedtext?${params.toString()}`);
+  const data = JSON.parse(text);
   const cues = [];
   for(const ev of (data.events||[])){
     if(!ev.segs || ev.tStartMs==null) continue;
-    const text = ev.segs.map(s=>s.utf8||'').join('').replace(/\n+/g,' ').trim();
-    if(!text) continue;
+    const text2 = ev.segs.map(s=>s.utf8||'').join('').replace(/\n+/g,' ').trim();
+    if(!text2) continue;
     const start = ev.tStartMs/1000;
     const end = start + (ev.dDurationMs!=null ? ev.dDurationMs/1000 : 3);
-    cues.push({ start, end, text });
+    cues.push({ start, end, text: text2 });
   }
   cues.sort((a,b)=>a.start-b.start);
   return cues;
