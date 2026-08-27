@@ -3479,11 +3479,17 @@ function renderVsyncYoutubePlayer(holder){
     try{
       epYtPlayer = new YT.Player(targetEl, {
         videoId: wantedId,
-        playerVars: { playsinline:1, controls:0, modestbranding:1, rel:0, iv_load_policy:3, fs:0 },
+        playerVars: { playsinline:1, controls:0, modestbranding:1, rel:0, iv_load_policy:3, fs:0, cc_load_policy:0 },
         events:{
           onReady: ()=>{
             clearTimeout(loadTimeout);
             setYtMsg(null);
+            // cc_load_policy:0 above stops YouTube's own captions from turning on by default, but
+            // some browsers/devices force them on anyway (a system-level "always show captions"
+            // accessibility setting) — this explicitly clears the track too, so only this app's
+            // own clickable caption bar is ever visible, never YouTube's plain (non-clickable) one.
+            try{ epYtPlayer.setOption('captions', 'track', {}); }catch(e){}
+            try{ epYtPlayer.unloadModule('captions'); }catch(e){}
             const facade = new YtVideoFacade(epYtPlayer);
             if(epVideoLastTime > 0){
               try{ facade.currentTime = Math.min(epVideoLastTime, facade.duration || epVideoLastTime); }catch(e){}
