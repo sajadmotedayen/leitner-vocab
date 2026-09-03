@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>رزرو صندلی کتابخانه</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
+    background: linear-gradient(180deg, #f7f4fb 0%, #f0eef7 100%);
+    margin: 0;
+    padding: 28px 16px 60px;
+    direction: rtl;
+    color: #2b2b33;
+  }
+  h2 {
+    text-align: center;
+    color: #3b2a54;
+    margin: 0 0 4px;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  p.sub {
+    text-align: center;
+    color: #8a8398;
+    font-size: 13px;
+    margin: 0 0 22px;
+  }
+  .card {
+    max-width: 900px;
+    margin: 18px auto 0;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(80, 60, 120, 0.06), 0 1px 3px rgba(80, 60, 120, 0.05);
+    padding: 18px 20px;
+  }
+  .grid {
+    display: grid;
+    direction: rtl;
+    grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+    gap: 9px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .seat {
+    background: #f3c6e0;
+    border: 1px solid #d99cc0;
+    border-radius: 6px;
+    padding: 10px 0;
+    text-align: center;
+    font-size: 15px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s, background 0.2s;
+  }
+  .seat:hover {
+    background: #ecb0d6;
+    transform: scale(1.05);
+  }
+  .seat:active {
+    transform: scale(0.95);
+  }
+  .seat.no-need {
+    border-top: 5px solid #2e7d32;
+  }
+  .seat.needs-strip {
+    border-top: 5px solid #e65100;
+  }
+  .seat.custom {
+    box-shadow: 0 0 0 2px #4caf50 inset;
+  }
+  .seat.edit-mode {
+    cursor: pointer;
+    outline: 2px dashed #8a7ba8;
+    outline-offset: 2px;
+  }
+  .msg {
+    text-align: center;
+    margin-top: 14px;
+    color: #4a3866;
+    font-size: 13px;
+    min-height: 18px;
+    font-weight: 600;
+  }
+  .legend {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: #f7f5fb;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 12.5px;
+    color: #574a6b;
+  }
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .legend-swatch.no-need { background: #2e9c5c; }
+  .legend-swatch.needs-strip { background: #e6650f; }
+  .legend-swatch.unknown { background: #d9c9d1; }
+
+  .add-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .add-form input {
+    flex: 1;
+    min-width: 120px;
+    padding: 10px 12px;
+    border: 1px solid #e6e1ec;
+    background: #faf9fc;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    direction: rtl;
+    transition: border-color 0.15s;
+  }
+  .add-form input:focus {
+    outline: none;
+    border-color: #a794c9;
+    background: #fff;
+  }
+  .add-form input[name="link"] {
+    flex: 2;
+    direction: ltr;
+    text-align: left;
+  }
+  .add-form button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 10px;
+    background: #4caf50;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .add-form button:hover {
+    background: #429a46;
+  }
+  .add-msg {
+    width: 100%;
+    font-size: 12.5px;
+    min-height: 16px;
+  }
+  .add-msg.ok { color: #2e9c5c; }
+  .add-msg.err { color: #d9534f; }
+
+  .settings-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+  .pill-btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.1s;
+    color: #fff;
+  }
+  .pill-btn:hover {
+    filter: brightness(0.94);
+  }
+  .pill-btn:active {
+    transform: scale(0.97);
+  }
+  .status-toggle-btn {
+    background: #7a6a99;
+  }
+  .status-toggle-btn.active {
+    background: #d9534f;
+  }
+  .download-btn {
+    background: #3b7dd8;
+  }
+  .card-label {
+    text-align: center;
+    font-size: 11px;
+    color: #a99fb8;
+    margin: -8px 0 12px;
+    letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+
+<h2>رزرو صندلی کتابخانه</h2>
+<p class="sub">روی شماره صندلی مورد نظر بزنید تا لینک رزرو آن باز شود</p>
+
+<div class="grid" id="seatGrid"><div class="seat unknown">۱</div><div class="seat unknown">۲</div><div class="seat unknown">۳</div><div class="seat unknown">۴</div><div class="seat no-need">۵</div><div class="seat no-need">۶</div><div class="seat no-need">۷</div><div class="seat no-need">۸</div><div class="seat needs-strip">۹</div><div class="seat no-need">۱۰</div><div class="seat no-need">۱۱</div><div class="seat no-need">۱۲</div><div class="seat no-need">۱۳</div><div class="seat no-need">۱۴</div><div class="seat no-need">۱۵</div><div class="seat needs-strip">۱۶</div><div class="seat needs-strip">۱۷</div><div class="seat needs-strip">۱۸</div><div class="seat needs-strip">۱۹</div><div class="seat needs-strip">۲۰</div><div class="seat no-need">۲۱</div><div class="seat no-need">۲۲</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۲۳</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۲۴</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۲۵</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۲۶</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۲۷</div><div class="seat no-need">۲۸</div><div class="seat no-need">۲۹</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۳۰</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۳۱</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۳۲</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۳۳</div><div class="seat needs-strip">۳۴</div><div class="seat no-need">۳۵</div><div class="seat no-need">۳۶</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۳۷</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۳۸</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۳۹</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۴۰</div><div class="seat needs-strip">۴۱</div><div class="seat no-need">۴۲</div><div class="seat no-need">۴۳</div><div class="seat needs-strip">۴۴</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۴۵</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۴۶</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۴۷</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۴۸</div><div class="seat no-need" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۴۹</div><div class="seat no-need" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۵۰</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۵۱</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۵۲</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۵۳</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۵۴</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۵۵</div><div class="seat no-need">۵۶</div><div class="seat no-need">۵۷</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۵۸</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۵۹</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۶۰</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۶۱</div><div class="seat needs-strip">۶۲</div><div class="seat no-need" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۶۳</div><div class="seat no-need" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۶۴</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۶۵</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۶۶</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۶۷</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۶۸</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۶۹</div><div class="seat no-need">۷۰</div><div class="seat no-need" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۷۱</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۷۲</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۷۳</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۷۴</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۷۵</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۷۶</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۷۷</div><div class="seat no-need" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۷۸</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۷۹</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۸۰</div><div class="seat unknown">۸۱</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۸۲</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۸۳</div><div class="seat needs-strip">۸۴</div><div class="seat no-need" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۸۵</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۸۶</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۸۷</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۸۸</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۸۹</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۹۰</div><div class="seat no-need" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۹۱</div><div class="seat no-need" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۹۲</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۹۳</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۹۴</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۹۵</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۹۶</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۹۷</div><div class="seat no-need">۹۸</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۹۹</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۱۰۰</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۱۰۱</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۱۰۲</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۱۰۳</div><div class="seat needs-strip">۱۰۴</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۱۰۵</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۱۰۶</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۱۰۷</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۱۰۸</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۱۰۹</div><div class="seat needs-strip">۱۱۰</div><div class="seat unknown" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۱۱۱</div><div class="seat needs-strip" title="لینک این صندلی موجود نیست" style="opacity: 0.35; cursor: not-allowed;">۱۱۲</div></div>
+<div class="msg" id="msg"></div>
+
+<div class="card legend">
+  <div class="legend-item"><span class="legend-swatch no-need"></span>نزدیک پریز</div>
+  <div class="legend-item"><span class="legend-swatch needs-strip"></span>نیاز به سه‌راهی</div>
+  <div class="legend-item"><span class="legend-swatch unknown"></span>نامشخص</div>
+</div>
+
+<div class="card add-form" id="addForm">
+  <input type="number" min="1" name="seatNumber" placeholder="شماره صندلی">
+  <input type="text" name="link" placeholder="لینک رزرو صندلی">
+  <button type="button" id="addBtn">افزودن صندلی</button>
+  <div class="add-msg" id="addMsg"></div>
+</div>
+
+<div class="card settings-card">
+  <button type="button" class="pill-btn status-toggle-btn" id="statusEditToggle">🔌 ویرایش وضعیت پریز</button>
+  <button type="button" class="pill-btn download-btn" id="downloadBtn">⬇️ دانلود نسخه به‌روزشده</button>
+</div>
+
+<script>
+const seats = {
+  1: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41426&s=c528c5ee-a4cf-476b-b9c1-f658147bc770",
+  2: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41427&s=0c5c942f-21c5-48c7-9c4b-0ef71bb85751",
+  3: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41428&s=2d3b3759-bdc1-4546-9d44-8daa3004db11",
+  4: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41429&s=85663018-a96d-497b-ad41-2706e7f6dc08",
+  5: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41430&s=075df83b-5a1e-4741-9dbd-8ea014df8b5f",
+  6: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41431&s=d547ff48-1085-48b2-8e90-d01d73cd5f6a",
+  7: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41432&s=5e58cdc7-bd00-46ed-87f9-b4e8959502ac",
+  8: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41433&s=5bfd008e-104b-4459-9ef2-dbd6fb52b243",
+  9: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41434&s=ee210053-d67f-4723-8966-768459b957d5",
+  10: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41435&s=1211ed4e-0fb8-400d-ba98-55d4b387218f",
+  11: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41436&s=95c26272-249e-4191-b789-116155fc57e1",
+  12: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41437&s=6c8a1d43-2906-4bf4-a7a1-40eddbf58536",
+  13: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41438&s=464391f6-4683-479c-aac6-2e1de8626332",
+  14: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41439&s=c55d9819-6e44-4df3-a262-8af45c4eda2b",
+  15: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41440&s=74561d86-cc54-49c9-8c92-6555761f48d8",
+  16: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41441&s=c04abd9e-28ce-4862-8ba0-42243f84121c",
+  17: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41442&s=94cfab38-72d1-4d78-8e58-09aa7dd93582",
+  18: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41443&s=3fc64eba-24fd-4cad-8a6a-040680432bf4",
+  19: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41444&s=8469a62c-dd0f-4b4a-bb36-006ac9b245ad",
+  20: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41445&s=72ec0323-2ac1-4392-ad33-11e25558ffa4",
+  21: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41446&s=8d52065d-0d2b-413a-9ef0-3e958c948332",
+  22: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41447&s=74fde371-c2a5-4439-98c3-abbf99fccb2e",
+  28: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41453&s=47ae7eab-4690-495a-bf17-7bea6843848d",
+  29: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41454&s=32b1e54e-9e65-43e3-b7fa-98f5f0795978",
+  34: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41459&s=918881e3-efd7-4333-9736-2f1c1ea3bd99",
+  35: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41460&s=0d720d2e-fcb0-4ab4-a747-740165d361c3",
+  36: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41461&s=dae66a6a-eadd-4b35-b868-d36d1b143d73",
+  41: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41466&s=0f5ca0ac-c3b2-414c-bb5a-9a0d0b03d543",
+  42: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41467&s=a9dbb30b-f08d-4490-b602-d90f7c9c2a71",
+  43: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41468&s=22e3dcb1-9cb5-4066-bbe2-cbcc211b2200",
+  44: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41469&s=01a55dd9-286c-41de-8372-765ad8a12a3d",
+  56: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41481&s=1c99323f-9f7a-474a-b70e-b959bf7fcdee",
+  57: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41482&s=34fa689e-5d0d-4687-90ae-f28ae7260496",
+  62: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41487&s=63339641-8295-4157-a0f3-3e699a727113",
+  70: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41495&s=76341440-4e54-48eb-9b1f-2769934e7236",
+  81: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41506&s=4967e9b3-4732-40ac-a711-7949ac906588",
+  84: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41509&s=487ad672-8bb5-4d12-b8b2-fb11525b4900",
+  98: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41523&s=434a57ba-180d-475b-9c0c-28e8f10095f5",
+  104: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41529&s=ca2aa023-6a1e-4338-a7f9-8d25d2411b86",
+  110: "https://www.samanpl.ir/Common/Portal/UserReservation?CID=41535&s=4c7eb702-c1c3-47e9-81ff-628cd2900104"
+};
+
+// وضعیت فاصله صندلی از پریز برق
+const noNeedStrip = [5,6,7,8,10,11,12,13,14,15,21,22,28,29,35,36,42,43,49,50,56,57,63,64,70,71,78,85,91,92,98];
+const needsStrip = [9,16,17,18,19,20,23,34,37,41,44,51,55,62,65,69,76,77,79,84,86,90,93,99,100,101,104,105,106,107,110,112];
+const needsStripSet = new Set(needsStrip);
+const noNeedStripSet = new Set(noNeedStrip);
+
+const toPersianDigits = (num) => {
+  const fa = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+  return String(num).replace(/[0-9]/g, d => fa[d]);
+};
+
+const STORAGE_KEY = 'librarySeatsCustom';
+const STATUS_STORAGE_KEY = 'librarySeatsOutletStatus';
+const STATUS_CYCLE = ['no-need', 'needs-strip', 'unknown'];
+
+function loadCustomSeats() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveCustomSeats(customSeats) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(customSeats));
+}
+
+function loadStatusOverrides() {
+  try {
+    const raw = localStorage.getItem(STATUS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveStatusOverrides(overrides) {
+  localStorage.setItem(STATUS_STORAGE_KEY, JSON.stringify(overrides));
+}
+
+function getBaseStatus(i) {
+  if (needsStripSet.has(i)) return 'needs-strip';
+  if (noNeedStripSet.has(i)) return 'no-need';
+  return 'unknown';
+}
+
+function getStatus(i, overrides) {
+  return overrides[i] || getBaseStatus(i);
+}
+
+let editMode = false;
+
+const grid = document.getElementById('seatGrid');
+const msg = document.getElementById('msg');
+const addBtn = document.getElementById('addBtn');
+const addMsg = document.getElementById('addMsg');
+const seatNumberInput = document.querySelector('input[name="seatNumber"]');
+const linkInput = document.querySelector('input[name="link"]');
+const statusEditToggle = document.getElementById('statusEditToggle');
+const downloadBtn = document.getElementById('downloadBtn');
+
+function renderGrid() {
+  grid.innerHTML = '';
+  const customSeats = loadCustomSeats();
+  const statusOverrides = loadStatusOverrides();
+  const allSeats = { ...seats, ...customSeats };
+  const knownNumbers = Object.keys(allSeats).map(Number);
+  const maxKnownLink = knownNumbers.length ? Math.max(...knownNumbers) : 0;
+  const maxKnownStatus = Math.max(...noNeedStrip, ...needsStrip, ...Object.keys(statusOverrides).map(Number), 0);
+  const maxSeat = Math.max(maxKnownLink, maxKnownStatus);
+
+  for (let i = 1; i <= maxSeat; i++) {
+    const div = document.createElement('div');
+    div.className = 'seat';
+    div.textContent = toPersianDigits(i);
+    div.classList.add(getStatus(i, statusOverrides));
+
+    if (editMode) {
+      div.classList.add('edit-mode');
+      div.title = 'برای تغییر وضعیت پریز بزن';
+      div.addEventListener('click', () => {
+        const current = getStatus(i, statusOverrides);
+        const nextIndex = (STATUS_CYCLE.indexOf(current) + 1) % STATUS_CYCLE.length;
+        statusOverrides[i] = STATUS_CYCLE[nextIndex];
+        saveStatusOverrides(statusOverrides);
+        renderGrid();
+      });
+    } else if (allSeats[i]) {
+      if (customSeats[i]) div.classList.add('custom');
+      div.addEventListener('click', () => {
+        window.open(allSeats[i], '_blank');
+        msg.textContent = `صندلی ${toPersianDigits(i)} در حال باز شدن...`;
+      });
+    } else {
+      div.style.opacity = '0.35';
+      div.style.cursor = 'not-allowed';
+      div.title = 'لینک این صندلی موجود نیست';
+    }
+    grid.appendChild(div);
+  }
+}
+
+statusEditToggle.addEventListener('click', () => {
+  editMode = !editMode;
+  statusEditToggle.textContent = editMode
+    ? '✅ حالت ویرایش روشن است'
+    : '🔌 ویرایش وضعیت پریز';
+  statusEditToggle.classList.toggle('active', editMode);
+  msg.textContent = editMode ? 'روی صندلی بزن تا وضعیت پریزش عوض شود' : '';
+  renderGrid();
+});
+
+function buildSeatsObjectLiteral(allSeatsObj) {
+  const keys = Object.keys(allSeatsObj).map(Number).sort((a, b) => a - b);
+  const lines = keys.map(k => `  ${k}: ${JSON.stringify(allSeatsObj[k])}`);
+  return `const seats = {\n${lines.join(',\n')}\n};`;
+}
+
+function buildArrayLiteral(name, arr) {
+  const sorted = [...new Set(arr)].sort((a, b) => a - b);
+  return `const ${name} = [${sorted.join(',')}];`;
+}
+
+function downloadUpdatedFile() {
+  const customSeats = loadCustomSeats();
+  const statusOverrides = loadStatusOverrides();
+  const allSeats = { ...seats, ...customSeats };
+
+  const allSeatNumbers = new Set([
+    ...Object.keys(allSeats).map(Number),
+    ...noNeedStrip,
+    ...needsStrip,
+    ...Object.keys(statusOverrides).map(Number)
+  ]);
+
+  const newNoNeed = [];
+  const newNeeds = [];
+  allSeatNumbers.forEach(i => {
+    const status = getStatus(i, statusOverrides);
+    if (status === 'no-need') newNoNeed.push(i);
+    else if (status === 'needs-strip') newNeeds.push(i);
+  });
+
+  let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+  const seatsLiteral = buildSeatsObjectLiteral(allSeats);
+  const noNeedLiteral = buildArrayLiteral('noNeedStrip', newNoNeed);
+  const needsLiteral = buildArrayLiteral('needsStrip', newNeeds);
+
+  html = html.replace(/const seats = \{[\s\S]*?\};/, seatsLiteral);
+  html = html.replace(/const noNeedStrip = \[[\s\S]*?\];/, noNeedLiteral);
+  html = html.replace(/const needsStrip = \[[\s\S]*?\];/, needsLiteral);
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'seats-updated.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  msg.textContent = 'فایل جدید با تغییرات دانلود شد';
+}
+
+downloadBtn.addEventListener('click', downloadUpdatedFile);
+
+function addSeat() {
+  const num = parseInt(seatNumberInput.value, 10);
+  const link = linkInput.value.trim();
+
+  if (!num || num < 1) {
+    addMsg.textContent = 'شماره صندلی معتبر وارد کنید';
+    addMsg.className = 'add-msg err';
+    return;
+  }
+  if (!link || !/^https?:\/\//i.test(link)) {
+    addMsg.textContent = 'لینک معتبر وارد کنید (باید با http یا https شروع شود)';
+    addMsg.className = 'add-msg err';
+    return;
+  }
+
+  const customSeats = loadCustomSeats();
+  customSeats[num] = link;
+  saveCustomSeats(customSeats);
+
+  seatNumberInput.value = '';
+  linkInput.value = '';
+  addMsg.textContent = `صندلی ${toPersianDigits(num)} اضافه شد`;
+  addMsg.className = 'add-msg ok';
+
+  renderGrid();
+}
+
+addBtn.addEventListener('click', addSeat);
+linkInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addSeat();
+});
+seatNumberInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addSeat();
+});
+
+renderGrid();
+</script>
+
+
+
+</body></html>
