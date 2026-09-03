@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دعاهای قرآنی برای حفظ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2b26;
+    --paper:#f6f1e4;
+    --paper-2:#efe7d3;
+    --teal:#0f4d43;
+    --teal-deep:#0a352e;
+    --gold:#b8873a;
+    --gold-soft:#e4c68a;
+    --line:#d9cdae;
+    --done:#5c7a52;
+    --done-bg:#e7efdf;
+    --card:#fffdf7;
+    --shadow: 0 1px 3px rgba(20,20,10,0.07), 0 6px 18px rgba(20,20,10,0.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 100% -10%, rgba(184,135,58,0.10), transparent 60%),
+      radial-gradient(1200px 500px at -10% 10%, rgba(15,77,67,0.08), transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Vazirmatn', Tahoma, sans-serif;
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  .arabic{
+    font-family:'Amiri', 'Traditional Arabic', 'Scheherazade New', serif;
+  }
+
+  header{
+    background: linear-gradient(180deg, var(--teal-deep), var(--teal) 70%);
+    color:var(--paper);
+    padding:28px 18px 22px;
+    position:relative;
+    overflow:hidden;
+    border-bottom:3px solid var(--gold);
+  }
+  header::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 22px);
+    pointer-events:none;
+  }
+  header h1{
+    margin:0 0 4px;
+    font-size:22px;
+    font-weight:700;
+    display:flex; align-items:center; gap:10px;
+  }
+  header h1 .ornament{
+    color:var(--gold-soft);
+    font-size:18px;
+  }
+  header p.sub{
+    margin:0;
+    font-size:13px;
+    color:#d9ead5;
+    opacity:0.9;
+  }
+
+  .progress-wrap{
+    max-width:760px; margin:16px auto 0; padding:0 18px;
+  }
+  .progress-card{
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:14px;
+    padding:12px 16px;
+    display:flex; align-items:center; gap:14px;
+  }
+  .progress-numbers{
+    font-weight:700; font-size:15px; white-space:nowrap; color:var(--gold-soft);
+  }
+  .progress-bar-bg{
+    flex:1; height:10px; border-radius:8px; background:rgba(255,255,255,0.15); overflow:hidden;
+  }
+  .progress-bar-fill{
+    height:100%; background:linear-gradient(90deg, var(--gold), var(--gold-soft));
+    border-radius:8px; transition:width .35s ease;
+    width:0%;
+  }
+
+  main{max-width:760px; margin:0 auto; padding:18px;}
+
+  .section-title{
+    display:flex; align-items:center; gap:10px;
+    margin:26px 0 12px;
+    font-weight:700; font-size:15px; color:var(--teal-deep);
+  }
+  .section-title .badge-count{
+    background:var(--paper-2); border:1px solid var(--line);
+    border-radius:999px; padding:2px 10px; font-size:12px; color:#6b5f45; font-weight:500;
+  }
+  .section-title::after{
+    content:""; flex:1; height:1px; background:var(--line);
+  }
+
+  .my-list-empty{
+    background:var(--card); border:1px dashed var(--line); border-radius:14px;
+    padding:18px; text-align:center; color:#8a7f63; font-size:13px;
+  }
+
+  .tabs{
+    display:flex; gap:8px; overflow-x:auto; padding:2px 2px 10px; margin-bottom:4px;
+    scrollbar-width:thin;
+  }
+  .tab-btn{
+    flex:none; border:1px solid var(--line); background:var(--card); color:var(--teal-deep);
+    padding:8px 14px; border-radius:999px; font-family:inherit; font-size:12.5px; font-weight:600;
+    cursor:pointer; white-space:nowrap; transition:all .15s ease;
+  }
+  .tab-btn.active{
+    background:var(--teal); color:var(--paper); border-color:var(--teal);
+  }
+  .tab-btn:hover:not(.active){ border-color:var(--gold); }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:16px 18px;
+    margin-bottom:12px;
+    box-shadow:var(--shadow);
+    position:relative;
+    transition: border-color .2s ease, opacity .2s ease;
+  }
+  .card.picked{
+    border-color:var(--gold);
+    box-shadow: 0 0 0 1px var(--gold-soft), var(--shadow);
+  }
+  .card.memorized{
+    background:var(--done-bg);
+    border-color:var(--done);
+  }
+  .card.memorized .arabic-text{ opacity:0.75; }
+
+  .card-top{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px;
+  }
+  .source-tag{
+    font-size:12px; font-weight:700; color:var(--teal);
+    background:rgba(15,77,67,0.08); border-radius:8px; padding:3px 9px; white-space:nowrap;
+  }
+  .multi-tag{
+    font-size:11px; font-weight:600; color:#8a5a12;
+    background:rgba(184,135,58,0.16); border:1px solid rgba(184,135,58,0.4);
+    border-radius:8px; padding:3px 9px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;
+  }
+  .multi-tag::before{ content:"🔗"; font-size:11px; }
+
+  .tags-row{ display:flex; gap:6px; flex-wrap:wrap; }
+
+  .arabic-text{
+    font-size:22px;
+    line-height:2.15;
+    text-align:justify;
+    color:#20261f;
+    margin:6px 0 12px;
+  }
+  .arabic-text .split-mark{
+    color:var(--gold);
+    font-weight:700;
+    margin:0 3px;
+    font-family:'Vazirmatn', sans-serif;
+    font-size:15px;
+  }
+
+  .note-line{
+    font-size:12px; color:#8a7f63; margin-bottom:10px;
+  }
+
+  .card-actions{
+    display:flex; gap:8px; border-top:1px dashed var(--line); padding-top:10px; margin-top:4px;
+  }
+  .action-btn{
+    flex:1; border:1px solid var(--line); background:var(--paper-2);
+    border-radius:10px; padding:9px 10px; font-family:inherit; font-size:12.5px; font-weight:600;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;
+    color:var(--teal-deep); transition:all .15s ease;
+  }
+  .action-btn:hover{ filter:brightness(0.97); }
+  .action-btn.pick-btn.active{
+    background:var(--gold-soft); border-color:var(--gold); color:#5c3f10;
+  }
+  .action-btn.memo-btn{
+    display:none;
+  }
+  .card.picked .action-btn.memo-btn{ display:flex; }
+  .action-btn.memo-btn.active{
+    background:var(--done); border-color:var(--done); color:#fff;
+  }
+  .action-btn .icon{ font-size:14px; }
+
+  .field-row{ margin-bottom:12px; }
+  .field-row-2{ display:flex; gap:12px; }
+  .field-row-2 .field-row{ flex:1; }
+  .field-label{
+    display:block; font-size:12px; font-weight:600; color:#6b5f45; margin-bottom:5px;
+  }
+  .field-input{
+    width:100%; border:1px solid var(--line); border-radius:10px; background:var(--paper);
+    padding:9px 12px; font-family:inherit; font-size:14px; color:var(--ink); resize:vertical;
+  }
+  textarea.field-input{ font-size:19px; line-height:1.9; }
+  select.field-input{ font-family:'Vazirmatn', sans-serif; }
+  .field-input:focus{ outline:2px solid var(--gold-soft); outline-offset:1px; border-color:var(--gold); }
+  .checkbox-row{
+    display:flex; align-items:center; gap:8px; font-size:13px; color:var(--teal-deep);
+    margin-bottom:12px; cursor:pointer; font-weight:500;
+  }
+  .checkbox-row input{ width:16px; height:16px; accent-color:var(--teal); }
+  .custom-badge{
+    font-size:11px; font-weight:600; color:#0a5c4a;
+    background:rgba(15,77,67,0.10); border:1px solid rgba(15,77,67,0.3);
+    border-radius:8px; padding:3px 9px; white-space:nowrap;
+  }
+  .delete-btn{
+    background:transparent; border:none; color:#a8503f; font-size:16px; cursor:pointer;
+    padding:2px 6px; line-height:1; border-radius:6px;
+  }
+  .delete-btn:hover{ background:rgba(168,80,63,0.1); }
+
+  footer{
+    text-align:center; font-size:11.5px; color:#9a8f72; margin-top:30px; padding:0 20px;
+    line-height:1.9;
+  }
+
+  @media (max-width:480px){
+    header h1{ font-size:19px; }
+    .arabic-text{ font-size:19.5px; line-height:2.05; }
+  }
+
+  /* --- افزودن دعا: دکمهٔ شناور و مودال --- */
+  .fab-btn{
+    position:fixed; left:18px; bottom:18px; z-index:60;
+    width:54px; height:54px; border-radius:50%;
+    background:linear-gradient(180deg, var(--teal), var(--teal-deep));
+    color:var(--paper); border:2px solid var(--gold-soft);
+    font-size:24px; line-height:1; cursor:pointer;
+    box-shadow:0 4px 14px rgba(10,53,46,0.35);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .fab-btn:active{ filter:brightness(0.95); }
+
+  .modal-overlay{
+    display:none; position:fixed; inset:0; z-index:70;
+    background:rgba(20,20,10,0.45);
+    align-items:flex-end; justify-content:center;
+    padding:0;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{
+    background:var(--paper); width:100%; max-width:760px;
+    max-height:88vh; overflow-y:auto;
+    border-radius:20px 20px 0 0;
+    padding:16px 18px 22px;
+    box-shadow:0 -8px 24px rgba(0,0,0,0.2);
+  }
+  @media (min-width:560px){
+    .modal-overlay{ align-items:center; }
+    .modal-box{ border-radius:18px; max-height:80vh; }
+  }
+  .modal-header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:12px; font-weight:700; color:var(--teal-deep); font-size:15px;
+  }
+  .modal-close{
+    background:transparent; border:none; font-size:18px; color:#8a7f63; cursor:pointer;
+    padding:4px 8px; line-height:1; border-radius:8px;
+  }
+  .modal-close:hover{ background:rgba(0,0,0,0.06); }
+
+  /* --- مدیریت ذخیره‌سازی داده‌ها --- */
+  .data-mgmt{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:14px 16px; margin-top:24px;
+  }
+  .data-mgmt p.hint{
+    font-size:12px; color:#8a7f63; margin:0 0 10px; line-height:1.9;
+  }
+  .data-mgmt-actions{ display:flex; flex-wrap:wrap; gap:8px; }
+  .data-mgmt-btn{
+    border:1px solid var(--line); background:var(--paper-2); color:var(--teal-deep);
+    border-radius:10px; padding:9px 12px; font-family:inherit; font-size:12.5px; font-weight:600;
+    cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+  }
+  .data-mgmt-btn:hover{ filter:brightness(0.97); }
+  .data-mgmt-status{ font-size:11.5px; color:#6b8a5a; margin-top:8px; min-height:14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="ornament">﴾</span> دعاهای قرآنی برای حفظ <span class="ornament">﴿</span></h1>
+  <p class="sub">دعاهایی رو انتخاب کن که می‌خوای حفظ کنی، بعد از حفظ‌شدن تیک بزن.</p>
+  <div class="progress-wrap">
+    <div class="progress-card">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-numbers" id="progressText">۰ / ۰</div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div class="section-title">📿 لیست حفظ من <span class="badge-count" id="myListCount">۰</span></div>
+  <div id="myListContainer"></div>
+
+  <div class="section-title">📖 همه دعاها بر اساس موضوع</div>
+  <div class="tabs" id="tabsContainer"></div>
+  <div id="allListContainer"></div>
+
+  <div class="data-mgmt">
+    <div class="section-title" style="margin-top:0;">💾 ذخیره و انتقال داده‌ها</div>
+    <p class="hint">
+      انتخاب‌ها، دعاهای شخصی و وضعیت حفظ به‌صورت خودکار در همین مرورگر ذخیره می‌شوند.
+      برای اینکه این اطلاعات را در مرورگر یا دستگاه دیگری هم داشته باشی، نسخهٔ به‌روز فایل را دانلود کن
+      (داده‌ها داخل خود فایل ذخیره می‌شوند) و همان فایل را در جای دیگر باز کن — یا از دکمهٔ «بارگذاری از فایل» برای وارد کردن داده از یک نسخهٔ قبلی استفاده کن.
+    </p>
+    <div class="data-mgmt-actions">
+      <button class="data-mgmt-btn" id="downloadFileBtn"><span>⬇️</span>دانلود نسخهٔ به‌روز فایل</button>
+      <button class="data-mgmt-btn" id="importFileBtn"><span>📂</span>بارگذاری از فایل</button>
+      <input type="file" id="importFileInput" accept=".html" style="display:none;">
+      <button class="data-mgmt-btn" id="connectFileBtn"><span>🔄</span>اتصال برای ذخیرهٔ خودکار روی فایل</button>
+    </div>
+    <div class="data-mgmt-status" id="dataMgmtStatus"></div>
+  </div>
+
+</main>
+
+<button class="fab-btn" id="fabAddBtn" title="افزودن دعای خودم">➕</button>
+
+<div class="modal-overlay" id="addModalOverlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>➕ افزودن دعای خودم</span>
+      <button class="modal-close" id="modalCloseBtn">✕</button>
+    </div>
+    <div class="card" id="addForm" style="box-shadow:none;border:none;padding:0;margin:0;">
+      <div class="field-row">
+        <label class="field-label">متن دعا (عربی)</label>
+        <textarea id="newText" class="field-input arabic" rows="3" placeholder="مثلاً: رَبِّ زِدْنِي عِلْمًا"></textarea>
+      </div>
+      <div class="field-row-2">
+        <div class="field-row">
+          <label class="field-label">منبع (اختیاری)</label>
+          <input id="newSrc" class="field-input" type="text" placeholder="مثلاً: طه: ۱۱۴">
+        </div>
+        <div class="field-row">
+          <label class="field-label">دسته‌بندی</label>
+          <select id="newCat" class="field-input"></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label">یادداشت (اختیاری)</label>
+        <input id="newNote" class="field-input" type="text" placeholder="مثلاً: دعای طلب علم">
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="newMultiCheck">
+        این دعا از چند آیهٔ پشت‌سرهم تشکیل شده
+      </label>
+      <div class="field-row" id="newMultiRangeWrap" style="display:none;">
+        <label class="field-label">بازهٔ آیات (مثلاً «۲ تا ۴»)</label>
+        <input id="newMultiRange" class="field-input" type="text" placeholder="مثلاً: ۲ تا ۴">
+      </div>
+      <div class="card-actions" style="border-top:none;padding-top:0;">
+        <button class="action-btn pick-btn" id="addBtn" style="flex:1;">
+          <span class="icon">➕</span>افزودن دعا
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="embeddedData">{}</script>
+
+<footer>
+  ساخته‌شده به‌صورت آفلاین و مستقل — انتخاب‌ها و وضعیت حفظ داخل همین فایل و مرورگر ذخیره می‌شوند.<br>
+  🔗 یعنی این دعا از چند آیهٔ پشت‌سرهم تشکیل شده و بهتره یکجا حفظ بشه.
+</footer>
+
+<script>
+const DUAS = [
+  // دسته ۱: طلب آمرزش و مغفرت
+  {cat:"مغفرت و توبه", src:"القصص: ۱۶", multi:null,
+   text:"رَبِّ إِنِّي ظَلَمْتُ نَفْسِي فَاغْفِرْ لِي"},
+  {cat:"مغفرت و توبه", src:"اعراف: ۲۳", multi:null,
+   text:"رَبَّنَا ظَلَمْنَا أَنْفُسَنَا وَإِنْ لَمْ تَغْفِرْ لَنَا وَتَرْحَمْنَا لَنَكُونَنَّ مِنَ الْخَاسِرِينَ"},
+  {cat:"مغفرت و توبه", src:"حشر: ۱۰", multi:null,
+   text:"رَبَّنَا اغْفِرْ لَنَا وَلِإِخْوَانِنَا الَّذِينَ سَبَقُونَا بِالْإِيمَانِ وَلَا تَجْعَلْ فِي قُلُوبِنَا غِلًّا لِلَّذِينَ آمَنُوا رَبَّنَا إِنَّكَ رَءُوفٌ رَحِيمٌ"},
+  {cat:"مغفرت و توبه", src:"تحریم: ۸", multi:null,
+   text:"رَبَّنَا أَتْمِمْ لَنَا نُورَنَا وَاغْفِرْ لَنَا إِنَّكَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ"},
+  {cat:"مغفرت و توبه", src:"نوح: ۲۸", multi:null,
+   text:"رَبِّ اغْفِرْ لِي وَلِوَالِدَيَّ وَلِمَنْ دَخَلَ بَيْتِيَ مُؤْمِنًا وَلِلْمُؤْمِنِينَ وَالْمُؤْمِنَاتِ وَلَا تَزِدِ الظَّالِمِينَ إِلَّا تَبَارًا",
+   note:"نسخهٔ کوتاه؛ نسخهٔ کامل‌تر همراه با آیهٔ قبل در کارت بعدی آمده."},
+  {cat:"مغفرت و توبه", src:"نوح: ۲۶-۲۸", multi:"۲۶ تا ۲۸",
+   text:"رَبِّ لَا تَذَرْ عَلَى الْأَرْضِ مِنَ الْكَافِرِينَ دَيَّارًا <span class='split-mark'>*</span> إِنَّكَ إِنْ تَذَرْهُمْ يُضِلُّوا عِبَادَكَ وَلَا يَلِدُوا إِلَّا فَاجِرًا كَفَّارًا <span class='split-mark'>*</span> رَبِّ اغْفِرْ لِي وَلِوَالِدَيَّ وَلِمَنْ دَخَلَ بَيْتِيَ مُؤْمِنًا وَلِلْمُؤْمِنِينَ وَالْمُؤْمِنَاتِ وَلَا تَزِدِ الظَّالِمِينَ إِلَّا تَبَارًا"},
+  {cat:"مغفرت و توبه", src:"آل عمران: ۱۴۷", multi:null,
+   text:"رَبَّنَا اغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِي أَمْرِنَا وَثَبِّتْ أَقْدَامَنَا وَانْصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ"},
+  {cat:"مغفرت و توبه", src:"بقره: ۲۸۶", multi:null,
+   text:"رَبَّنَا لَا تُؤَاخِذْنَا إِنْ نَسِينَا أَوْ أَخْطَأْنَا رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَا إِصْرًا كَمَا حَمَلْتَهُ عَلَى الَّذِينَ مِنْ قَبْلِنَا رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِ وَاعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا أَنْتَ مَوْلَانَا فَانْصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ",
+   note:"یک آیهٔ طولانی (آخرین آیهٔ سورهٔ بقره)، نه چند آیهٔ جدا."},
+  {cat:"مغفرت و توبه", src:"غافر: ۷", multi:null,
+   text:"رَبَّنَا وَسِعْتَ كُلَّ شَيْءٍ رَحْمَةً وَعِلْمًا فَاغْفِرْ لِلَّذِينَ تَابُوا وَاتَّبَعُوا سَبِيلَكَ وَقِهِمْ عَذَابَ الْجَحِيمِ"},
+
+  // دسته ۲: فرزند و ذریه صالح
+  {cat:"فرزند و ذریهٔ صالح", src:"انبیاء: ۸۹", multi:null,
+   text:"رَبِّ لَا تَذَرْنِي فَرْدًا وَأَنْتَ خَيْرُ الْوَارِثِينَ"},
+  {cat:"فرزند و ذریهٔ صالح", src:"صافات: ۱۰۰", multi:null,
+   text:"رَبِّ هَبْ لِي مِنَ الصَّالِحِينَ"},
+  {cat:"فرزند و ذریهٔ صالح", src:"آل عمران: ۳۸", multi:null,
+   text:"رَبِّ هَبْ لِي مِنْ لَدُنْكَ ذُرِّيَّةً طَيِّبَةً إِنَّكَ سَمِيعُ الدُّعَاءِ"},
+  {cat:"فرزند و ذریهٔ صالح", src:"نمل: ۱۹", multi:null,
+   text:"رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ الَّتِي أَنْعَمْتَ عَلَيَّ وَعَلَىٰ وَالِدَيَّ وَأَنْ أَعْمَلَ صَالِحًا تَرْضَاهُ وَأَدْخِلْنِي بِرَحْمَتِكَ فِي عِبَادِكَ الصَّالِحِينَ"},
+  {cat:"فرزند و ذریهٔ صالح", src:"احقاف: ۱۵", multi:null,
+   text:"رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ الَّتِي أَنْعَمْتَ عَلَيَّ وَعَلَىٰ وَالِدَيَّ وَأَنْ أَعْمَلَ صَالِحًا تَرْضَاهُ وَأَصْلِحْ لِي فِي ذُرِّيَّتِي إِنِّي تُبْتُ إِلَيْكَ وَإِنِّي مِنَ الْمُسْلِمِينَ"},
+  {cat:"فرزند و ذریهٔ صالح", src:"مریم: ۵-۶", multi:"۵ تا ۶",
+   text:"فَهَبْ لِي مِنْ لَدُنْكَ وَلِيًّا <span class='split-mark'>*</span> يَرِثُنِي وَيَرِثُ مِنْ آلِ يَعْقُوبَ وَاجْعَلْهُ رَبِّ رَضِيًّا"},
+  {cat:"فرزند و ذریهٔ صالح", src:"ابراهیم: ۴۰-۴۱", multi:"۴۰ تا ۴۱",
+   text:"رَبِّ اجْعَلْنِي مُقِيمَ الصَّلَاةِ وَمِنْ ذُرِّيَّتِي رَبَّنَا وَتَقَبَّلْ دُعَاءِ <span class='split-mark'>*</span> رَبَّنَا اغْفِرْ لِي وَلِوَالِدَيَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ الْحِسَابُ"},
+  {cat:"فرزند و ذریهٔ صالح", src:"فرقان: ۷۴", multi:null,
+   text:"رَبَّنَا هَبْ لَنَا مِنْ أَزْوَاجِنَا وَذُرِّيَّاتِنَا قُرَّةَ أَعْيُنٍ وَاجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا"},
+  {cat:"فرزند و ذریهٔ صالح", src:"بقره: ۱۲۸", multi:null,
+   text:"رَبَّنَا وَاجْعَلْنَا مُسْلِمَيْنِ لَكَ وَمِنْ ذُرِّيَّتِنَا أُمَّةً مُسْلِمَةً لَكَ وَأَرِنَا مَنَاسِكَنَا وَتُبْ عَلَيْنَا إِنَّكَ أَنْتَ التَّوَّابُ الرَّحِيمُ"},
+
+  // دسته ۳: نصرت، صبر، ثبات قدم
+  {cat:"نصرت، صبر و ثبات قدم", src:"قصص: ۲۱", multi:null,
+   text:"رَبِّ نَجِّنِي مِنَ الْقَوْمِ الظَّالِمِينَ"},
+  {cat:"نصرت، صبر و ثبات قدم", src:"عنکبوت: ۳۰", multi:null,
+   text:"رَبِّ انْصُرْنِي عَلَى الْقَوْمِ الْمُفْسِدِينَ"},
+  {cat:"نصرت، صبر و ثبات قدم", src:"بقره: ۲۵۰", multi:null,
+   text:"رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَثَبِّتْ أَقْدَامَنَا وَانْصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ"},
+  {cat:"نصرت، صبر و ثبات قدم", src:"اعراف: ۱۲۶", multi:null,
+   text:"رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَتَوَفَّنَا مُسْلِمِينَ"},
+  {cat:"نصرت، صبر و ثبات قدم", src:"دخان: ۱۲", multi:null,
+   text:"رَبَّنَا اكْشِفْ عَنَّا الْعَذَابَ إِنَّا مُؤْمِنُونَ"},
+  {cat:"نصرت، صبر و ثبات قدم", src:"فرقان: ۶۵-۶۶", multi:"۶۵ تا ۶۶",
+   text:"رَبَّنَا اصْرِفْ عَنَّا عَذَابَ جَهَنَّمَ إِنَّ عَذَابَهَا كَانَ غَرَامًا <span class='split-mark'>*</span> إِنَّهَا سَاءَتْ مُسْتَقَرًّا وَمُقَامًا"},
+
+  // دسته ۴: هدایت، توکل، عاقبت‌به‌خیری
+  {cat:"هدایت، توکل و عاقبت‌به‌خیری", src:"ممتحنه: ۴-۵", multi:"۴ تا ۵",
+   text:"رَبَّنَا عَلَيْكَ تَوَكَّلْنَا وَإِلَيْكَ أَنَبْنَا وَإِلَيْكَ الْمَصِيرُ <span class='split-mark'>*</span> رَبَّنَا لَا تَجْعَلْنَا فِتْنَةً لِلَّذِينَ كَفَرُوا وَاغْفِرْ لَنَا رَبَّنَا إِنَّكَ أَنْتَ الْعَزِيزُ الْحَكِيمُ"},
+  {cat:"هدایت، توکل و عاقبت‌به‌خیری", src:"آل عمران: ۸", multi:null,
+   text:"رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِنْ لَدُنْكَ رَحْمَةً إِنَّكَ أَنْتَ الْوَهَّابُ"},
+  {cat:"هدایت، توکل و عاقبت‌به‌خیری", src:"آل عمران: ۵۳", multi:null,
+   text:"رَبَّنَا آمَنَّا بِمَا أَنْزَلْتَ وَاتَّبَعْنَا الرَّسُولَ فَاكْتُبْنَا مَعَ الشَّاهِدِينَ"},
+  {cat:"هدایت، توکل و عاقبت‌به‌خیری", src:"کهف: ۱۰", multi:null,
+   text:"رَبَّنَا آتِنَا مِنْ لَدُنْكَ رَحْمَةً وَهَيِّئْ لَنَا مِنْ أَمْرِنَا رَشَدًا"},
+  {cat:"هدایت، توکل و عاقبت‌به‌خیری", src:"طه: ۲۵-۲۸", multi:"۲۵ تا ۲۸",
+   text:"رَبِّ اشْرَحْ لِي صَدْرِي <span class='split-mark'>*</span> وَيَسِّرْ لِي أَمْرِي <span class='split-mark'>*</span> وَاحْلُلْ عُقْدَةً مِنْ لِسَانِي <span class='split-mark'>*</span> يَفْقَهُوا قَوْلِي"},
+  {cat:"هدایت، توکل و عاقبت‌به‌خیری", src:"اسراء: ۸۰", multi:null,
+   text:"رَبِّ أَدْخِلْنِي مُدْخَلَ صِدْقٍ وَأَخْرِجْنِي مُخْرَجَ صِدْقٍ وَاجْعَلْ لِي مِنْ لَدُنْكَ سُلْطَانًا نَصِيرًا"},
+  {cat:"هدایت، توکل و عاقبت‌به‌خیری", src:"یوسف: ۱۰۱", multi:null,
+   text:"فَاطِرَ السَّمَاوَاتِ وَالْأَرْضِ أَنْتَ وَلِيِّي فِي الدُّنْيَا وَالْآخِرَةِ تَوَفَّنِي مُسْلِمًا وَأَلْحِقْنِي بِالصَّالِحِينَ"},
+  {cat:"هدایت، توکل و عاقبت‌به‌خیری", src:"اعراف: ۱۵۵", multi:null,
+   text:"أَنْتَ وَلِيُّنَا فَاغْفِرْ لَنَا وَارْحَمْنَا وَأَنْتَ خَيْرُ الْغَافِرِينَ"},
+  {cat:"هدایت، توکل و عاقبت‌به‌خیری", src:"توبه: ۱۲۹", multi:null,
+   text:"فَإِنْ تَوَلَّوْا فَقُلْ حَسْبِيَ اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ"},
+  {cat:"هدایت، توکل و عاقبت‌به‌خیری", src:"نساء: ۷۵", multi:null,
+   text:"وَاجْعَلْ لَنَا مِنْ لَدُنْكَ وَلِيًّا وَاجْعَلْ لَنَا مِنْ لَدُنْكَ نَصِيرًا"},
+
+  // دسته ۵: امنیت شهر و دوری از شرک
+  {cat:"امنیت شهر و دوری از شرک", src:"بقره: ۱۲۶", multi:null,
+   text:"رَبِّ اجْعَلْ هَٰذَا بَلَدًا آمِنًا وَارْزُقْ أَهْلَهُ مِنَ الثَّمَرَاتِ مَنْ آمَنَ مِنْهُمْ بِاللَّهِ وَالْيَوْمِ الْآخِرِ"},
+  {cat:"امنیت شهر و دوری از شرک", src:"ابراهیم: ۳۵", multi:null,
+   text:"رَبِّ اجْعَلْ هَٰذَا الْبَلَدَ آمِنًا وَاجْنُبْنِي وَبَنِيَّ أَنْ نَعْبُدَ الْأَصْنَامَ"},
+
+  // دسته ۶: دعاهای انبیا و متفرقه
+  {cat:"دعاهای انبیا و متفرقه", src:"قصص: ۲۴", multi:null, note:"دعای حضرت موسی (ع)",
+   text:"رَبِّ إِنِّي لِمَا أَنْزَلْتَ إِلَيَّ مِنْ خَيْرٍ فَقِيرٌ"},
+  {cat:"دعاهای انبیا و متفرقه", src:"انبیاء: ۸۳", multi:null, note:"دعای حضرت ایوب (ع)",
+   text:"وَأَيُّوبَ إِذْ نَادَى رَبَّهُ أَنِّي مَسَّنِيَ الضُّرُّ وَأَنْتَ أَرْحَمُ الرَّاحِمِينَ"},
+  {cat:"دعاهای انبیا و متفرقه", src:"اعراف: ۱۵۱", multi:null, note:"دعای حضرت موسی (ع)",
+   text:"رَبِّ اغْفِرْ لِي وَلِأَخِي وَأَدْخِلْنَا فِي رَحْمَتِكَ وَأَنْتَ أَرْحَمُ الرَّاحِمِينَ"},
+  {cat:"دعاهای انبیا و متفرقه", src:"اسراء: ۲۴", multi:null, note:"دعا برای پدر و مادر",
+   text:"وَاخْفِضْ لَهُمَا جَنَاحَ الذُّلِّ مِنَ الرَّحْمَةِ وَقُلْ رَبِّ ارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا"},
+  {cat:"دعاهای انبیا و متفرقه", src:"مؤمنون: ۲۹", multi:null,
+   text:"وَقُلْ رَبِّ أَنْزِلْنِي مُنْزَلًا مُبَارَكًا وَأَنْتَ خَيْرُ الْمُنْزِلِينَ"},
+  {cat:"دعاهای انبیا و متفرقه", src:"مؤمنون: ۹۷", multi:null,
+   text:"وَقُلْ رَبِّ أَعُوذُ بِكَ مِنْ هَمَزَاتِ الشَّيَاطِينِ"},
+  {cat:"دعاهای انبیا و متفرقه", src:"شعراء: ۸۳-۸۹", multi:"۸۳ تا ۸۹ (۷ آیهٔ پیوسته)", note:"دعای حضرت ابراهیم (ع) — طولانی‌ترین دعای این مجموعه",
+   text:"رَبِّ هَبْ لِي حُكْمًا وَأَلْحِقْنِي بِالصَّالِحِينَ <span class='split-mark'>*</span> وَاجْعَلْ لِي لِسَانَ صِدْقٍ فِي الْآخِرِينَ <span class='split-mark'>*</span> وَاجْعَلْنِي مِنْ وَرَثَةِ جَنَّةِ النَّعِيمِ <span class='split-mark'>*</span> وَاغْفِرْ لِأَبِي إِنَّهُ كَانَ مِنَ الضَّالِّينَ <span class='split-mark'>*</span> وَلَا تُخْزِنِي يَوْمَ يُبْعَثُونَ <span class='split-mark'>*</span> يَوْمَ لَا يَنْفَعُ مَالٌ وَلَا بَنُونَ <span class='split-mark'>*</span> إِلَّا مَنْ أَتَى اللَّهَ بِقَلْبٍ سَلِيمٍ"},
+  {cat:"دعاهای انبیا و متفرقه", src:"مائده: ۱۱۴", multi:null, note:"دعای حضرت عیسی (ع)",
+   text:"قَالَ عِيسَى ابْنُ مَرْيَمَ اللَّهُمَّ رَبَّنَا أَنْزِلْ عَلَيْنَا مَائِدَةً مِنَ السَّمَاءِ تَكُونُ لَنَا عِيدًا لِأَوَّلِنَا وَآخِرِنَا وَآيَةً مِنْكَ وَارْزُقْنَا وَأَنْتَ خَيْرُ الرَّازِقِينَ"},
+];
+
+// assign stable ids
+DUAS.forEach((d,i)=>d.id = 'd'+i);
+
+const STORAGE_KEY = 'quran-dua-memorization-v1';
+const CUSTOM_KEY = 'quran-dua-custom-v1';
+const PERSONAL_CAT = 'دعاهای شخصی من';
+let state = {}; // id -> {picked:bool, memorized:bool}
+let customDuas = [];
+
+const EMBED_ID = 'embeddedData';
+const EMBED_REGEX = /(<script type="application\/json" id="embeddedData">)([\s\S]*?)(<\/script>)/;
+let fileHandle = null;
+let cachedFileText = null;
+let autoSaveTimer = null;
+
+function readEmbeddedData(){
+  try{
+    const el = document.getElementById(EMBED_ID);
+    if(!el) return {customDuas:[], state:{}};
+    const raw = el.textContent.trim();
+    if(!raw) return {customDuas:[], state:{}};
+    const parsed = JSON.parse(raw);
+    return {
+      customDuas: Array.isArray(parsed.customDuas) ? parsed.customDuas : [],
+      state: (parsed.state && typeof parsed.state === 'object') ? parsed.state : {}
+    };
+  }catch(e){ return {customDuas:[], state:{}}; }
+}
+function writeEmbeddedDataToDOM(){
+  const el = document.getElementById(EMBED_ID);
+  if(!el) return;
+  el.textContent = JSON.stringify({customDuas:customDuas, state:state});
+}
+function mergeStates(a, b){
+  const out = {};
+  const ids = new Set([...Object.keys(a||{}), ...Object.keys(b||{})]);
+  ids.forEach(id=>{
+    const ea = (a && a[id]) || {picked:false, memorized:false};
+    const eb = (b && b[id]) || {picked:false, memorized:false};
+    out[id] = { picked: !!(ea.picked || eb.picked), memorized: !!(ea.memorized || eb.memorized) };
+  });
+  return out;
+}
+function mergeCustomDuas(a, b){
+  const out = (a||[]).slice();
+  const ids = new Set(out.map(d=>d.id));
+  (b||[]).forEach(d=>{
+    if(!ids.has(d.id)){ out.push(d); ids.add(d.id); }
+  });
+  return out;
+}
+function loadAllData(){
+  const embedded = readEmbeddedData();
+  let localState = {}, localCustom = [];
+  try{
+    const rawState = localStorage.getItem(STORAGE_KEY);
+    localState = rawState ? JSON.parse(rawState) : {};
+  }catch(e){ localState = {}; }
+  try{
+    const rawCustom = localStorage.getItem(CUSTOM_KEY);
+    localCustom = rawCustom ? JSON.parse(rawCustom) : [];
+  }catch(e){ localCustom = []; }
+  state = mergeStates(embedded.state, localState);
+  customDuas = mergeCustomDuas(embedded.customDuas, localCustom);
+  saveState();
+  saveCustom();
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  writeEmbeddedDataToDOM();
+  scheduleFileAutoSave();
+}
+function getEntry(id){
+  if(!state[id]) state[id] = {picked:false, memorized:false};
+  return state[id];
+}
+function saveCustom(){
+  try{ localStorage.setItem(CUSTOM_KEY, JSON.stringify(customDuas)); }catch(e){}
+  writeEmbeddedDataToDOM();
+  scheduleFileAutoSave();
+}
+function allDuas(){
+  return DUAS.concat(customDuas);
+}
+
+function scheduleFileAutoSave(){
+  if(!fileHandle) return;
+  if(autoSaveTimer) clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(saveToConnectedFile, 400);
+}
+async function connectFileHandle(){
+  if(!window.showOpenFilePicker){
+    alert('مرورگر فعلی از ذخیرهٔ خودکار روی فایل پشتیبانی نمی‌کند. از دکمهٔ «دانلود نسخهٔ به‌روز فایل» استفاده کن.');
+    return;
+  }
+  try{
+    const [handle] = await window.showOpenFilePicker({
+      types: [{description:'HTML', accept:{'text/html':['.html']}}]
+    });
+    const perm = await handle.requestPermission({mode:'readwrite'});
+    if(perm !== 'granted'){
+      setDataMgmtStatus('اجازهٔ نوشتن روی فایل داده نشد.', false);
+      return;
+    }
+    fileHandle = handle;
+    cachedFileText = await (await fileHandle.getFile()).text();
+    await saveToConnectedFile();
+    setDataMgmtStatus('متصل شد ✓ از این پس تغییرات خودکار روی همین فایل ذخیره می‌شود.', true);
+  }catch(e){
+    if(e && e.name !== 'AbortError') setDataMgmtStatus('اتصال به فایل انجام نشد.', false);
+  }
+}
+async function saveToConnectedFile(){
+  if(!fileHandle || cachedFileText == null) return;
+  try{
+    const dataJson = JSON.stringify({customDuas:customDuas, state:state});
+    let newText = cachedFileText;
+    if(EMBED_REGEX.test(cachedFileText)){
+      newText = cachedFileText.replace(EMBED_REGEX, (m,p1,p2,p3)=>p1+dataJson+p3);
+    }
+    const writable = await fileHandle.createWritable();
+    await writable.write(newText);
+    await writable.close();
+    cachedFileText = newText;
+    setDataMgmtStatus('آخرین ذخیرهٔ خودکار: ' + new Date().toLocaleTimeString('fa-IR'), true);
+  }catch(e){
+    setDataMgmtStatus('ذخیرهٔ خودکار با خطا مواجه شد.', false);
+  }
+}
+function setDataMgmtStatus(text, ok){
+  const el = document.getElementById('dataMgmtStatus');
+  if(!el) return;
+  el.textContent = text;
+  el.style.color = ok ? '#6b8a5a' : '#a8503f';
+}
+function downloadUpdatedFile(){
+  writeEmbeddedDataToDOM();
+  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'دعاهای-قرآنی-حفظ.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  setDataMgmtStatus('فایل دانلود شد.', true);
+}
+function handleImportFile(file){
+  const reader = new FileReader();
+  reader.onload = function(){
+    try{
+      const text = String(reader.result);
+      const m = text.match(EMBED_REGEX);
+      if(!m){ setDataMgmtStatus('این فایل داده‌ای برای بارگذاری نداشت.', false); return; }
+      const parsed = JSON.parse(m[2]);
+      const importedCustom = Array.isArray(parsed.customDuas) ? parsed.customDuas : [];
+      const importedState = (parsed.state && typeof parsed.state === 'object') ? parsed.state : {};
+      customDuas = mergeCustomDuas(customDuas, importedCustom);
+      state = mergeStates(state, importedState);
+      saveState(); saveCustom(); render();
+      setDataMgmtStatus('داده‌ها با موفقیت بارگذاری و ترکیب شدند.', true);
+    }catch(e){
+      setDataMgmtStatus('خطا در خواندن فایل.', false);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function toPersianNum(n){
+  const map = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+  return String(n).replace(/[0-9]/g, d=>map[d]);
+}
+
+let activeCat = 'همه';
+
+function categories(){
+  const set = [];
+  allDuas().forEach(d=>{ if(!set.includes(d.cat)) set.push(d.cat); });
+  if(!set.includes(PERSONAL_CAT)) set.push(PERSONAL_CAT);
+  return set;
+}
+
+function renderTabs(){
+  const cats = ['همه', ...categories()];
+  const el = document.getElementById('tabsContainer');
+  el.innerHTML = '';
+  cats.forEach(c=>{
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (c===activeCat ? ' active' : '');
+    btn.textContent = c;
+    btn.onclick = ()=>{ activeCat = c; render(); };
+    el.appendChild(btn);
+  });
+}
+
+function makeCard(d){
+  const entry = getEntry(d.id);
+  const card = document.createElement('div');
+  card.className = 'card' + (entry.picked ? ' picked' : '') + (entry.memorized ? ' memorized' : '');
+
+  const top = document.createElement('div');
+  top.className = 'card-top';
+  const tagsRow = document.createElement('div');
+  tagsRow.className = 'tags-row';
+  const src = document.createElement('span');
+  src.className = 'source-tag';
+  src.textContent = d.src;
+  tagsRow.appendChild(src);
+  if(d.multi){
+    const mt = document.createElement('span');
+    mt.className = 'multi-tag';
+    mt.textContent = 'آیات پیوسته: ' + d.multi;
+    tagsRow.appendChild(mt);
+  }
+  if(d.isCustom){
+    const ct = document.createElement('span');
+    ct.className = 'custom-badge';
+    ct.textContent = '✎ افزوده‌شده توسط من';
+    tagsRow.appendChild(ct);
+  }
+  top.appendChild(tagsRow);
+  if(d.isCustom){
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-btn';
+    delBtn.title = 'حذف این دعا';
+    delBtn.textContent = '✕';
+    delBtn.onclick = ()=>{
+      if(confirm('این دعا حذف بشه؟')){
+        customDuas = customDuas.filter(x=>x.id !== d.id);
+        delete state[d.id];
+        saveCustom(); saveState(); render();
+      }
+    };
+    top.appendChild(delBtn);
+  }
+  card.appendChild(top);
+
+  const arabicP = document.createElement('div');
+  arabicP.className = 'arabic-text arabic';
+  arabicP.innerHTML = d.text;
+  card.appendChild(arabicP);
+
+  if(d.note){
+    const note = document.createElement('div');
+    note.className = 'note-line';
+    note.textContent = '💡 ' + d.note;
+    card.appendChild(note);
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'card-actions';
+
+  const pickBtn = document.createElement('button');
+  pickBtn.className = 'action-btn pick-btn' + (entry.picked ? ' active' : '');
+  pickBtn.innerHTML = '<span class="icon">' + (entry.picked ? '★' : '☆') + '</span>' + (entry.picked ? 'در لیست حفظ من' : 'انتخاب برای حفظ');
+  pickBtn.onclick = ()=>{
+    entry.picked = !entry.picked;
+    if(!entry.picked) entry.memorized = false;
+    saveState();
+    render();
+  };
+  actions.appendChild(pickBtn);
+
+  const memoBtn = document.createElement('button');
+  memoBtn.className = 'action-btn memo-btn' + (entry.memorized ? ' active' : '');
+  memoBtn.innerHTML = '<span class="icon">' + (entry.memorized ? '✔' : '○') + '</span>' + (entry.memorized ? 'حفظ شد' : 'تیک بزن: حفظ کردم');
+  memoBtn.onclick = ()=>{
+    entry.memorized = !entry.memorized;
+    saveState();
+    render();
+  };
+  actions.appendChild(memoBtn);
+
+  card.appendChild(actions);
+  return card;
+}
+
+function render(){
+  renderTabs();
+
+  // My list (picked items) — sorted: not-memorized first, then memorized
+  const picked = allDuas().filter(d=>getEntry(d.id).picked);
+  const myListEl = document.getElementById('myListContainer');
+  myListEl.innerHTML = '';
+  if(picked.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'my-list-empty';
+    empty.textContent = 'هنوز دعایی برای حفظ انتخاب نکردی. از لیست پایین با دکمهٔ «انتخاب برای حفظ» شروع کن.';
+    myListEl.appendChild(empty);
+  } else {
+    picked
+      .slice()
+      .sort((a,b)=> (getEntry(a.id).memorized?1:0) - (getEntry(b.id).memorized?1:0))
+      .forEach(d=> myListEl.appendChild(makeCard(d)));
+  }
+  document.getElementById('myListCount').textContent = toPersianNum(picked.length);
+
+  // Progress
+  const memCount = picked.filter(d=>getEntry(d.id).memorized).length;
+  const pct = picked.length ? Math.round(memCount/picked.length*100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = toPersianNum(memCount) + ' / ' + toPersianNum(picked.length);
+
+  // All list, filtered by category
+  const allEl = document.getElementById('allListContainer');
+  allEl.innerHTML = '';
+  const list = allDuas().filter(d=> activeCat==='همه' || d.cat===activeCat);
+  let lastCat = null;
+  list.forEach(d=>{
+    if(activeCat === 'همه' && d.cat !== lastCat){
+      lastCat = d.cat;
+      const h = document.createElement('div');
+      h.style.cssText = 'font-weight:700;font-size:13px;color:#8a5a12;margin:16px 0 8px;';
+      h.textContent = '— ' + d.cat + ' —';
+      allEl.appendChild(h);
+    }
+    allEl.appendChild(makeCard(d));
+  });
+}
+
+function populateCatSelect(){
+  const sel = document.getElementById('newCat');
+  const current = sel.value;
+  sel.innerHTML = '';
+  categories().forEach(c=>{
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    if(c === PERSONAL_CAT) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  if(current && [...sel.options].some(o=>o.value===current)) sel.value = current;
+}
+
+function setupForm(){
+  populateCatSelect();
+
+  const multiCheck = document.getElementById('newMultiCheck');
+  const multiWrap = document.getElementById('newMultiRangeWrap');
+  multiCheck.onchange = ()=>{
+    multiWrap.style.display = multiCheck.checked ? 'block' : 'none';
+  };
+
+  document.getElementById('addBtn').onclick = ()=>{
+    const text = document.getElementById('newText').value.trim();
+    if(!text){
+      alert('لطفاً متن دعا رو وارد کن.');
+      return;
+    }
+    const src = document.getElementById('newSrc').value.trim();
+    const cat = document.getElementById('newCat').value || PERSONAL_CAT;
+    const note = document.getElementById('newNote').value.trim();
+    const isMulti = document.getElementById('newMultiCheck').checked;
+    const multiRange = document.getElementById('newMultiRange').value.trim();
+
+    const newDua = {
+      id: 'custom-' + Date.now() + '-' + Math.floor(Math.random()*1000),
+      cat: cat,
+      src: src || '—',
+      text: text,
+      multi: isMulti ? (multiRange || 'چند آیه') : null,
+      note: note || null,
+      isCustom: true
+    };
+    customDuas.push(newDua);
+    saveCustom();
+
+    // reset form
+    document.getElementById('newText').value = '';
+    document.getElementById('newSrc').value = '';
+    document.getElementById('newNote').value = '';
+    document.getElementById('newMultiCheck').checked = false;
+    document.getElementById('newMultiRange').value = '';
+    multiWrap.style.display = 'none';
+
+    activeCat = cat;
+    render();
+  };
+}
+
+function setupModal(){
+  const overlay = document.getElementById('addModalOverlay');
+  document.getElementById('fabAddBtn').onclick = ()=> overlay.classList.add('open');
+  document.getElementById('modalCloseBtn').onclick = ()=> overlay.classList.remove('open');
+  overlay.onclick = function(e){ if(e.target === overlay) overlay.classList.remove('open'); };
+}
+function setupDataMgmt(){
+  document.getElementById('downloadFileBtn').onclick = downloadUpdatedFile;
+  document.getElementById('importFileBtn').onclick = ()=> document.getElementById('importFileInput').click();
+  document.getElementById('importFileInput').onchange = function(e){
+    const f = e.target.files[0];
+    if(f) handleImportFile(f);
+    e.target.value = '';
+  };
+  const connectBtn = document.getElementById('connectFileBtn');
+  if(!window.showOpenFilePicker){
+    connectBtn.style.display = 'none';
+  } else {
+    connectBtn.onclick = connectFileHandle;
+  }
+}
+
+loadAllData();
+setupForm();
+setupModal();
+setupDataMgmt();
+render();
+</script>
+</body>
+</html>
