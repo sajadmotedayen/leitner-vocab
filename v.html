@@ -1522,12 +1522,51 @@ function loadAiSettings(){
   try{
     const raw = localStorage.getItem(AI_SETTINGS_KEY);
     const s = raw ? JSON.parse(raw) : {provider:'google', key:''};
+    if(s.provider!=='apmix') s.provider = 'google';
     if(!Array.isArray(s.extraKeys)) s.extraKeys = [];
+    if(!s.byProvider) s.byProvider = {};
+    ['google','apmix'].forEach(p=>{ if(!s.byProvider[p]) s.byProvider[p] = {key:'', extra:[]}; });
+    // migrate settings saved before multi-provider support
+    if(!s.byProvider[s.provider].key && s.key) s.byProvider[s.provider] = {key:s.key, extra:s.extraKeys};
     return s;
-  }catch(e){ return {provider:'', key:'', extraKeys:[]}; }
+  }catch(e){ return {provider:'google', key:'', extraKeys:[], byProvider:{google:{key:'',extra:[]}, apmix:{key:'',extra:[]}}}; }
 }
+/* `key` / `extraKeys` always mirror the ACTIVE provider's keys (every AI feature reads those);
+   byProvider remembers each provider's keys so switching back and forth loses nothing. */
 function saveAiSettings(s){
-  try{ localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(s)); }catch(e){}
+  try{
+    const out = {...s};
+    out.provider = out.provider==='apmix' ? 'apmix' : 'google';
+    out.byProvider = {...(s.byProvider||{})};
+    out.byProvider[out.provider] = {key: out.key||'', extra: out.extraKeys||[]};
+    localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(out));
+  }catch(e){}
+}
+function aiReady(s){ return !!(s && s.key && (s.provider==='google' || s.provider==='apmix')); }
+
+/* ---------- apmix.ai (OpenAI-compatible gateway → Claude Sonnet 4.6) ---------- */
+const APMIX_BASE  = 'https://api.apmix.ai/v1';
+const APMIX_MODEL = 'claude-sonnet-4-6';
+async function apmixCall(key, systemPrompt, messages){
+  const res = await fetch(APMIX_BASE + '/chat/completions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json', 'Authorization':'Bearer ' + key},
+    body: JSON.stringify({
+      model: APMIX_MODEL,
+      max_tokens: 8192,
+      messages: [{role:'system', content: systemPrompt}, ...messages]
+    })
+  });
+  if(!res.ok){
+    let detail = '';
+    try{ const e = await res.json(); const m = e && e.error && e.error.message; detail = m ? ' — ' + m : ''; }catch(_){}
+    const err = new Error('HTTP '+res.status+detail);
+    err.status = res.status;
+    throw err;
+  }
+  const data = await res.json();
+  const c = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  return (typeof c==='string' ? c : Array.isArray(c) ? c.map(x=>x.text||'').join('\n') : '').trim();
 }
 
 /* Single global "سطح زبان" (CEFR level) preference, set once from ⚙ تنظیمات and reused
@@ -1603,6 +1642,7 @@ function getOrderedEnabledTools(){
 /* Does one actual HTTP call to Gemini with a single specific key. Split out of geminiOnce so
    the rotation logic there can retry with a different key without duplicating the fetch code. */
 async function geminiCallWithKey(key, systemPrompt, userMessage){
+  if(loadAiSettings().provider==='apmix') return apmixCall(key, systemPrompt, [{role:'user', content:userMessage}]);
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + encodeURIComponent(key);
   const res = await fetch(url, {
     method:'POST',
@@ -1732,8 +1772,8 @@ async function generateDeckExample(){
   }
 
   const settings = loadAiSettings();
-  if(!(settings.provider==='google' && settings.key)){
-    deckExampleError = 'مثال ذخیره‌شده‌ی دیگری برای این کلمه نیست. برای ساخت مثال تازه با هوش مصنوعی، از تنظیمات کلید رایگان Gemini را وارد کن.';
+  if(!(aiReady(settings))){
+    deckExampleError = 'مثال ذخیره‌شده‌ی دیگری برای این کلمه نیست. برای ساخت مثال تازه با هوش مصنوعی، از تنظیمات کلید هوش مصنوعی را وارد کن.';
     renderDeckCard();
     return;
   }
@@ -2035,7 +2075,7 @@ async function fetchWordOfDaySuggestion(key, knownWords, avoidWords){
    from what's already on screen. */
 async function generateWordOfDay(avoidCurrent){
   const settings = loadAiSettings();
-  if(!(settings.provider==='google' && settings.key)){
+  if(!(aiReady(settings))){
     wordOfDayError = 'NO_KEY';
     renderWordOfDayCard();
     return;
@@ -2078,7 +2118,7 @@ function renderWordOfDayCard(){
       <div class="wod-card">
         <button class="wod-close" id="wodCloseBtn">✕</button>
         <div class="wod-head">🌟 پیشنهاد امروز</div>
-        <div class="wod-note">برای اینکه هر روز یک کلمه‌ی جدید و مرتبط با لغات خودت پیشنهاد بگیری، از دکمه ⚙ تنظیمات کلید رایگان Gemini را وارد کن.</div>
+        <div class="wod-note">برای اینکه هر روز یک کلمه‌ی جدید و مرتبط با لغات خودت پیشنهاد بگیری، از دکمه ⚙ تنظیمات کلید هوش مصنوعی را وارد کن.</div>
         <div class="wod-actions" style="margin-top:10px;">
           <button class="btn btn-secondary" id="wodSettingsBtn">رفتن به تنظیمات</button>
         </div>
@@ -4076,7 +4116,7 @@ function openTextImportPage(){
 function renderTextImportPage(){
   if(!textImportPageEl) return;
   const settings = loadAiSettings();
-  const ready = !!(settings.provider==='google' && settings.key);
+  const ready = !!(aiReady(settings));
 
   textImportPageEl.innerHTML = `
     <div class="page-top">
@@ -4084,7 +4124,7 @@ function renderTextImportPage(){
       <button class="close-x" id="tiCloseBtn">✕</button>
     </div>
     <div class="page-body">
-      ${!ready ? `<div class="ai-note">برای دریافت کلمات از دکمه ⚙ تنظیمات، کلید رایگان Gemini را وارد کنید.</div>` : ''}
+      ${!ready ? `<div class="ai-note">برای دریافت کلمات از دکمه ⚙ تنظیمات، کلید هوش مصنوعی را وارد کنید.</div>` : ''}
 
       <div class="vsync-wrap">
         <div class="vsync-head">📝 متن انگلیسی</div>
@@ -4120,7 +4160,7 @@ function renderTextImportPage(){
    exactly like the .srt flow, just fed sentence-split plain text instead of subtitle lines. */
 async function runTextImportAnalysis(){
   const settings = loadAiSettings();
-  if(!(settings.provider==='google' && settings.key)) return;
+  if(!(aiReady(settings))) return;
   const textArea = textImportPageEl.querySelector('#tiTextArea');
   const text = textArea ? textArea.value.trim() : '';
   if(!text){
@@ -4275,7 +4315,7 @@ function formatVsyncClock(totalSeconds){
 function renderEpisodePage(){
   if(!episodePageEl) return;
   const settings = loadAiSettings();
-  const ready = !!(settings.provider==='google' && settings.key);
+  const ready = !!(aiReady(settings));
 
   episodePageEl.innerHTML = `
     <div class="page-top">
@@ -4283,7 +4323,7 @@ function renderEpisodePage(){
       <button class="close-x" id="epCloseBtn">✕</button>
     </div>
     <div class="page-body">
-      ${!ready ? `<div class="ai-note">چند ابزار دیگه‌ی داخل اپ (مثل توضیح گرامری و نکات کاربردی کلمه‌ها) به کلید رایگان Gemini نیاز دارن (از ⚙ تنظیمات) — ولی همه‌ی ابزارهای این صفحه با هوش مصنوعی خارجی (مثل ChatGPT) کار می‌کنن و نیازی به این کلید ندارن.</div>` : ''}
+      ${!ready ? `<div class="ai-note">چند ابزار دیگه‌ی داخل اپ (مثل توضیح گرامری و نکات کاربردی کلمه‌ها) به کلید هوش مصنوعی نیاز دارن (از ⚙ تنظیمات) — ولی همه‌ی ابزارهای این صفحه با هوش مصنوعی خارجی (مثل ChatGPT) کار می‌کنن و نیازی به این کلید ندارن.</div>` : ''}
 
       <div class="vsync-wrap">
         <div class="vsync-head">🎥 پخش هم‌زمان فیلم با زیرنویس</div>
@@ -5626,7 +5666,7 @@ function openSettingsPage(){
   const provider = loadSyncProvider();
   const ts0 = loadToolsSettings();
   const toolsActiveCount = ts0.order.length - ts0.disabled.length;
-  const aiCaption = s.key ? 'کلید فعال ✓' : 'کلید تنظیم نشده';
+  const aiCaption = s.key ? (s.provider==='apmix' ? 'apmix · Claude Sonnet 4.6 ✓' : 'Google Gemini ✓') : 'کلید تنظیم نشده';
   const syncCaption = provider==='github' ? 'گیت‌هاب فعال' : provider==='drive' ? 'گوگل‌درایو فعال' : 'غیرفعال';
   const curLevel = loadCefrLevel();
   const curLevelLabel = (CEFR_LEVELS.find(l=>l.value===curLevel) || CEFR_LEVELS[0]).label;
@@ -5715,19 +5755,26 @@ function openSettingsPage(){
         <div class="ss-body">
           <button type="button" class="help-toggle" data-help="help-ai">؟</button>
           <div class="ai-note" id="help-ai" style="display:none;">
-            دستیار از <b>Google Gemini</b> استفاده می‌کند (رایگان با سهمیه روزانه). یک کلید رایگان از aistudio.google.com بگیر و اینجا وارد کن.
+            می‌تونی بین <b>Google Gemini</b> (کلید رایگان از aistudio.google.com) و <b>apmix.ai</b> (مدل Claude Sonnet 4.6، کلید از داشبورد apmix.ai) یکی را انتخاب کنی. کلید هر کدام جداگانه ذخیره می‌شود.
           </div>
-          <label>کلید API</label>
-          <input type="text" class="en" id="s-key" placeholder="AIza..." value="${escapeHtml(s.key||'')}">
+          <label>ارائه‌دهنده</label>
+          <select id="s-provider" class="en" style="width:100%;">
+            <option value="google" ${s.provider!=='apmix'?'selected':''}>Google Gemini</option>
+            <option value="apmix" ${s.provider==='apmix'?'selected':''}>apmix.ai — Claude Sonnet 4.6</option>
+          </select>
+          <label style="margin-top:14px;">کلید API</label>
+          <input type="text" class="en" id="s-key" placeholder="${s.provider==='apmix'?'apx_live_...':'AIza...'}" value="${escapeHtml(s.key||'')}">
           <label style="margin-top:14px;">کلیدهای پشتیبان (اختیاری — هر خط یک کلید)</label>
           <div class="ai-note" style="margin-bottom:8px;">
             اگر چند حساب گوگل داری، از هرکدام یک کلید رایگان بساز و اینجا وارد کن. وقتی سهمیه‌ی کلید اصلی تمام بشه، اپ خودکار سراغ کلید بعدی می‌رود — دیگر نیازی به عوض‌کردن دستی نیست.
           </div>
-          <textarea id="s-extra-keys" class="en" rows="3" placeholder="AIza...&#10;AIza...">${escapeHtml((s.extraKeys||[]).join('\n'))}</textarea>
+          <textarea id="s-extra-keys" class="en" rows="3" placeholder="${s.provider==='apmix'?'apx_live_...':'AIza...'}&#10;${s.provider==='apmix'?'apx_live_...':'AIza...'}">${escapeHtml((s.extraKeys||[]).join('\n'))}</textarea>
           <div class="actions" style="margin-top:16px;">
             <button class="btn btn-primary" id="s-save">ذخیره</button>
-            <button class="btn btn-ghost" id="s-clear">حذف همه‌ی کلیدها</button>
+            <button class="btn btn-ghost" id="s-test">تست اتصال</button>
+            <button class="btn btn-ghost" id="s-clear">حذف کلیدها</button>
           </div>
+          <div class="ai-note" id="s-test-result" style="display:none;margin-top:12px;word-break:break-word;"></div>
         </div>
       </details>
 
@@ -5905,21 +5952,59 @@ function openSettingsPage(){
     renderToolsList();
   });
 
-  sp('#s-save').onclick = ()=>{
-    const extraKeys = sp('#s-extra-keys').value
-      .split('\n')
-      .map(k=>k.trim())
-      .filter(Boolean);
-    saveAiSettings({
-      provider: 'google',
+  const aiForm = loadAiSettings();
+  const aiBp = { google: {...aiForm.byProvider.google}, apmix: {...aiForm.byProvider.apmix} };
+  let aiFormProvider = aiForm.provider;
+  function readAiFormKeys(){
+    return {
       key: sp('#s-key').value.trim(),
-      extraKeys
+      extra: sp('#s-extra-keys').value.split('\n').map(k=>k.trim()).filter(Boolean)
+    };
+  }
+  function persistAiForm(){
+    aiBp[aiFormProvider] = readAiFormKeys();
+    saveAiSettings({
+      provider: aiFormProvider,
+      key: aiBp[aiFormProvider].key,
+      extraKeys: aiBp[aiFormProvider].extra,
+      byProvider: aiBp
     });
+  }
+  sp('#s-provider').onchange = ()=>{
+    aiBp[aiFormProvider] = readAiFormKeys();           // stash what's typed for the old provider
+    aiFormProvider = sp('#s-provider').value;
+    const cur = aiBp[aiFormProvider] || {key:'', extra:[]};
+    const ph = aiFormProvider==='apmix' ? 'apx_live_...' : 'AIza...';
+    sp('#s-key').value = cur.key || '';
+    sp('#s-key').placeholder = ph;
+    sp('#s-extra-keys').value = (cur.extra||[]).join('\n');
+    sp('#s-extra-keys').placeholder = ph + '\n' + ph;
+    sp('#s-test-result').style.display = 'none';
   };
+  sp('#s-save').onclick = ()=>{ persistAiForm(); };
   sp('#s-clear').onclick = ()=>{
-    saveAiSettings({provider:'google', key:'', extraKeys:[]});
     sp('#s-key').value = '';
     sp('#s-extra-keys').value = '';
+    persistAiForm();
+  };
+  sp('#s-test').onclick = async ()=>{
+    persistAiForm();
+    const box = sp('#s-test-result');
+    const st = loadAiSettings();
+    box.style.display = 'block';
+    if(!st.key){ box.textContent = 'اول کلید API را وارد کن.'; return; }
+    box.innerHTML = '<span class="spinner"></span> در حال تست اتصال...';
+    const t0 = Date.now();
+    try{
+      const out = await geminiOnce(st.key, 'You are a connection test. Reply with only the word OK.', 'ping');
+      const secs = ((Date.now()-t0)/1000).toFixed(1);
+      const who = st.provider==='apmix' ? 'apmix.ai (Claude Sonnet 4.6)' : 'Google Gemini';
+      box.textContent = '✓ اتصال به ' + who + ' برقرار شد (' + secs + ' ثانیه). پاسخ مدل: ' + (out||'(خالی)').slice(0,80);
+    }catch(e){
+      const msg = e && e.message ? e.message : String(e);
+      const net = /Failed to fetch|NetworkError|Load failed/i.test(msg);
+      box.textContent = '✗ اتصال ناموفق: ' + msg + (net ? ' — مرورگر نتوانست به سرور برسد (اینترنت/فیلترشکن یا مسدود شدن CORS توسط سرور).' : (e && e.status===401 ? ' — کلید اشتباه است.' : (e && e.status===403 ? ' — این مدل در پلن شما نیست.' : '')));
+    }
   };
 
   function githubFromForm(){
@@ -6098,7 +6183,7 @@ function openSettingsPage(){
 /* ---------- AI assistant (uses your own free Google Gemini API key) ---------- */
 function openAiPanel(word){
   const settings = loadAiSettings();
-  const ready = !!(settings.provider==='google' && settings.key);
+  const ready = !!(aiReady(settings));
   const overlay = document.createElement('div');
   overlay.className='overlay';
   overlay.innerHTML = `
@@ -6107,7 +6192,7 @@ function openAiPanel(word){
         <h2>دستیار هوشمند · <span class="en">${escapeHtml(word.en)}</span></h2>
         <button class="close-x">✕</button>
       </div>
-      ${!ready ? `<div class="ai-note">هنوز کلید Google Gemini را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید رایگان خودتان را وارد کنید.</div>` : ''}
+      ${!ready ? `<div class="ai-note">هنوز کلید هوش مصنوعی را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید خودتان را وارد کنید.</div>` : ''}
       <div id="aiThread"></div>
       ${ready ? `
       <label style="margin-top:12px;">زبان سوال</label>
@@ -6160,6 +6245,10 @@ ${activityNote}
 مقدار "suggestions" باید ۲ تا ۳ سوال کوتاه (حداکثر ۸-۱۰ کلمه)، به همان زبان سوال کاربر، متناسب با همین کلمه و با در نظر گرفتن سوال قبلی و وضعیت یادگیری کاربر باشد — نه سوالات کلی و تکراری.`;
 
   async function callGemini(key){
+    if(loadAiSettings().provider==='apmix'){
+      const out = await apmixCall(key, systemPrompt, history.map(h=>({role:h.role, content:h.content})));
+      return out || 'پاسخی دریافت نشد.';
+    }
     const contents = history.map(h=>({ role: h.role==='assistant'?'model':'user', parts:[{text:h.content}] }));
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + encodeURIComponent(key);
     const res = await fetch(url, {
@@ -6739,7 +6828,7 @@ function openWordDetailPanel(word, contextInfo){
   const dialogueContext = (contextInfo.context || '').trim();
 
   const settings = loadAiSettings();
-  const ready = !!(settings.provider==='google' && settings.key);
+  const ready = !!(aiReady(settings));
 
   const freqEntry = srtCandidatesPool.find(c=> c.en===enLower);
   const maxFreq = srtCandidatesPool.length ? Math.max(...srtCandidatesPool.map(c=>c.count)) : 0;
@@ -6878,7 +6967,7 @@ function openWordDetailPanel(word, contextInfo){
 
       ${ready ? `<div id="wdFreeDictHeaderWrap"></div>` : ''}
 
-      ${!ready ? `<div class="ai-note">هنوز کلید Google Gemini را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید رایگان خودتان را وارد کنید.</div><div id="wdFreeDictWrap"></div>` : `
+      ${!ready ? `<div class="ai-note">هنوز کلید هوش مصنوعی را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید خودتان را وارد کنید.</div><div id="wdFreeDictWrap"></div>` : `
       <div class="ep-type-filter-row" id="wdTabsRow">
         <div class="ep-type-filter-btn active" data-tab="grammar">دستور زبان</div>
         <div class="ep-type-filter-btn" data-tab="explain">نکات کاربردی</div>
@@ -7005,7 +7094,7 @@ function openWordDetailPanel(word, contextInfo){
 
     async function getManualSuggestion(){
       if(manualCachedSuggestion) return manualCachedSuggestion;
-      if(!(settings.provider==='google' && settings.key)) throw new Error('NO_KEY');
+      if(!(aiReady(settings))) throw new Error('NO_KEY');
       manualCachedSuggestion = await fetchWordSuggestion(settings.key, en);
       return manualCachedSuggestion;
     }
@@ -7033,7 +7122,7 @@ function openWordDetailPanel(word, contextInfo){
         renderManualSuggestBox(boxEl, text, (accepted)=>{ targetInput.value = accepted; });
       }catch(e){
         if(e.message==='NO_KEY'){
-          boxEl.innerHTML = `<div class="suggest-box">هنوز کلید Google Gemini را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید رایگان خودتان را وارد کنید.</div>`;
+          boxEl.innerHTML = `<div class="suggest-box">هنوز کلید هوش مصنوعی را وارد نکرده‌اید. از دکمه ⚙ تنظیمات بالای صفحه، کلید خودتان را وارد کنید.</div>`;
         }else{
           boxEl.innerHTML = `<div class="suggest-box">درخواست ناموفق بود (${escapeHtml(e.message||'')}).</div>`;
         }
